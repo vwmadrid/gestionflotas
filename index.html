@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VW Workspace</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { vw: { blue: '#001e50', light: '#00b0f0', bg: '#f9fafb' } }, fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRfERugbIVfAXtKa7mGdLLTm6xwxb5wlE",
+      authDomain: "gestion-flotas-vw.firebaseapp.com",
+      projectId: "gestion-flotas-vw",
+      storageBucket: "gestion-flotas-vw.firebasestorage.app",
+      messagingSenderId: "1070891769268",
+      appId: "1:1070891769268:web:47b04e6d62e576038966e1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    
+    window.db = db;
+    window.collection = collection;
+    window.onSnapshot = onSnapshot;
+    window.doc = doc;
+    window.updateDoc = updateDoc;
+    window.getDoc = getDoc;
+  </script>
+
+  <style>
+    body { background-color: var(--vw-bg); }
+    .card-pro { background: white; border: 1px solid #f3f4f6; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); transition: all 0.2s; }
+    .card-pro:hover { border-color: #e5e7eb; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); transform: translateY(-2px); }
+    .timeline-dot { position: relative; }
+    .timeline-dot::before { content: ''; position: absolute; left: -1.75rem; top: 0.5rem; width: 0.75rem; height: 0.75rem; background: #00b0f0; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 1px #e5e7eb; }
+    .chat-scroll::-webkit-scrollbar { width: 6px; } .chat-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+  </style>
+</head>
+<body class="text-gray-800 antialiased selection:bg-vw-light selection:text-white">
+
+  <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50">
+    <div class="bg-white p-10 rounded-2xl shadow-xl w-full max-w-sm border border-gray-100 text-center">
+      <i class="ph-fill ph-car-profile text-5xl text-vw-blue mb-4"></i>
+      <h1 class="text-2xl font-bold text-gray-900 mb-1">GESTION FLOTAS</h1>
+      <p class="text-sm text-gray-500 mb-8">Entregas Volkswagen</p>
+      
+      <div class="space-y-4">
+        <select id="userRole" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-vw-light outline-none font-medium">
+          <option value="taller">Taller</option><option value="recambios">Recambios</option><option value="entregas">Entregas</option>
+        </select>
+        <input type="password" id="userPass" placeholder="Contraseña" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-vw-light outline-none font-medium">
+        <button onclick="iniciar()" class="w-full bg-vw-blue hover:bg-vw-blue/90 text-white font-semibold py-3 rounded-xl transition-all shadow-md">Acceder</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mainApp" style="display:none;" class="min-h-screen flex flex-col">
+    <nav class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center sticky top-0 z-30 shadow-sm">
+      <div class="flex items-center gap-2">
+        <i class="ph-fill ph-steering-wheel text-2xl text-vw-blue"></i>
+        <h1 class="text-lg font-bold text-gray-900 tracking-tight">VW <span class="text-gray-400 font-medium">Workspace</span></h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="roleBadge" class="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg uppercase tracking-wider"></span>
+        <button onclick="cerrarSesion()" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer" title="Cerrar Sesión">
+          <i class="ph-bold ph-sign-out text-xl"></i>
+        </button>
+      </div>
+    </nav>
+
+    <div id="tabsEntregas" class="hidden flex-wrap justify-center gap-2 mt-6 px-4 relative">
+      <button id="btnTodos" onclick="cambiarPestana('todos')" class="px-4 py-2 rounded-xl font-medium text-sm transition-all bg-gray-900 text-white shadow-md flex items-center gap-2">🚗 Vehículos</button>
+      <button id="btnIncidencias" onclick="cambiarPestana('incidencias')" class="px-4 py-2 rounded-xl font-medium text-sm transition-all bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 flex items-center gap-2">⚠️ Incidencias</button>
+      <button id="btnAgenda" onclick="cambiarPestana('agenda')" class="px-4 py-2 rounded-xl font-medium text-sm transition-all bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 flex items-center gap-2">📅 Agenda</button>
+    </div>
+
+    <main class="max-w-3xl mx-auto w-full p-4 mt-2 flex-grow">
+      <div id="barraBusqueda" class="hidden mb-4 relative">
+        <i class="ph ph-magnifying-glass absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg"></i>
+        <input type="text" id="buscadorInput" onkeyup="filtrarCoches()" placeholder="Buscar por modelo, bastidor o matrícula..." class="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-vw-light outline-none shadow-sm transition-all font-medium">
+      </div>
+      <div id="contenedorPrincipal" class="space-y-4"></div>
+      <div id="contenedorAgendaWrapper" class="hidden">
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <h2 class="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2"><i class="ph-bold ph-calendar-check text-vw-light"></i> Próximas Entregas</h2>
+          <div id="contenedorAgenda" class="border-l-2 border-gray-100 ml-3 pl-6 space-y-6"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="chatModal" class="fixed inset-0 z-50 hidden bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <div>
+          <h3 class="font-bold text-gray-900 flex items-center gap-2"><i class="ph-fill ph-chats text-vw-light"></i> Chat de Vehículo</h3>
+          <p id="chatSubtitulo" class="text-xs font-medium text-gray-500"></p>
+        </div>
+        <button onclick="cerrarChat()" class="p-2 text-gray-400 hover:text-gray-700 bg-white rounded-full border border-gray-200"><i class="ph-bold ph-x"></i></button>
+      </div>
+      <div id="chatMessages" class="p-6 flex-grow overflow-y-auto chat-scroll bg-white space-y-4 flex flex-col"></div>
+      <div class="p-4 bg-gray-50 border-t border-gray-100 flex gap-2">
+        <input type="hidden" id="chatFilaActiva">
+        <input type="text" id="chatInput" placeholder="Escribe un mensaje..." class="flex-grow px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-vw-light outline-none text-sm">
+        <button onclick="enviarMensajeChat()" class="px-4 py-2 bg-vw-blue hover:bg-vw-blue/90 text-white rounded-xl shadow-md"><i class="ph-bold ph-paper-plane-right"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let userRole = "";
+    let activeTab = 'todos'; 
+    let unsubscribeFirebase = null; 
+
+    window.onload = function() {
+      const rolGuardado = localStorage.getItem('vw_departamento');
+      if (rolGuardado) {
+        userRole = rolGuardado;
+        document.getElementById('userRole').value = rolGuardado;
+        iniciarAppDirectamente(rolGuardado);
+      }
+    };
+
+    function iniciar() {
+      userRole = document.getElementById('userRole').value;
+      const userPass = document.getElementById('userPass').value;
+      const contrasenas = { 'taller': 'taller2026', 'recambios': 'piezas2026', 'entregas': 'vw2026' };
+
+      if (userPass !== contrasenas[userRole]) {
+        Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'Contraseña incorrecta.', confirmButtonColor: '#111827', customClass: { popup: 'rounded-2xl' }});
+        return; 
+      }
+      localStorage.setItem('vw_departamento', userRole);
+      iniciarAppDirectamente(userRole);
+    }
+
+    function iniciarAppDirectamente(rol) {
+      document.getElementById('roleBadge').innerText = rol;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'flex';
+      
+      if (rol === 'entregas') {
+        document.getElementById('tabsEntregas').classList.remove('hidden');
+        document.getElementById('tabsEntregas').classList.add('flex');
+        cambiarPestana('todos');
+      } else {
+        cargar();
+      }
+    }
+
+    function cerrarSesion() {
+      Swal.fire({
+        title: 'Cerrar Sesión', text: '¿Quieres desconectar tu dispositivo?', icon: 'question',
+        showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Sí, desconectar', cancelButtonText: 'Cancelar',
+        customClass: { popup: 'rounded-2xl' }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          localStorage.removeItem('vw_departamento'); 
+          userRole = "";
+          document.getElementById('userPass').value = ""; 
+          document.getElementById('mainApp').style.display = 'none';
+          document.getElementById('loginScreen').style.display = 'flex';
+          document.getElementById('tabsEntregas').classList.add('hidden');
+          document.getElementById('tabsEntregas').classList.remove('flex');
+          document.getElementById('barraBusqueda').style.display = 'none';
+          if(unsubscribeFirebase) unsubscribeFirebase(); 
+        }
+      });
+    }
+
+    function cambiarPestana(pestana) {
+      activeTab = pestana;
+      const btnT = document.getElementById('btnTodos');
+      const btnI = document.getElementById('btnIncidencias');
+      const btnA = document.getElementById('btnAgenda');
+      const barraBusqueda = document.getElementById('barraBusqueda');
+      
+      [btnT, btnI, btnA].forEach(b => b.className = "px-4 py-2 rounded-xl font-medium text-sm transition-all bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 flex items-center gap-2");
+      
+      if (pestana === 'agenda') {
+        document.getElementById('contenedorPrincipal').style.display = 'none';
+        document.getElementById('contenedorAgendaWrapper').style.display = 'block';
+        btnA.className = "px-4 py-2 rounded-xl font-medium text-sm transition-all bg-gray-900 text-white shadow-md flex items-center gap-2";
+        barraBusqueda.style.display = 'none';
+      } else {
+        document.getElementById('contenedorPrincipal').style.display = 'block';
+        document.getElementById('contenedorAgendaWrapper').style.display = 'none';
+        barraBusqueda.style.display = (pestana === 'todos') ? 'block' : 'none'; 
+        if(pestana === 'todos') btnT.className = "px-4 py-2 rounded-xl font-medium text-sm transition-all bg-gray-900 text-white shadow-md flex items-center gap-2";
+        if(pestana === 'incidencias') btnI.className = "px-4 py-2 rounded-xl font-medium text-sm transition-all bg-gray-900 text-white shadow-md flex items-center gap-2";
+      }
+      cargar();
+    }
+
+    function mostrarError(msg) {
+      Swal.fire({ icon: 'error', title: 'Error', text: msg, confirmButtonColor: '#001e50', customClass: { popup: 'rounded-2xl' } });
+    }
+
+    // ==========================================
+    // LÓGICA EN TIEMPO REAL (FIREBASE)
+    // ==========================================
+    function cargar() {
+      let divP = document.getElementById('contenedorPrincipal');
+      if (activeTab !== 'agenda') divP.innerHTML = `<div class="py-12 text-center text-gray-400"><i class="ph ph-spinner animate-spin text-3xl mb-2 text-gray-900"></i><p class="text-sm font-medium">Conectando en tiempo real...</p></div>`;
+      if(document.getElementById('buscadorInput')) document.getElementById('buscadorInput').value = "";
+
+      if(unsubscribeFirebase) unsubscribeFirebase();
+
+      unsubscribeFirebase = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
+        let coches = [];
+        snapshot.forEach((doc) => {
+          let c = doc.data();
+          c.fila = doc.id; 
+          c.A = c.bastidor || ""; c.B = c.matricula || ""; c.C = c.modelo || "";
+          coches.push(c);
+        });
+
+        coches.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
+
+        let htmlSalida = "";
+
+        if (userRole === 'taller') {
+          let filtrados = coches.filter(c => c.enTaller && !c.finTaller);
+          htmlSalida = filtrados.length === 0 ? vacioUI() : filtrados.map(c => renderTarjetaActiva(c, 'p', c.ordenTaller || "Sin instrucciones", 'Taller')).join('');
+          divP.innerHTML = htmlSalida;
+        } 
+        else if (userRole === 'recambios') {
+          let filtrados = coches.filter(c => c.enRecambios && !c.finRecambios);
+          htmlSalida = filtrados.length === 0 ? vacioUI() : filtrados.map(c => renderTarjetaActiva(c, 'r', c.ordenRecambios || "Sin instrucciones", 'Recambios')).join('');
+          divP.innerHTML = htmlSalida;
+        }
+        else if (userRole === 'entregas') {
+          if (activeTab === 'todos') {
+            divP.innerHTML = coches.length === 0 ? vacioUI() : coches.map(c => renderCocheGlobal(c)).join('');
+          } 
+          else if (activeTab === 'incidencias') {
+            let alertas = coches.filter(c => {
+               let statusTag = "";
+               if (c.enTaller && !c.finTaller && c.enRecambios && !c.finRecambios) statusTag = "TALLER Y RECAMBIOS";
+               else if (c.enTaller && !c.finTaller) statusTag = "EN TALLER";
+               else if (c.enRecambios && !c.finRecambios) statusTag = "EN RECAMBIOS";
+               
+               let esRiesgo = c.estado && c.estado.toUpperCase().includes("RIESGO");
+               if (esRiesgo || statusTag !== "") { c.statusTag = statusTag; return true; }
+               return false;
+            });
+            divP.innerHTML = alertas.length === 0 ? vacioUI() : alertas.map(a => renderAlertaUI(a)).join('');
+          }
+          else if (activeTab === 'agenda') {
+            let agenda = coches.filter(c => c.fechaCita && c.fechaCita !== "");
+            let agendaDiv = document.getElementById('contenedorAgenda');
+            if (agenda.length === 0) agendaDiv.innerHTML = `<p class="text-gray-400 text-sm italic">No hay entregas programadas.</p>`;
+            else agendaDiv.innerHTML = agenda.map(a => `
+              <div class="timeline-dot pb-4">
+                <span class="text-xs font-bold text-vw-light mb-1 block">${a.fechaCita}</span>
+                <div class="bg-gray-50 border border-gray-100 rounded-xl p-3 flex justify-between items-center">
+                  <div><h4 class="font-bold text-gray-800 text-sm">${a.C}</h4><span class="text-xs text-gray-500 uppercase">${a.A}</span></div>
+                  <span class="bg-white border border-gray-200 text-xs font-bold px-2 py-1 rounded shadow-sm">${a.B}</span>
+                </div>
+              </div>`).join('');
+          }
+        }
+      }, (error) => { mostrarError('Fallo al cargar datos'); });
+    }
+
+    function vacioUI() { return `<div class="bg-white rounded-2xl p-10 text-center border border-gray-200"><i class="ph-fill ph-check-circle text-4xl text-emerald-500 mb-2"></i><p class="text-gray-500 font-medium text-sm">No hay registros</p></div>`; }
+
+    function filtrarCoches() {
+      const texto = document.getElementById('buscadorInput').value.toLowerCase();
+      const tarjetas = document.querySelectorAll('#contenedorPrincipal .card-pro');
+      tarjetas.forEach(t => {
+        const contenido = t.innerText.toLowerCase();
+        if (contenido.includes(texto)) t.style.display = '';
+        else t.style.display = 'none';
+      });
+    }
+
+    function pedirInstruccionDepto(idCoche, depto) {
+      const titulo = depto === 'taller' ? '⚙️ Enviar a Taller' : '📦 Enviar a Recambios';
+      Swal.fire({
+        title: titulo,
+        html: `<input type="text" id="instruccionInput" class="swal2-input" placeholder="Instrucciones...">`,
+        showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Enviar', cancelButtonText: 'Cancelar',
+        preConfirm: () => { return document.getElementById('instruccionInput').value; }
+      }).then((result) => {
+        if (result.isConfirmed) { mandarDepto(idCoche, depto, result.value); }
+      });
+    }
+
+    async function mandarDepto(idCoche, depto, instruccion) {
+      try {
+        const ref = window.doc(window.db, "vehiculos", idCoche);
+        if (depto === 'taller') await window.updateDoc(ref, { enTaller: true, ordenTaller: instruccion });
+        else await window.updateDoc(ref, { enRecambios: true, ordenRecambios: instruccion });
+        Swal.fire({ icon: 'success', title: '¡Enviado!', showConfirmButton: false, timer: 1000 });
+      } catch (e) { mostrarError('Error al enviar instrucción.'); }
+    }
+
+    function obtenerBurbujaChat(chatRaw) {
+      if (!chatRaw || chatRaw === "[]") return '';
+      try {
+        let chatData = JSON.parse(decodeURIComponent(chatRaw));
+        let history = chatData.history || chatData; 
+        let lastOpened = chatData.lastOpened ? (chatData.lastOpened[userRole.toUpperCase()] || 0) : 0;
+        let noLeidos = history.filter(msg => msg.fecha > lastOpened && msg.rol.toUpperCase() !== userRole.toUpperCase()).length;
+        return noLeidos > 0 ? `<span class="absolute -top-1.5 -right-1.5 bg-red-500 border-2 border-white text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm animate-bounce">${noLeidos}</span>` : '';
+      } catch(e) { return ''; }
+    }
+
+    function renderCocheGlobal(c) {
+      let chatJson = encodeURIComponent(c.chat || "[]");
+      let modSafe = encodeURIComponent(c.C || "");
+      let matSafe = encodeURIComponent(c.B || "");
+      let basSafe = encodeURIComponent(c.A || ""); 
+      let burbuja = obtenerBurbujaChat(c.chat);
+      
+      let uiTaller = c.finTaller ? `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded">✅ Terminado</span>` : 
+                     c.enTaller ? `<span class="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded">⏳ En taller</span>` : 
+                     `<button onclick="pedirInstruccionDepto('${c.fila}', 'taller')" class="text-[10px] font-bold bg-white border border-gray-300 text-gray-700 px-2 py-1 rounded shadow-sm hover:bg-gray-100 transition-colors">➡️ Enviar</button>`;
+                     
+      let uiRecambios = c.finRecambios ? `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded">✅ Terminado</span>` : 
+                        c.enRecambios ? `<span class="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded">⏳ En recambios</span>` : 
+                        `<button onclick="pedirInstruccionDepto('${c.fila}', 'recambios')" class="text-[10px] font-bold bg-white border border-gray-300 text-gray-700 px-2 py-1 rounded shadow-sm hover:bg-gray-100 transition-colors">➡️ Enviar</button>`;
+
+      let infoTallerAdicional = (c.ordenTaller || c.fechaTaller) ? 
+        `<div class="text-xs text-gray-500 mt-1">Nº Orden: <span class="font-bold text-gray-700">${c.ordenTaller || '-'}</span> | Prevista: <span class="font-bold text-gray-700">${c.fechaTaller || '-'}</span></div>` : '';
+        
+      let infoRecambiosAdicional = (c.ordenRecambios || c.fechaRecambios) ? 
+        `<div class="text-xs text-gray-500 mt-1">Nº Orden: <span class="font-bold text-gray-700">${c.ordenRecambios || '-'}</span> | Prevista: <span class="font-bold text-gray-700">${c.fechaRecambios || '-'}</span></div>` : '';
+
+      return `
+      <div class="card-pro p-4 mb-3">
+        <div class="flex justify-between items-start mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-gray-900">${c.C}</h3>
+            <span class="inline-block bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-200 mt-1">${c.B}</span>
+          </div>
+          <div class="flex gap-1">
+             <button onclick="imprimirEtiqueta('${modSafe}', '${matSafe}', '${basSafe}')" class="p-1.5 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">
+               <i class="ph-bold ph-printer text-lg"></i>
+             </button>
+             <button onclick="abrirChat('${c.fila}', '${modSafe}', '${matSafe}', '${chatJson}')" class="relative flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-vw-blue hover:bg-blue-100 rounded-lg text-xs font-semibold transition-colors">
+               <i class="ph-fill ph-chat-teardrop-text text-lg"></i> ${burbuja}
+             </button>
+          </div>
+        </div>
+        <p class="text-[10px] text-gray-500 font-medium mb-3">Bastidor: <span class="uppercase">${c.A}</span></p>
+        
+        <div class="grid grid-cols-2 gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100 mb-3">
+          <div><span class="block text-[10px] uppercase font-bold text-gray-400">Progreso</span><span class="text-xs font-medium ${c.estado ? 'text-gray-800' : 'text-gray-400 italic'}">${c.estado || 'Sin estado'}</span></div>
+          <div><span class="block text-[10px] uppercase font-bold text-gray-400">Fecha Cita</span><span class="text-xs font-medium text-gray-800">${c.fechaCita || 'Sin cita'}</span></div>
+        </div>
+
+        <div class="space-y-1.5 border-t border-gray-100 pt-3">
+           <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <div>
+                 <span class="text-xs font-bold text-gray-600 uppercase flex items-center gap-1"><i class="ph-fill ph-wrench"></i> Taller</span>
+                 ${infoTallerAdicional}
+              </div>
+              <div class="flex flex-col items-end">${uiTaller}</div>
+           </div>
+           <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <div>
+                 <span class="text-xs font-bold text-gray-600 uppercase flex items-center gap-1"><i class="ph-fill ph-package"></i> Recambios</span>
+                 ${infoRecambiosAdicional}
+              </div>
+              <div class="flex flex-col items-end">${uiRecambios}</div>
+           </div>
+        </div>
+      </div>`;
+    }
+
+    function renderTarjetaActiva(c, prefijo, info, tipo) {
+      let chatJson = encodeURIComponent(c.chat || "[]");
+      let modSafe = encodeURIComponent(c.C || "");
+      let matSafe = encodeURIComponent(c.B || "");
+      let burbuja = obtenerBurbujaChat(c.chat);
+
+      return `
+      <div class="card-pro p-5 mb-4 border-t-4 ${tipo === 'Taller' ? 'border-t-amber-500' : 'border-t-vw-light'}">
+        <div class="flex justify-between items-start mb-3">
+           <div>
+             <h3 class="text-base font-bold text-gray-900">${c.C}</h3>
+             <span class="inline-block bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-200 mt-1">${c.B}</span>
+           </div>
+           <button onclick="abrirChat('${c.fila}', '${modSafe}', '${matSafe}', '${chatJson}')" class="relative flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-vw-blue hover:bg-blue-100 rounded-lg text-xs font-semibold">
+             <i class="ph-fill ph-chat-teardrop-text text-lg"></i> Chat ${burbuja}
+           </button>
+        </div>
+        
+        <div class="bg-gray-50 p-3 rounded-xl mb-4 border border-gray-100">
+          <p class="text-xs text-gray-500 uppercase font-bold tracking-wider mb-0.5">Bastidor: ${c.A}</p>
+          <p class="text-sm font-medium text-gray-800">${info}</p>
+        </div>
+
+        <div class="flex gap-2">
+          <input type="text" id="o-${prefijo}-${c.fila}" value="${c.ordenTaller || c.ordenRecambios || ''}" placeholder="Nº Orden" class="w-1/4 px-3 py-2 border border-gray-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-vw-light outline-none">
+          <input type="date" id="f-${prefijo}-${c.fila}" value="${c.fechaTaller || c.fechaRecambios || ''}" class="w-1/4 px-3 py-2 border border-gray-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-vw-light outline-none">
+          
+          <button onclick="ejecutarAccion('${tipo}', '${c.fila}', false)" class="w-1/4 bg-vw-light hover:bg-vw-blue text-white font-semibold py-2 rounded-lg text-xs transition-colors shadow-sm">Actualizar</button>
+          <button onclick="ejecutarAccion('${tipo}', '${c.fila}', true)" class="w-1/4 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-lg text-xs shadow-sm transition-colors flex items-center justify-center gap-1">
+            <i class="ph-bold ph-check-circle text-lg"></i> Finalizar
+          </button>
+        </div>
+      </div>`;
+    }
+
+    function renderAlertaUI(a) {
+      let chatJson = encodeURIComponent(a.chat || "[]");
+      let modSafe = encodeURIComponent(a.C || "");
+      let matSafe = encodeURIComponent(a.B || "");
+      let isWarn = a.statusTag ? true : false;
+      let burbuja = obtenerBurbujaChat(a.chat);
+
+      let uiTaller = a.finTaller ? `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded">✅ Terminado</span>` : 
+                     a.enTaller ? `<span class="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded">⏳ En taller</span>` : 
+                     `<button onclick="pedirInstruccionDepto('${a.fila}', 'taller')" class="text-[10px] font-bold bg-white border border-gray-300 text-gray-700 px-2 py-1 rounded shadow-sm hover:bg-gray-100 transition-colors">➡️ Enviar</button>`;
+                     
+      let uiRecambios = a.finRecambios ? `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-1 rounded">✅ Terminado</span>` : 
+                        a.enRecambios ? `<span class="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded">⏳ En recambios</span>` : 
+                        `<button onclick="pedirInstruccionDepto('${a.fila}', 'recambios')" class="text-[10px] font-bold bg-white border border-gray-300 text-gray-700 px-2 py-1 rounded shadow-sm hover:bg-gray-100 transition-colors">➡️ Enviar</button>`;
+
+      let infoTallerAdicional = (a.ordenTaller || a.fechaTaller) ? 
+        `<div class="text-xs text-gray-500 mt-1">Nº Orden: <span class="font-bold text-gray-700">${a.ordenTaller || '-'}</span> | Prevista: <span class="font-bold text-gray-700">${a.fechaTaller || '-'}</span></div>` : '';
+        
+      let infoRecambiosAdicional = (a.ordenRecambios || a.fechaRecambios) ? 
+        `<div class="text-xs text-gray-500 mt-1">Nº Orden: <span class="font-bold text-gray-700">${a.ordenRecambios || '-'}</span> | Prevista: <span class="font-bold text-gray-700">${a.fechaRecambios || '-'}</span></div>` : '';
+
+      return `
+      <div class="card-pro p-5 mb-4 relative overflow-hidden">
+        <div class="absolute left-0 top-0 bottom-0 w-1 ${isWarn ? 'bg-amber-400' : 'bg-red-500'}"></div>
+        <div class="flex justify-between items-start mb-3 ml-2">
+          <div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase ${isWarn ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}">${a.statusTag || 'ALERTA'}</span>
+            <h3 class="text-base font-bold text-gray-900 mt-1">${a.C}</h3>
+          </div>
+          <button onclick="abrirChat('${a.fila}', '${modSafe}', '${matSafe}', '${chatJson}')" class="relative flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-vw-blue hover:bg-blue-100 rounded-lg text-xs font-semibold">
+            <i class="ph-fill ph-chat-teardrop-text text-lg"></i> Chat ${burbuja}
+          </button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl ml-2 border border-gray-100 mb-3">
+          <div><span class="block text-[10px] uppercase font-bold text-gray-400">Bastidor | Matrícula</span><span class="text-xs font-medium text-gray-800">${a.A} | ${a.B}</span></div>
+          <div><span class="block text-[10px] uppercase font-bold text-gray-400">Cita</span><span class="text-xs font-medium text-gray-800">${a.fechaCita || 'Sin cita'}</span></div>
+        </div>
+
+        <div class="space-y-1.5 border-t border-gray-100 pt-3 ml-2">
+           <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <div>
+                 <span class="text-xs font-bold text-gray-600 uppercase flex items-center gap-1"><i class="ph-fill ph-wrench"></i> Taller</span>
+                 ${infoTallerAdicional}
+              </div>
+              <div class="flex flex-col items-end">${uiTaller}</div>
+           </div>
+           <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100">
+              <div>
+                 <span class="text-xs font-bold text-gray-600 uppercase flex items-center gap-1"><i class="ph-fill ph-package"></i> Recambios</span>
+                 ${infoRecambiosAdicional}
+              </div>
+              <div class="flex flex-col items-end">${uiRecambios}</div>
+           </div>
+        </div>
+      </div>`;
+    }
+
+    async function ejecutarAccion(tipo, idCoche, esFinalizar) {
+      const prefijo = tipo === 'Taller' ? 'p' : 'r';
+      const orden = document.getElementById(`o-${prefijo}-${idCoche}`).value;
+      const fecha = document.getElementById(`f-${prefijo}-${idCoche}`).value;
+
+      try {
+        const ref = window.doc(window.db, "vehiculos", idCoche);
+        if (tipo === 'Taller') {
+          await window.updateDoc(ref, { ordenTaller: orden, fechaTaller: fecha, finTaller: esFinalizar });
+        } else {
+          await window.updateDoc(ref, { ordenRecambios: orden, fechaRecambios: fecha, finRecambios: esFinalizar });
+        }
+        Swal.fire({ icon: 'success', title: '¡Actualizado!', showConfirmButton: false, timer: 1000 });
+      } catch (e) { mostrarError('Error al guardar datos.'); }
+    }
+
+    function imprimirEtiqueta(modelo, matricula, bastidor) {
+      const ventana = window.open('', '_blank', 'width=400,height=300');
+      ventana.document.write(`
+        <html>
+          <head>
+            <title>Etiqueta</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 10px; display: flex; justify-content: center; align-items: center; }
+              .etiqueta { border: 2px solid #000; padding: 15px; width: 300px; text-align: center; }
+              .titulo { font-size: 20px; font-weight: bold; margin-bottom: 10px; text-transform: uppercase; }
+              .dato { margin: 10px 0; border-top: 1px solid #ccc; padding-top: 5px; }
+              .label { font-size: 10px; color: #555; text-transform: uppercase; }
+              .val { font-size: 18px; font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <div class="etiqueta">
+              <div class="titulo">VW Flota</div>
+              <div class="dato"><div class="label">Modelo</div><div class="val">${decodeURIComponent(modelo)}</div></div>
+              <div class="dato"><div class="label">Matrícula</div><div class="val">${decodeURIComponent(matricula)}</div></div>
+              <div class="dato"><div class="label">Bastidor</div><div class="val" style="font-size: 14px;">${decodeURIComponent(bastidor)}</div></div>
+            </div>
+            <script>window.onload = function() { window.print(); window.close(); }<\/script>
+          </body>
+        </html>
+      `);
+      ventana.document.close();
+    }
+
+    async function abrirChat(idCoche, modeloEnc, matriculaEnc, chatJsonEncoded) {
+      document.getElementById('chatFilaActiva').value = idCoche;
+      document.getElementById('chatSubtitulo').innerText = `${decodeURIComponent(modeloEnc)} [${decodeURIComponent(matriculaEnc)}]`;
+      
+      let chatData = [];
+      let chatObj = { history: [], lastOpened: { TALLER: 0, RECAMBIOS: 0, ENTREGAS: 0 } };
+      
+      try { 
+        if (chatJsonEncoded && chatJsonEncoded !== "null" && chatJsonEncoded !== "%5B%5D") {
+            let decoded = JSON.parse(decodeURIComponent(chatJsonEncoded));
+            chatObj = decoded.history ? decoded : { history: decoded, lastOpened: {} };
+            chatData = chatObj.history;
+        }
+      } catch(e) {}
+
+      chatObj.lastOpened[userRole.toUpperCase()] = new Date().getTime();
+      const ref = window.doc(window.db, "vehiculos", idCoche);
+      window.updateDoc(ref, { chat: JSON.stringify(chatObj) }).catch(e=>console.log(e));
+      
+      dibujarMensajes(chatData);
+      document.getElementById('chatModal').classList.remove('hidden');
+    }
+
+    function cerrarChat() { document.getElementById('chatModal').classList.add('hidden'); }
+
+    function dibujarMensajes(historial) {
+      const container = document.getElementById('chatMessages');
+      if (!historial || historial.length === 0) {
+        container.innerHTML = `<div class="m-auto text-center text-gray-400"><i class="ph-fill ph-chats-teardrop text-4xl mb-2"></i><p class="text-sm">No hay mensajes.</p></div>`; 
+        return;
+      }
+      container.innerHTML = historial.map(msg => {
+        const rolMensaje = msg.rol || "DESCONOCIDO";
+        const isMe = rolMensaje.toLowerCase() === userRole.toLowerCase();
+        return `<div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+            <span class="text-[10px] font-bold text-gray-400 mb-1 ml-1">${rolMensaje}</span>
+            <div class="max-w-[85%] px-4 py-2.5 rounded-2xl text-sm ${isMe ? 'bg-vw-blue text-white rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm'}">${msg.texto}</div>
+          </div>`;
+      }).join('');
+      setTimeout(() => container.scrollTop = container.scrollHeight, 50);
+    }
+
+    async function enviarMensajeChat() {
+      const input = document.getElementById('chatInput');
+      const idCoche = document.getElementById('chatFilaActiva').value;
+      const mensaje = input.value.trim();
+
+      if (!idCoche || mensaje === "") return;
+      input.disabled = true; input.value = "Enviando...";
+
+      try {
+        const ref = window.doc(window.db, "vehiculos", idCoche);
+        const docSnap = await window.getDoc(ref);
+        let chatAct = docSnap.data().chat || "[]";
+        
+        let chatObj = { history: [], lastOpened: { TALLER: 0, RECAMBIOS: 0, ENTREGAS: 0 } };
+        try { 
+            let dec = JSON.parse(chatAct);
+            chatObj = dec.history ? dec : { history: dec, lastOpened: {} }; 
+        } catch(e) {}
+
+        chatObj.history.push({ rol: userRole.toUpperCase(), fecha: new Date().getTime(), texto: mensaje });
+        chatObj.lastOpened[userRole.toUpperCase()] = new Date().getTime();
+
+        await window.updateDoc(ref, { chat: JSON.stringify(chatObj) });
+        input.disabled = false; input.value = "";
+        dibujarMensajes(chatObj.history);
+      } catch(e) {
+        input.disabled = false; input.value = mensaje;
+        mostrarError('No se pudo enviar el mensaje.');
+      }
+    }
+  </script>
+</body>
+</html>
