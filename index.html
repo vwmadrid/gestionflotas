@@ -288,14 +288,71 @@
       const titulo = depto === 'taller' ? '⚙️ Enviar a Taller' : '📦 Enviar a Recambios';
       Swal.fire({
         title: titulo,
-        html: `<input type="text" id="instruccionInput" class="swal2-input" placeholder="Instrucciones...">`,
+        html: `
+          <input type="text" id="instruccionInput" class="swal2-input" placeholder="Instrucciones o Nº de Orden...">
+          <div class="mt-4 text-left border border-gray-200 p-3 rounded-lg bg-gray-50">
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2"><i class="ph-bold ph-file-pdf text-red-500 text-sm"></i> Adjuntar Parte (Opcional)</label>
+            <input type="file" id="parteInput" accept=".pdf,image/*" class="w-full text-sm font-medium file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-vw-light file:text-white hover:file:bg-vw-blue transition-colors cursor-pointer">
+          </div>
+        `,
         showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Enviar', cancelButtonText: 'Cancelar',
-        preConfirm: () => { return document.getElementById('instruccionInput').value; }
+        preConfirm: () => { 
+          return {
+            instruccion: document.getElementById('instruccionInput').value,
+            archivo: document.getElementById('parteInput').files[0]
+          };
+        }
       }).then((result) => {
-        if (result.isConfirmed) { mandarDepto(idCoche, depto, result.value); }
+        if (result.isConfirmed) { 
+          const datos = result.value;
+          if (datos.archivo) {
+            subirArchivoYEnviar(idCoche, depto, datos.instruccion, datos.archivo);
+          } else {
+            mandarDepto(idCoche, depto, datos.instruccion); 
+          }
+        }
       });
     }
-
+    async function subirArchivoYEnviar(idCoche, depto, instruccion, archivo) {
+      Swal.fire({ title: 'Subiendo archivo...', text: 'No cierres la ventana, estamos subiendo el documento a Drive.', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      
+      const reader = new FileReader();
+      reader.readAsDataURL(archivo);
+      
+      reader.onload = async () => {
+        const base64Data = reader.result;
+        
+        // 🔥 PON AQUÍ LA URL DEL APPS SCRIPT DEL PASO 1 🔥
+        const scriptURL = https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec; 
+        
+        try {
+          // 1. Enviamos el archivo por el puente hacia Google Drive
+          const response = await fetch(scriptURL, {
+            method: 'POST',
+            body: JSON.stringify({ base64: base64Data, fileName: archivo.name, mimeType: archivo.type })
+          });
+          
+          const data = await response.json();
+          
+          if (data.status === 'success') {
+            const fileUrl = data.url;
+            
+            // 2. Guardamos la URL y la orden en tu base de datos Firebase
+            const refDoc = window.doc(window.db, "vehiculos", idCoche);
+            const updateData = depto === 'taller' 
+              ? { enTaller: true, ordenTaller: instruccion, urlParte: fileUrl }
+              : { enRecambios: true, ordenRecambios: instruccion, urlParte: fileUrl };
+              
+            await window.updateDoc(refDoc, updateData);
+            Swal.fire({ icon: 'success', title: '¡Enviado con parte incluido!', showConfirmButton: false, timer: 1500 });
+          } else {
+            throw new Error(data.message);
+          }
+        } catch (e) {
+          Swal.fire({ icon: 'error', title: 'Error', text: 'Hubo un fallo al subir el archivo: ' + e.message, customClass: { popup: 'rounded-2xl' } });
+        }
+      };
+    }
     async function mandarDepto(idCoche, depto, instruccion) {
       try {
         const ref = window.doc(window.db, "vehiculos", idCoche);
@@ -331,11 +388,13 @@
                         c.enRecambios ? `<span class="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded">⏳ En recambios</span>` : 
                         `<button onclick="pedirInstruccionDepto('${c.fila}', 'recambios')" class="text-[10px] font-bold bg-white border border-gray-300 text-gray-700 px-2 py-1 rounded shadow-sm hover:bg-gray-100 transition-colors">➡️ Enviar</button>`;
 
-      let infoTallerAdicional = (c.ordenTaller || c.fechaTaller) ? 
-        `<div class="text-xs text-gray-500 mt-1">Nº Orden: <span class="font-bold text-gray-700">${c.ordenTaller || '-'}</span> | Prevista: <span class="font-bold text-gray-700">${c.fechaTaller || '-'}</span></div>` : '';
+      let botonParteTaller = c.urlParte ? `<a href="${c.urlParte}" target="_blank" class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 px-2 py-0.5 rounded transition-colors"><i class="ph-bold ph-file-pdf"></i> Ver Parte</a>` : '';
+      let infoTallerAdicional = (c.ordenTaller || c.fechaTaller || c.urlParte) ? 
+        `<div class="text-xs text-gray-500 mt-1">Nº Orden: <span class="font-bold text-gray-700">${c.ordenTaller || '-'}</span> | Prevista: <span class="font-bold text-gray-700">${c.fechaTaller || '-'}</span><br>${botonParteTaller}</div>` : '';
         
-      let infoRecambiosAdicional = (c.ordenRecambios || c.fechaRecambios) ? 
-        `<div class="text-xs text-gray-500 mt-1">Nº Orden: <span class="font-bold text-gray-700">${c.ordenRecambios || '-'}</span> | Prevista: <span class="font-bold text-gray-700">${c.fechaRecambios || '-'}</span></div>` : '';
+      let botonParteRecambios= c.urlParte ? `<a href="${c.urlParte}" target="_blank" class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 px-2 py-0.5 rounded transition-colors"><i class="ph-bold ph-file-pdf"></i> Ver Parte</a>` : '';
+      let infoRecambiosAdicional = (c.ordenRecambios || c.fechaRecambios || c.urlParte) ? 
+        `<div class="text-xs text-gray-500 mt-1">Nº Orden: <span class="font-bold text-gray-700">${c.ordenRecambios || '-'}</span> | Prevista: <span class="font-bold text-gray-700">${c.fechaRecambios || '-'}</span><br>${botonParteRecambios}</div>` : '';
 
       return `
       <div class="card-pro p-4 mb-3">
