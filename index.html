@@ -1254,6 +1254,13 @@ window.borrarVehiculo = async function(id, modelo) {
         Swal.fire('¡Éxito!', `Se han movido ${cochesAConvertir.length} vehículos a Logística.`, 'success');
     }
 }
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => console.log('Service Worker registrado', reg))
+      .catch((err) => console.log('Error al registrar SW', err));
+  });
+}
   </script>
 </body>
 </html>
