@@ -13,7 +13,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion, deleteDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
     
     const firebaseConfig = {
       apiKey: "AIzaSyCRfERugbIVfAXtKa7mGdLLTm6xwxb5wlE",
@@ -26,7 +26,7 @@
 
     const app = initializeApp(firebaseConfig);
     window.db = getFirestore(app);
-    window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; window.arrayUnion = arrayUnion;
+    window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; window.arrayUnion = arrayUnion; window.deleteDoc = deleteDoc;
   </script>
 
   <style>
@@ -58,6 +58,7 @@
     ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; border: 2px solid #f1f5f9; }
     ::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+    .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
   </style>
 </head>
 <body class="text-gray-800 antialiased h-screen flex overflow-hidden">
@@ -89,6 +90,8 @@
       <button onclick="cambiarPestana('todos')" class="p-3 bg-white/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all shadow-sm"><i class="ph-bold ph-squares-four text-lg"></i> Inventario Total</button>
       <button onclick="cambiarPestana('agenda')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-lg"></i> Agenda Citas</button>
       <button onclick="cambiarPestana('entregados')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-4 border border-white/20"><i class="ph-bold ph-check-square-offset text-lg"></i> Historial Entregados</button>
+      
+      <button onclick="cambiarPestana('auditoria')" class="p-3 text-red-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-red-500/20 mt-4"><i class="ph-bold ph-trash text-lg"></i> Auditoría (Limpieza)</button>
     </nav>
     <div class="p-6 bg-black/20 mt-auto border-t border-white/10">
       <p id="roleBadge" class="font-bold text-sm uppercase text-white"></p>
@@ -134,11 +137,24 @@
       </div>
     </header>
     
-    <div class="flex-1 overflow-y-auto p-6 bg-gray-100 w-full">
+    <div class="flex-1 overflow-y-auto p-6 bg-gray-100 w-full relative">
       <div id="contenedorLogistica" class="hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full"></div>
       <div id="contenedorTarjetas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 w-full"></div>
       <div id="contenedorTabla" class="hidden w-full bg-white rounded-lg shadow-sm border border-gray-300 overflow-auto" style="max-height: calc(100vh - 190px);"></div>
       <div id="contenedorAgenda" class="hidden max-w-full mx-auto w-full"></div>
+      
+      <div id="contenedorAuditoria" class="hidden w-full max-w-4xl mx-auto">
+          <div class="bg-white p-6 rounded-xl shadow-lg border border-red-200">
+              <h2 class="text-xl font-black text-red-600 flex items-center gap-2 uppercase mb-4"><i class="ph-bold ph-trash"></i> Auditoría de Inventario</h2>
+              <p class="text-sm text-gray-600 mb-6">Selecciona <b>SOLO los coches que tienes realmente en stock</b>. Todos los que no marques serán eliminados permanentemente del sistema al confirmar.</p>
+              
+              <div id="listaAuditoria" class="max-h-[500px] overflow-y-auto border border-gray-200 rounded-lg p-4 mb-6"></div>
+              
+              <button onclick="ejecutarLimpieza()" class="w-full bg-red-600 text-white font-black py-4 rounded-xl hover:bg-red-700 transition-all shadow-lg uppercase tracking-widest">
+                  Eliminar todo lo no seleccionado
+              </button>
+          </div>
+      </div>
     </div>
   </main>
 
@@ -206,25 +222,34 @@
     function cambiarPestana(pestana) {
       activeTab = pestana;
       const botones = document.querySelectorAll('#tabsEntregas button');
+      
+      // Limpiamos estilos de todos los botones
       botones.forEach(b => { 
-        b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-amber-500/10', 'border-amber-500/30'); 
-        b.classList.add('text-gray-300'); 
+        b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-amber-500/10', 'border-amber-500/30', 'bg-red-500/10', 'border-red-500/50'); 
+        if(b.innerText.includes('Auditoría')) b.classList.add('text-red-300', 'border-red-500/20');
+        else b.classList.add('text-gray-300');
       });
       
+      // Aplicamos estilo al botón activo
       if (pestana === 'logistica') botones[0].classList.add('text-amber-300', 'bg-amber-500/10', 'border-amber-500/30');
-      if (pestana === 'todos') botones[1].classList.add('bg-white/10', 'text-white');
-      if (pestana === 'agenda') botones[2].classList.add('bg-white/10', 'text-white');
-      if (pestana === 'entregados') botones[3].classList.add('bg-white/10', 'text-white');
+      else if (pestana === 'todos') botones[1].classList.add('bg-white/10', 'text-white');
+      else if (pestana === 'agenda') botones[2].classList.add('bg-white/10', 'text-white');
+      else if (pestana === 'entregados') botones[3].classList.add('bg-white/10', 'text-white');
+      else if (pestana === 'auditoria') botones[4].classList.add('bg-red-500/10', 'text-red-200', 'border-red-500/50');
 
+      // Ocultamos todo
       document.getElementById('contenedorLogistica').style.display = 'none';
       document.getElementById('contenedorTarjetas').style.display = 'none';
       document.getElementById('contenedorTabla').style.display = 'none';
       document.getElementById('contenedorAgenda').style.display = 'none';
+      document.getElementById('contenedorAuditoria').style.display = 'none';
+      
       document.getElementById('filtrosVisuales').style.display = 'none';
       document.getElementById('controlesVistaExcel').style.display = 'none';
       document.getElementById('botonesAdd').style.display = 'none';
       document.getElementById('buscadorInput').style.display = 'block';
 
+      // Mostramos lo que toca
       if (pestana === 'logistica') {
         document.getElementById('contenedorLogistica').style.display = 'grid';
         document.getElementById('botonesAdd').style.display = 'flex';
@@ -237,6 +262,10 @@
         document.getElementById('buscadorInput').style.display = 'none';
       } else if (pestana === 'entregados') {
         document.getElementById('contenedorTarjetas').style.display = 'grid';
+      } else if (pestana === 'auditoria') {
+        document.getElementById('contenedorAuditoria').style.display = 'block';
+        document.getElementById('buscadorInput').style.display = 'none';
+        renderAuditoria();
       }
       cargar();
     }
@@ -323,6 +352,7 @@
           else if (activeTab === 'todos') { actualizarContadores(); renderizarVistas(); }
           else if (activeTab === 'agenda') renderAgenda();
           else if (activeTab === 'entregados') renderEntregados();
+          else if (activeTab === 'auditoria') renderAuditoria();
         }
       });
     }
@@ -593,18 +623,17 @@
     }
 
     // ==========================================
-    // NUEVO CUADRANTE PRO EN LA AGENDA
+    // AGENDA Y CUADRANTE WEB (SIN FINES DE SEMANA)
     // ==========================================
+    window.datosAgenda = [];
+    window.mesVistaActual = new Date();
+    window.mesVistaActual.setDate(1);
+
     async function renderAgenda() {
        let div = document.getElementById('contenedorAgenda');
        
        // 🚨 PON AQUÍ LA URL DE TU APLICACIÓN WEB DE GOOGLE SCRIPT 🚨
        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqD3kagU--t1lAmBRoqy3ngBgneeWCCLFdWWxsFDaHLROrCi-9CqTyE-rFpIEhwQd9/exec";
-       
-       if (SCRIPT_URL === "PON_AQUI_TU_URL_DE_GOOGLE_SCRIPT") {
-           div.innerHTML = `<div class="bg-white p-10 rounded-xl shadow-sm border border-gray-200 text-center"><i class="ph-fill ph-warning-circle text-4xl text-amber-500 mb-3"></i><p class="font-bold text-gray-600">Aún no has pegado la URL de tu Google Script en el código.</p></div>`;
-           return;
-       }
 
        div.innerHTML = `<div class="bg-white p-16 rounded-xl shadow-sm border border-gray-200 text-center flex flex-col items-center"><i class="ph-bold ph-spinner animate-spin text-5xl text-[#001e50] mb-4"></i><p class="font-black text-gray-500 tracking-widest uppercase">Sincronizando con Outlook y Excel...</p></div>`;
 
@@ -613,126 +642,331 @@
                fetch(`${SCRIPT_URL}?action=getAgenda&agente=MANUEL`),
                fetch(`${SCRIPT_URL}?action=getAgenda&agente=ALEJANDRO`)
            ]);
-           
+
            const citasM = await resM.json();
            const citasA = await resA.json();
-           const todasLasCitas = [...citasM, ...citasA];
+           window.datosAgenda = [...citasM, ...citasA];
 
-           let agendaEstructurada = {};
-           let diasUnicos = new Set();
-           const horasLaborales = ['09', '10', '11', '12', '13', '16', '17', '18'];
+           window.mesVistaActual = new Date();
+           window.mesVistaActual.setDate(1);
 
-           todasLasCitas.forEach(cita => {
-               if (!cita.fechaHora) return;
-               let fecha = new Date(cita.fechaHora);
-               let diaStr = fecha.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase();
-               let horaStr = fecha.getHours().toString().padStart(2, '0');
-               
-               diasUnicos.add(diaStr);
-               
-               if (!agendaEstructurada[diaStr]) agendaEstructurada[diaStr] = {};
-               if (!agendaEstructurada[diaStr][horaStr]) agendaEstructurada[diaStr][horaStr] = { MANUEL: null, ALEJANDRO: null };
-               let nombreAgente = (cita.entregador || cita.agente || "MANUEL").toUpperCase();
-agendaEstructurada[diaStr][horaStr][nombreAgente] = cita;
-           });
-
-           let diasArray = Array.from(diasUnicos).sort();
-
-           if (diasArray.length === 0) {
-               div.innerHTML = `<div class="bg-white p-10 rounded-xl shadow-sm border border-gray-200 text-center"><p class="font-bold text-gray-500">No hay citas programadas próximamente.</p></div>`;
-               return;
-           }
-
-           let html = `
-           <div class="bg-white rounded-xl shadow-xl border border-[#001e50] overflow-hidden">
-               <div class="bg-[#001e50] text-white p-4 flex justify-between items-center">
-                  <h2 class="text-lg font-black tracking-widest uppercase flex items-center gap-2"><i class="ph-bold ph-calendar-grid-week text-2xl"></i> Cuadrante de Entregas</h2>
-                  <div class="flex gap-4 text-xs font-bold">
-                     <span class="flex items-center gap-1"><div class="w-3 h-3 bg-[#c9daf8] rounded-full border border-blue-300"></div> MANUEL</span>
-                     <span class="flex items-center gap-1"><div class="w-3 h-3 bg-[#f9cb9c] rounded-full border border-orange-300"></div> ALEJANDRO</span>
-                  </div>
-               </div>
-               <div class="overflow-x-auto">
-                 <table class="w-full text-left border-collapse">
-                   <thead>
-                     <tr>
-                       <th class="p-3 border-b-2 border-r-2 border-gray-200 bg-gray-50 text-center w-20"><i class="ph-bold ph-clock text-xl text-gray-400"></i></th>
-                       ${diasArray.map(dia => `<th class="p-3 border-b-2 border-r border-gray-200 bg-gray-50 text-center font-black text-[#001e50] min-w-[250px]">${dia}</th>`).join('')}
-                     </tr>
-                   </thead>
-                   <tbody>
-           `;
-
-           horasLaborales.forEach(hora => {
-               html += `<tr><td class="p-3 border-b border-r-2 border-gray-200 bg-gray-50 text-center font-black text-gray-600 text-lg align-top pt-4">${hora}:00</td>`;
-               diasArray.forEach(dia => {
-                   html += `<td class="p-2 border-b border-r border-gray-100 align-top">
-                               <div class="flex flex-col gap-2 h-full">`;
-                   let cM = agendaEstructurada[dia] && agendaEstructurada[dia][hora] ? agendaEstructurada[dia][hora].MANUEL : null;
-                   html += renderizarCeldaCita(cM, 'MANUEL', '#c9daf8', 'text-blue-900', 'border-blue-200');
-                   let cA = agendaEstructurada[dia] && agendaEstructurada[dia][hora] ? agendaEstructurada[dia][hora].ALEJANDRO : null;
-                   html += renderizarCeldaCita(cA, 'ALEJANDRO', '#f9cb9c', 'text-orange-900', 'border-orange-300');
-                   html += `   </div>
-                             </td>`;
-               });
-               html += `</tr>`;
-           });
-
-           html += `</tbody></table></div></div>`;
-           div.innerHTML = html;
+           dibujarCuadranteMes();
+           comprobarAtrasosGenerales();
 
        } catch (error) {
-           console.error(error);
-           div.innerHTML = `<div class="bg-red-50 p-10 rounded-xl shadow-sm border border-red-200 text-center"><p class="font-bold text-red-600">Error al conectar con el servidor de Outlook/Excel.</p></div>`;
+           console.error("Detalle del error en la conexión:", error);
+           div.innerHTML = `
+           <div class="bg-red-50 p-10 rounded-xl shadow-sm border border-red-200 text-center">
+               <p class="font-bold text-red-600 text-lg"><i class="ph-bold ph-warning-circle"></i> Error de conexión</p>
+               <p class="font-bold text-gray-600 mt-2">No se pudo leer la información del servidor.</p>
+               <p class="text-xs text-red-400 mt-4 font-mono bg-white p-2 rounded border border-red-100 inline-block">Motivo: ${error.message}</p>
+           </div>`;
        }
     }
 
-    function renderizarCeldaCita(cita, nombreAgente, bgColor, textColor, borderColor) {
+    window.cambiarMesAgenda = function(delta) {
+        window.mesVistaActual.setMonth(window.mesVistaActual.getMonth() + delta);
+        dibujarCuadranteMes();
+    }
+
+    function dibujarCuadranteMes() {
+        let div = document.getElementById('contenedorAgenda');
+        let agendaEstructurada = {};
+        const horasLaborales = ['10', '11', '12', '13', '16', '17', '18', '19'];
+
+        window.datosAgenda.forEach(cita => {
+            if (!cita.fechaHora) return;
+            let fecha = new Date(cita.fechaHora);
+            if (isNaN(fecha.getTime())) return;
+
+            let dateKey = fecha.getFullYear() + "-" + String(fecha.getMonth()+1).padStart(2,'0') + "-" + String(fecha.getDate()).padStart(2,'0');
+            let horaStr = fecha.getHours().toString().padStart(2, '0');
+
+            if (!agendaEstructurada[dateKey]) agendaEstructurada[dateKey] = {};
+            if (!agendaEstructurada[dateKey][horaStr]) agendaEstructurada[dateKey][horaStr] = { MANUEL: null, ALEJANDRO: null };
+
+            let nombreAgente = (cita.entregador || cita.agente || "MANUEL").toUpperCase();
+            agendaEstructurada[dateKey][horaStr][nombreAgente] = cita;
+        });
+
+        let anio = window.mesVistaActual.getFullYear();
+        let mes = window.mesVistaActual.getMonth();
+        let numDiasMes = new Date(anio, mes + 1, 0).getDate();
+
+        let diasArrayKeys = [];
+        for(let d = 1; d <= numDiasMes; d++) {
+            let cur = new Date(anio, mes, d);
+            if (cur.getDay() !== 0 && cur.getDay() !== 6) { 
+                let key = cur.getFullYear() + "-" + String(cur.getMonth()+1).padStart(2,'0') + "-" + String(cur.getDate()).padStart(2,'0');
+                diasArrayKeys.push(key);
+            }
+        }
+
+        const nombresMeses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+        let tituloMes = `${nombresMeses[mes]} ${anio}`;
+        let hoyKey = new Date().toISOString().split('T')[0];
+
+        let html = `
+        <div class="bg-white rounded-xl shadow-xl border border-[#001e50] flex flex-col h-[calc(100vh-140px)] w-full relative">
+            <div class="bg-[#001e50] text-white p-3 px-6 flex justify-between items-center shrink-0 z-30">
+               <h2 class="text-base font-black tracking-widest uppercase flex items-center gap-2">
+                 <i class="ph-bold ph-calendar-grid-week text-xl text-[#00b0f0]"></i> Cuadrante
+               </h2>
+               
+               <div class="flex items-center gap-4 bg-white/10 rounded-lg p-1.5 px-3 border border-white/20 shadow-sm backdrop-blur-sm">
+                   <button onclick="cambiarMesAgenda(-1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white transition-colors"><i class="ph-bold ph-caret-left text-xl"></i></button>
+                   <span class="font-black text-sm w-36 text-center tracking-widest">${tituloMes}</span>
+                   <button onclick="cambiarMesAgenda(1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white transition-colors"><i class="ph-bold ph-caret-right text-xl"></i></button>
+               </div>
+
+               <div class="flex gap-4 text-xs font-bold">
+                  <span class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-[#c9daf8] rounded-full border border-blue-300"></div> MANUEL</span>
+                  <span class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-[#f9cb9c] rounded-full border border-orange-300"></div> ALEJANDRO</span>
+               </div>
+            </div>
+            
+            <div class="overflow-auto flex-1 custom-scrollbar relative">
+              <table class="w-full text-left border-collapse min-w-max">
+                <thead class="sticky top-0 z-20 shadow-md">
+                  <tr>
+                    <th class="p-3 border-b-2 border-r-2 border-gray-200 bg-gray-100 text-center w-24 sticky left-0 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.15)]"><i class="ph-bold ph-clock text-2xl text-gray-400"></i></th>
+                    ${diasArrayKeys.map(dateKey => {
+                        let parts = dateKey.split('-');
+                        let fObj = new Date(parts[0], parts[1]-1, parts[2]);
+                        let diaSemana = fObj.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
+                        let diaNum = String(fObj.getDate()).padStart(2, '0');
+                        let isToday = (dateKey === hoyKey);
+                        let bgClass = isToday ? 'bg-blue-100 text-[#001e50]' : 'bg-white text-[#001e50]';
+                        
+                        return `<th class="p-2 border-b-2 border-r border-gray-200 ${bgClass} text-center min-w-[240px]">
+                                  <div class="font-black text-sm">${diaSemana}</div>
+                                  <div class="text-3xl font-black ${isToday ? 'text-[#00b0f0]' : ''}">${diaNum}</div>
+                                </th>`;
+                    }).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+        `;
+
+        horasLaborales.forEach(hora => {
+            html += `<tr>
+                        <td class="p-3 border-b border-r-2 border-gray-200 bg-gray-50 text-center font-black text-gray-500 text-xl align-top pt-4 sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                           ${hora}:00
+                        </td>`;
+            
+            diasArrayKeys.forEach(dateKey => {
+                let isToday = (dateKey === hoyKey);
+                let bgTd = isToday ? 'bg-blue-50/20' : 'bg-white';
+                
+                html += `<td class="p-2.5 border-b border-r border-gray-100 align-top ${bgTd} hover:bg-gray-50 transition-colors">
+                            <div class="flex flex-col gap-2 h-full">`;
+                
+                let cM = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].MANUEL : null;
+                let cA = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].ALEJANDRO : null;
+
+                if (hora === '19') {
+                    if (cM) html += renderizarCeldaCita(cM, 'MANUEL', '#c9daf8', 'text-blue-900', 'border-blue-200', true);
+                    else if (cA) html += renderizarCeldaCita(cA, 'ALEJANDRO', '#f9cb9c', 'text-orange-900', 'border-orange-300', true);
+                    else html += renderizarCeldaCita(null, 'ÚNICA ENTREGA', '#f3f4f6', 'text-gray-400', 'border-gray-300', true);
+                } else {
+                    html += renderizarCeldaCita(cM, 'MANUEL', '#c9daf8', 'text-blue-900', 'border-blue-200', false);
+                    html += renderizarCeldaCita(cA, 'ALEJANDRO', '#f9cb9c', 'text-orange-900', 'border-orange-300', false);
+                }
+
+                html += `   </div>
+                          </td>`;
+            });
+            html += `</tr>`;
+        });
+
+        html += `</tbody></table></div></div>`;
+        div.innerHTML = html;
+    }
+
+    function renderizarCeldaCita(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
+       let alturaClase = esUnico ? "min-h-[190px]" : "min-h-[110px]";
+
        if (!cita) {
-           return `<div class="flex-1 border border-dashed border-gray-300 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center min-h-[80px] opacity-50 hover:opacity-100 transition-opacity cursor-pointer group" title="Hueco Libre - ${nombreAgente}">
-                      <span class="text-[10px] font-bold text-gray-400 group-hover:text-gray-600 uppercase tracking-widest">+ LIBRE</span>
+           return `<div onclick="window.open('https://outlook.office.com/book/EntregasVWMadrid@porscheholding.onmicrosoft.com/?ismsaljsauthenabled', '_blank')" 
+                        class="flex-1 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center ${alturaClase} opacity-60 hover:opacity-100 transition-all cursor-pointer group hover:bg-[#00b0f0]/10 hover:border-[#00b0f0]" 
+                        title="Hueco Libre - ${nombreAgente} - Clic para agendar en Bookings">
+                      <span class="text-[11px] font-black text-gray-400 group-hover:text-[#001e50] uppercase tracking-widest flex items-center gap-1.5"><i class="ph-bold ph-plus-circle text-sm"></i> Agendar ${esUnico ? '(Última)' : ''}</span>
                    </div>`;
        }
-       let cocheEnBaseDatos = todosLosCoches.find(c => c.B === cita.matricula || (c.A && c.A === cita.bastidor));
-       let estaRetenido = cocheEnBaseDatos && ((cocheEnBaseDatos.enTaller && !cocheEnBaseDatos.finTaller) || (cocheEnBaseDatos.enRecambios && !cocheEnBaseDatos.finRecambios));
        
-       let alertaVisual = estaRetenido 
-           ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse cursor-pointer" onclick="comprobarAlertaEntrega('${cita.matricula}', '${cita.modelo}')" title="Vehículo bloqueado. Haz clic para Reagendar."><i class="ph-bold ph-warning"></i></div>` 
+       let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '') : '';
+       let basCita = cita.bastidor ? String(cita.bastidor).toUpperCase() : '';
+       
+       let cocheEnBaseDatos = todosLosCoches.find(c => (c.B && c.B.replace(/\s/g, '') === matCita) || (c.A && c.A === basCita));
+       
+       let yaEntregado = cocheEnBaseDatos && cocheEnBaseDatos.entregado;
+       let estaRetenido = cocheEnBaseDatos && !yaEntregado && ((cocheEnBaseDatos.enTaller && !cocheEnBaseDatos.finTaller) || (cocheEnBaseDatos.enRecambios && !cocheEnBaseDatos.finRecambios));
+       
+       let ahora = new Date();
+       let fechaCitaObj = new Date(cita.fechaHora);
+       let esPasada = fechaCitaObj < ahora;
+
+       let alertaVisual = '';
+       
+       if (esPasada && !yaEntregado) {
+           let diaStr = fechaCitaObj.toLocaleDateString('es-ES');
+           let horaStr = fechaCitaObj.getHours() + ":00h";
+           let idFb = cocheEnBaseDatos ? cocheEnBaseDatos.fila : 'no_db';
+           let modeloSeguro = cita.modelo ? String(cita.modelo).replace(/['"]/g, "") : "Coche";
+           let matriculaSegura = cita.matricula ? String(cita.matricula).replace(/['"]/g, "") : "S/M";
+           
+           alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}')" title="Fecha pasada. ¿Se entregó el coche?"><i class="ph-bold ph-question text-lg"></i></div>`;
+           borderColor = "border-[#00b0f0] border-2"; 
+       } else if (estaRetenido) {
+           alertaVisual = `<div class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse cursor-pointer z-10" onclick="comprobarAlertaEntrega('${cita.matricula}', '${cita.modelo}')" title="Vehículo bloqueado. Haz clic para Reagendar."><i class="ph-bold ph-warning"></i></div>`;
+       }
+
+       let textoVO = (cita.entregaVO) ? String(cita.entregaVO).toUpperCase().trim() : '';
+       let tagVO = (textoVO === 'SÍ' || textoVO === 'SI') 
+           ? `<span class="bg-purple-200 text-purple-900 border border-purple-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest flex items-center gap-0.5"><i class="ph-bold ph-car-profile"></i> RETOMA VO</span>` 
            : '';
 
+       let opacidad = yaEntregado ? "opacity-50" : "opacity-100";
+
        return `
-       <div class="flex-1 rounded-lg p-2.5 relative border shadow-sm min-h-[80px] flex flex-col justify-between" style="background-color: ${bgColor}; border-color: ${borderColor};">
+       <div class="flex-1 rounded-lg p-2.5 relative border shadow-sm ${alturaClase} ${opacidad} flex flex-col justify-between hover:shadow-md transition-all" style="background-color: ${bgColor}; border-color: ${borderColor};">
           ${alertaVisual}
           <div>
             <div class="flex justify-between items-start mb-1">
-              <h4 class="font-black text-xs ${textColor} uppercase leading-tight line-clamp-1" title="${cita.modelo}">${cita.modelo}</h4>
+              <h4 class="font-black text-[11px] ${textColor} uppercase leading-tight line-clamp-1 flex-1" title="${cita.modelo}">${cita.modelo}</h4>
+              ${tagVO}
             </div>
-            <p class="font-bold text-[10px] bg-white/60 px-1.5 py-0.5 rounded text-gray-800 w-max tracking-widest shadow-sm">${cita.matricula}</p>
+            <div class="flex items-center gap-1.5 mb-1 flex-wrap">
+               <p class="font-bold text-[10px] bg-white/80 px-1.5 py-0.5 rounded text-gray-900 w-max tracking-widest shadow-sm">${cita.matricula}</p>
+               <p class="font-mono text-[9px] text-gray-500 bg-white/50 px-1 py-0.5 rounded border border-gray-200">VIN: ${cita.bastidor || 'S/M'}</p>
+            </div>
           </div>
-          <div class="mt-2 text-[9px] font-bold ${textColor} leading-tight border-t border-white/40 pt-1">
-             <p class="truncate uppercase"><i class="ph-fill ph-user"></i> ${cita.cliente}</p>
-             <p class="truncate uppercase mt-0.5"><i class="ph-fill ph-buildings"></i> ${cita.renting}</p>
+          <div class="mt-1 text-[9px] font-bold ${textColor} leading-tight border-t border-black/10 pt-1.5 space-y-1">
+             <p class="truncate uppercase flex items-center gap-1" title="${cita.cliente}"><i class="ph-fill ph-user text-xs"></i> ${cita.cliente}</p>
+             <p class="truncate uppercase flex items-center gap-1"><i class="ph-fill ph-phone text-xs"></i> ${cita.telefono || 'S/N'}</p>
+             <p class="truncate uppercase flex items-center gap-1" title="${cita.renting}"><i class="ph-fill ph-buildings text-xs"></i> ${cita.renting}</p>
           </div>
        </div>`;
     }
 
-    // Función de alerta que se lanza desde el cuadrante si hay retención
-    window.comprobarAlertaEntrega = function(matricula, modelo) {
+    // ==========================================
+    // ALERTAS, PREGUNTAS Y LIMPIEZA
+    // ==========================================
+    window.comprobarAtrasosGenerales = function() {
+        let atrasados = [];
+        let ahora = new Date();
+
+        window.datosAgenda.forEach(cita => {
+            if (!cita.fechaHora) return;
+            let fechaCita = new Date(cita.fechaHora);
+            let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '') : '';
+            let basCita = cita.bastidor ? String(cita.bastidor).toUpperCase() : '';
+            let cocheEnBaseDatos = todosLosCoches.find(c => (c.B && c.B.replace(/\s/g, '') === matCita) || (c.A && c.A === basCita));
+
+            let yaEntregado = cocheEnBaseDatos && cocheEnBaseDatos.entregado;
+
+            if (fechaCita < ahora && !yaEntregado) {
+                let modeloLimpio = cita.modelo ? cita.modelo : "Vehículo";
+                let matLimpia = cita.matricula ? cita.matricula : "S/M";
+                atrasados.push(`<b>${matLimpia}</b> - ${modeloLimpio}`);
+            }
+        });
+
+        if (atrasados.length > 0) {
+            let listaUnica = [...new Set(atrasados)];
+            Swal.fire({
+                title: '¡Aviso de Entregas Pendientes!',
+                html: `<p class="mb-3 text-gray-600">Tienes <b>${listaUnica.length}</b> entrega(s) con fecha pasada pendientes de confirmar:</p>
+                       <div class="text-sm text-left bg-blue-50 p-3 rounded-lg border border-blue-200 max-h-40 overflow-y-auto">
+                         <ul class="list-disc pl-5 space-y-1 text-[#001e50]">
+                           <li>${listaUnica.join('</li><li>')}</li>
+                         </ul>
+                       </div>
+                       <p class="mt-4 text-xs text-gray-500 font-bold"><i class="ph-bold ph-info"></i> Revisa los iconos azules (?) en tu cuadrante.</p>`,
+                icon: 'info', confirmButtonColor: '#001e50', confirmButtonText: 'Entendido'
+            });
+        }
+    };
+
+    window.preguntarSiEntregado = function(idFirebase, modelo, matricula, dia, hora) {
         Swal.fire({
-            title: '⚠️ ALERTA: ENTREGA INMINENTE',
-            text: `El coche ${modelo} (${matricula}) se entrega pronto y sigue bloqueado en Taller o Recambios. ¿Deseas reagendar la cita?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#001e50',
-            confirmButtonText: 'Ir a Bookings',
-            cancelButtonText: 'Cerrar'
+            title: '¿ENTREGA COMPLETADA?',
+            text: `Este coche (${modelo} - ${matricula}) se tenía que haber entregado el día ${dia} a las ${hora}. ¿Ha sido entregado?`,
+            icon: 'question', showCancelButton: true, showDenyButton: true,
+            confirmButtonColor: '#10b981', denyButtonColor: '#f59e0b', cancelButtonColor: '#6b7280',
+            confirmButtonText: '<i class="ph-bold ph-check-circle"></i> SÍ, ENTREGADO',
+            denyButtonText: '<i class="ph-bold ph-calendar-plus"></i> NO, REAGENDAR', cancelButtonText: 'Cerrar'
         }).then((result) => {
             if (result.isConfirmed) {
-                window.open("https://outlook.office.com/book/EntregasVWMadrid@porscheholding.onmicrosoft.com/?ismsaljsauthenabled", "_blank");
+                if (idFirebase !== 'no_db') {
+                    window.updateDoc(window.doc(window.db, "vehiculos", idFirebase), { entregado: true, fechaEntrega: new Date().toLocaleDateString() });
+                    Swal.fire('¡Perfecto!', 'El coche se ha movido al Historial de Entregados.', 'success');
+                } else { Swal.fire('Aviso', 'Este coche no consta en el Inventario, pero la alerta desaparecerá mañana.', 'info'); }
+            } else if (result.isDenied) {
+                window.open("https://outlook.office.com/bookings/calendar?b=EntregasVWMadrid@porscheholding.onmicrosoft.com", "_blank");
             }
         });
     };
 
+    window.comprobarAlertaEntrega = function(matricula, modelo) {
+        Swal.fire({
+            title: '⚠️ ALERTA: ENTREGA INMINENTE',
+            text: `El coche ${modelo} (${matricula}) se entrega pronto y sigue bloqueado en Taller o Recambios. ¿Deseas ir al calendario para editar la cita?`,
+            icon: 'warning', showCancelButton: true, confirmButtonColor: '#001e50',
+            confirmButtonText: 'Ir a Mis Citas (Bookings)', cancelButtonText: 'Cerrar'
+        }).then((result) => {
+            if (result.isConfirmed) window.open("https://outlook.office.com/bookings/calendar?b=EntregasVWMadrid@porscheholding.onmicrosoft.com", "_blank");
+        });
+    };
+
+    // ==========================================
+    // SECCIÓN DE AUDITORÍA (LIMPIEZA DE BASE DE DATOS)
+    // ==========================================
+    function renderAuditoria() {
+       let lista = document.getElementById('listaAuditoria');
+       let activos = todosLosCoches.filter(c => !c.entregado);
+       
+       lista.innerHTML = activos.map(c => `
+          <label class="flex items-center gap-4 p-3 border-b border-gray-100 hover:bg-red-50/50 cursor-pointer transition-colors rounded-lg">
+             <input type="checkbox" class="check-limpieza w-5 h-5 accent-red-600 cursor-pointer" value="${c.fila}">
+             <div class="flex-1">
+                <p class="font-bold text-sm text-gray-800">${c.C} - <span class="text-[#001e50] bg-gray-100 px-2 py-0.5 rounded border border-gray-200">${c.B}</span></p>
+                <p class="text-[10px] text-gray-500 font-mono mt-1">VIN: ${c.A}</p>
+             </div>
+          </label>
+       `).join('');
+    }
+
+    async function ejecutarLimpieza() {
+       let seleccionados = Array.from(document.querySelectorAll('.check-limpieza:checked')).map(cb => cb.value);
+       let activos = todosLosCoches.filter(c => !c.entregado);
+       let aBorrar = activos.filter(c => !seleccionados.includes(c.fila));
+
+       if (aBorrar.length === 0) {
+           Swal.fire('Atención', 'Has marcado todos los coches, por lo que no se eliminará ninguno.', 'info');
+           return;
+       }
+
+       const confirm = await Swal.fire({
+           title: `¿BORRAR ${aBorrar.length} COCHES?`,
+           text: "Esta acción no se puede deshacer. Los coches que NO has seleccionado se eliminarán permanentemente.",
+           icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6b7280',
+           confirmButtonText: '<i class="ph-bold ph-trash"></i> SÍ, BORRAR TODO LO DESMARCADO', cancelButtonText: 'Cancelar'
+       });
+
+       if (confirm.isConfirmed) {
+           Swal.fire({title: 'Borrando...', didOpen: () => Swal.showLoading()});
+           for (let c of aBorrar) {
+               await window.deleteDoc(window.doc(window.db, "vehiculos", c.fila));
+           }
+           Swal.fire('¡Limpieza realizada!', `Se han borrado ${aBorrar.length} vehículos obsoletos.`, 'success');
+           setTimeout(() => cambiarPestana('todos'), 1500);
+       }
+    }
+
+    // ==========================================
+    // RESTO DE FUNCIONES MENORES
+    // ==========================================
     function renderEntregados() {
        let entregados = todosLosCoches.filter(c => c.entregado);
        let div = document.getElementById('contenedorTarjetas');
@@ -748,6 +982,18 @@ agendaEstructurada[diaStr][horaStr][nombreAgente] = cita;
                 </div>
              </div>`).join('');
        }
+    }
+
+    window.marcarComoEntregado = function(id) {
+       Swal.fire({
+           title: '¿Marcar como Entregado?', text: "El vehículo pasará al historial de entregados.", icon: 'question',
+           showCancelButton: true, confirmButtonColor: '#10b981', confirmButtonText: 'Sí, Entregar'
+       }).then(async (result) => {
+           if (result.isConfirmed) {
+               await window.updateDoc(window.doc(window.db, "vehiculos", id), { entregado: true, fechaEntrega: new Date().toLocaleDateString() });
+               Swal.fire('¡Entregado!', '', 'success');
+           }
+       });
     }
 
     function filtrarCoches() {
@@ -844,7 +1090,7 @@ agendaEstructurada[diaStr][horaStr][nombreAgente] = cita;
        Swal.close();
     }
 
-    async function editarRentingAgencia(id, rActual, aActual) {
+    window.editarRentingAgencia = async function(id, rActual, aActual) {
         const { value: formValues } = await Swal.fire({
             title: 'Renting / Agencia',
             html: `<input id="swal-renting" class="swal2-input uppercase" placeholder="Empresa Renting..." value="${rActual || ''}"><input id="swal-agencia" class="swal2-input uppercase" placeholder="Agencia Transporte..." value="${aActual || ''}">`,
@@ -858,7 +1104,7 @@ agendaEstructurada[diaStr][horaStr][nombreAgente] = cita;
         }
     }
 
-    function pedirInst(btn, idCoche, depto) {
+    window.pedirInst = function(btn, idCoche, depto) {
       Swal.fire({
         title: 'Enviar a ' + depto.charAt(0).toUpperCase() + depto.slice(1),
         html: `<input type="text" id="instInput" class="swal2-input" placeholder="Escribe el Motivo/Instrucción..."><br><input type="file" id="fileInput" class="mt-4 text-sm w-3/4" accept=".pdf,image/*">`,
@@ -893,26 +1139,21 @@ agendaEstructurada[diaStr][horaStr][nombreAgente] = cita;
       await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
     }
 
-    async function abrirChat(id, mod, mat, jsonStr) {
+    window.abrirChat = async function(id, mod, mat, jsonStr) {
       document.getElementById('chatFilaActiva').value = id;
       document.getElementById('chatTituloCoche').innerText = decodeURIComponent(mod);
       document.getElementById('chatSubtitulo').innerText = "Matrícula: " + decodeURIComponent(mat);
       
       let chatObj = { history: [], lastOpened: {} }; 
-      try { 
-         if (jsonStr && jsonStr !== "undefined") { 
-             chatObj = JSON.parse(decodeURIComponent(jsonStr)); 
-         } 
-      } catch(e) {}
+      try { if (jsonStr && jsonStr !== "undefined") { chatObj = JSON.parse(decodeURIComponent(jsonStr)); } } catch(e) {}
       
-      let updateData = {};
-      updateData[`chatInfo.lastOpened.${userRole.toUpperCase()}`] = new Date().getTime();
+      let updateData = {}; updateData[`chatInfo.lastOpened.${userRole.toUpperCase()}`] = new Date().getTime();
       window.updateDoc(window.doc(window.db, "vehiculos", id), updateData).catch(e=>console.log(e));
 
       dibujarMsj(chatObj.history); document.getElementById('chatModal').classList.remove('hidden');
     }
 
-    function cerrarChat() { document.getElementById('chatModal').classList.add('hidden'); }
+    window.cerrarChat = function() { document.getElementById('chatModal').classList.add('hidden'); }
 
     function dibujarMsj(hist) {
       const cont = document.getElementById('chatMessages');
@@ -926,7 +1167,7 @@ agendaEstructurada[diaStr][horaStr][nombreAgente] = cita;
       setTimeout(() => cont.scrollTop = cont.scrollHeight, 50);
     }
 
-    async function enviarMensajeChat() {
+    window.enviarMensajeChat = async function() {
       const input = document.getElementById('chatInput'); const id = document.getElementById('chatFilaActiva').value; const txt = input.value.trim();
       if (!id || !txt) return; input.value = "";
       
