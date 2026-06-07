@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>CASTELLANA WAGEN M-40 - Control Vehículos</title>
+  <title>VCastellana Wagen M-40 - Control de Vehículos</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -64,23 +64,37 @@
 <body class="text-gray-800 antialiased h-screen flex overflow-hidden">
 
   <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-200">
-    <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-sm border-t-8 border-[#001e50] text-center">
-      <i class="ph-fill ph-car-profile text-5xl text-[#001e50] mb-4"></i>
-      <h1 class="text-2xl font-black text-[#001e50] mb-6 uppercase tracking-tight">VW System</h1>
-      <select id="userRole" class="w-full p-4 mb-4 bg-gray-50 border border-gray-300 rounded-xl font-bold outline-none focus:ring-2 focus:ring-[#00b0f0]">
-        <option value="entregas">Dpto. Entregas / Jefatura</option>
-        <option value="taller">Dpto. Taller</option>
-        <option value="recambios">Dpto. Recambios</option>
-      </select>
-      <input type="password" id="userPass" placeholder="Clave de acceso" class="w-full p-4 mb-6 bg-gray-50 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-[#00b0f0] font-medium">
-      <button onclick="iniciar()" class="w-full bg-[#001e50] text-white font-bold py-4 rounded-xl hover:bg-blue-900 transition-colors shadow-lg">Entrar al Sistema</button>
+<div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50">
+    <div class="bg-white w-full h-full flex flex-col items-center justify-center p-8 border-t-[20px] border-[#001e50] text-center">
+        
+        <div class="mb-12 w-full max-w-md">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/6/6d/Volkswagen_logo_2019.svg" class="w-32 h-32 mx-auto mb-6" alt="VW">
+            <h2 class="text-xl font-black text-[#001e50] uppercase tracking-[0.3em]">Castellana Wagen M-40</h2>
+        </div>
+
+        <div class="w-full max-w-sm space-y-4">
+            <select id="userRole" class="w-full p-4 bg-gray-50 border border-gray-300 rounded-lg font-bold text-base outline-none focus:ring-2 focus:ring-[#00b0f0]">
+                <option value="entregas">Dpto. Entregas</option>
+                <option value="taller">Dpto. Taller</option>
+                <option value="recambios">Dpto. Recambios</option>
+            </select>
+
+            <input type="password" id="userPass" placeholder="Clave de acceso" class="w-full p-4 bg-gray-50 border border-gray-300 rounded-lg text-base outline-none focus:ring-2 focus:ring-[#00b0f0] font-medium">
+
+            <button onclick="iniciar()" class="w-full bg-[#001e50] text-white font-black py-4 rounded-lg hover:bg-blue-900 transition-all shadow-lg uppercase tracking-widest text-lg">
+                Entrar al Sistema
+            </button>
+        </div>
+
+    </div>
+</div>
     </div>
   </div>
 
   <aside class="w-64 bg-[#001e50] text-white flex flex-col z-20 shadow-2xl" id="sidebarApp" style="display:none;">
     <div class="p-6 border-b border-white/10 text-center">
-      <h2 class="text-3xl font-black tracking-tighter">VW WAGEN</h2>
-      <p class="text-[10px] text-gray-300 font-bold uppercase tracking-widest mt-1">Gestión Interna</p>
+      <h2 class="text-3xl font-black tracking-tighter">Castellana Wagen M-40</h2>
+      <p class="text-[10px] text-gray-300 font-bold uppercase tracking-widest mt-1">Gestión de Vehículos</p>
     </div>
     <nav id="tabsEntregas" class="hidden flex-col p-4 gap-2 flex-1">
       <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1">Pre-Recepción</p>
@@ -143,19 +157,25 @@
       <div id="contenedorTabla" class="hidden w-full bg-white rounded-lg shadow-sm border border-gray-300 overflow-auto" style="max-height: calc(100vh - 190px);"></div>
       <div id="contenedorAgenda" class="hidden max-w-full mx-auto w-full"></div>
       
-      <div id="contenedorAuditoria" class="hidden w-full max-w-4xl mx-auto">
-          <div class="bg-white p-6 rounded-xl shadow-lg border border-red-200">
-              <h2 class="text-xl font-black text-red-600 flex items-center gap-2 uppercase mb-4"><i class="ph-bold ph-trash"></i> Auditoría de Inventario</h2>
-              <p class="text-sm text-gray-600 mb-6">Selecciona <b>SOLO los coches que tienes realmente en stock</b>. Todos los que no marques serán eliminados permanentemente del sistema al confirmar.</p>
-              
-              <div id="listaAuditoria" class="max-h-[500px] overflow-y-auto border border-gray-200 rounded-lg p-4 mb-6"></div>
-              
-              <button onclick="ejecutarLimpieza()" class="w-full bg-red-600 text-white font-black py-4 rounded-xl hover:bg-red-700 transition-all shadow-lg uppercase tracking-widest">
-                  Eliminar todo lo no seleccionado
-              </button>
-          </div>
-      </div>
+     <div id="contenedorAuditoria" class="hidden w-full max-w-4xl mx-auto">
+    <div class="bg-white p-6 rounded-xl shadow-lg border border-red-200">
+        <h2 class="text-xl font-black text-red-600 flex items-center gap-2 uppercase mb-4">
+            <i class="ph-bold ph-trash"></i> Auditoría de Inventario
+        </h2>
+        
+        <input type="text" id="searchAuditoria" oninput="renderAuditoria(this.value)" 
+               placeholder="🔍 Buscar por matrícula o bastidor..." 
+               class="w-full p-3 mb-4 border border-gray-300 rounded-lg text-sm font-bold focus:ring-2 focus:ring-red-200 outline-none">
+        
+        <p class="text-sm text-gray-600 mb-6">Selecciona <b>SOLO los coches que tienes realmente en stock</b>. Todos los que no marques serán eliminados permanentemente.</p>
+        
+        <div id="listaAuditoria" class="max-h-[500px] overflow-y-auto border border-gray-200 rounded-lg p-4 mb-6"></div>
+        
+        <button onclick="ejecutarLimpieza()" class="w-full bg-red-600 text-white font-black py-4 rounded-xl hover:bg-red-700 transition-all shadow-lg uppercase tracking-widest">
+            Eliminar todo lo no seleccionado
+        </button>
     </div>
+</div>
   </main>
 
   <input type="file" id="inputUploadPDF" accept=".pdf" multiple class="hidden" onchange="procesarPDFs(event)">
@@ -490,7 +510,10 @@
              <td class="text-center flex items-center justify-center gap-3 pt-2 pb-2 px-2">
                 <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="text-[#25D366] hover:scale-110 relative"><i class="ph-fill ph-whatsapp-logo text-xl"></i>${obtenerBurbujaChat(c.chatData)}</button>
                 <button onclick="marcarComoEntregado('${c.fila}')" class="text-gray-400 hover:text-emerald-600" title="Entregar"><i class="ph-bold ph-key text-xl"></i></button>
-             </td>
+                <button onclick="borrarVehiculo('${c.fila}', '${c.C}')" class="text-red-400 hover:text-red-600" title="Eliminar vehículo">
+    <i class="ph-bold ph-trash text-xl"></i>
+</button>
+                </td>
           </tr>`;
        });
        html += `</tbody></table>`; contenedor.innerHTML = html;
@@ -519,7 +542,10 @@
           <div class="flex gap-1 flex-shrink-0">
              <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${obtenerBurbujaChat(c.chatData)}</button>
              <button onclick="marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors"><i class="ph-bold ph-key text-lg"></i></button>
-          </div>
+             <button onclick="borrarVehiculo('${c.fila}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar">
+    <i class="ph-bold ph-trash text-lg"></i>
+</button>      
+             </div>
         </div>
         
         <div class="flex gap-2 mb-3">
@@ -983,7 +1009,24 @@
              </div>`).join('');
        }
     }
+window.borrarVehiculo = async function(id, modelo) {
+    const result = await Swal.fire({
+        title: '¿Estás seguro?',
+        text: `Vas a eliminar permanentemente el vehículo: ${modelo}. No se podrá deshacer.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, borrar',
+        cancelButtonText: 'Cancelar'
+    });
 
+    if (result.isConfirmed) {
+        await window.deleteDoc(window.doc(window.db, "vehiculos", id));
+        Swal.fire('Borrado', 'El vehículo ha sido eliminado del sistema.', 'success');
+        // No hace falta recargar, Firestore detectará el cambio y actualizará la lista solo
+    }
+}
     window.marcarComoEntregado = function(id) {
        Swal.fire({
            title: '¿Marcar como Entregado?', text: "El vehículo pasará al historial de entregados.", icon: 'question',
@@ -1179,6 +1222,37 @@
       
       await window.updateDoc(ref, updateData);
     }
+    window.migrarTodosALogistica = async function() {
+    // Filtramos solo los que están actualmente en inventario (pasoAInventario === true) y no entregados
+    const cochesAConvertir = todosLosCoches.filter(c => c.pasoAInventario === true && !c.entregado);
+
+    if (cochesAConvertir.length === 0) {
+        Swal.fire('Información', 'No hay coches en inventario para mover a logística.', 'info');
+        return;
+    }
+
+    const confirm = await Swal.fire({
+        title: `¿Mover ${cochesAConvertir.length} coches a Logística?`,
+        text: "Esto cambiará el estado de todos tus coches en Inventario a Logística de forma automática.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Sí, mover todos'
+    });
+
+    if (confirm.isConfirmed) {
+        Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+        
+        for (let c of cochesAConvertir) {
+            // Actualizamos en Firebase
+            await window.updateDoc(window.doc(window.db, "vehiculos", c.fila), { 
+                pasoAInventario: false 
+            });
+        }
+        
+        Swal.fire('¡Éxito!', `Se han movido ${cochesAConvertir.length} vehículos a Logística.`, 'success');
+    }
+}
   </script>
 </body>
 </html>
