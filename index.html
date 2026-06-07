@@ -2,23 +2,19 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Castellana Wagen M-40 - Panel Operativo Entregas</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <title>VW Workspace - Control Operativo</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { theme: { extend: { colors: { vw: { blue: '#001e50', light: '#00b0f0', bg: '#f4f7f9' }, wa: { bg: '#e5ddd5', me: '#dcf8c6', other: '#ffffff' } }, fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
-  </script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    
     const firebaseConfig = {
       apiKey: "AIzaSyCRfERugbIVfAXtKa7mGdLLTm6xwxb5wlE",
       authDomain: "gestion-flotas-vw.firebaseapp.com",
@@ -30,92 +26,126 @@
 
     const app = initializeApp(firebaseConfig);
     window.db = getFirestore(app);
-    window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc;
+    window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; window.arrayUnion = arrayUnion;
   </script>
 
   <style>
-    body { background-color: var(--vw-bg); }
+    body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; }
+    .card-mini { background: white; border-radius: 12px; border: 1px solid #e2e8f0; transition: transform 0.2s; display: flex; flex-direction: column; }
+    .card-mini:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #001e50; }
+    .status-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; width: 100%; }
     
-    .card-mini { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #e2e8f0; transition: all 0.2s; display: flex; flex-direction: column; }
-    .card-mini:hover { transform: translateY(-3px); box-shadow: 0 10px 15px rgba(0,0,0,0.05); border-color: #cbd5e1; }
-    
-    .status-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; width: 100%; }
-    .status-btn:active { transform: scale(0.96); }
-    
+    .tabla-excel { width: 100%; min-width: max-content; border-collapse: separate; border-spacing: 0; font-size: 11px; background: white; }
+    .tabla-excel th { background-color: #001e50; color: white; font-weight: bold; text-transform: uppercase; padding: 10px 12px; border: 1px solid #cbd5e1; border-top: none; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.2); }
+    .tabla-excel th:first-child { border-left: none; }
+    .tabla-excel th:last-child { border-right: none; }
+    .tabla-excel td { padding: 6px 12px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; color: #1e293b; vertical-align: middle; }
+    .tabla-excel td:first-child { border-left: 1px solid #e2e8f0; }
+    .tabla-excel tr:nth-child(even) td { background-color: #f8fafc; }
+    .tabla-excel tr:hover td { background-color: #e0f2fe; }
+
+    .excel-check { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 2px solid #94a3b8; border-radius: 3px; margin-right: 6px; font-size: 12px; font-weight: bold; background: white;}
+    .check-curso { border-color: #f59e0b; color: #f59e0b; }
+    .check-fin { border-color: #10b981; color: white; background-color: #10b981; }
+
     .bg-whatsapp { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-repeat: repeat; }
-    .wa-bubble { position: relative; padding: 6px 12px 20px 12px; border-radius: 8px; font-size: 14px; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); max-width: 85%; }
-    .wa-time { position: absolute; bottom: 4px; right: 8px; font-size: 10px; color: #667781; }
-    .wa-me { background-color: #dcf8c6; border-top-right-radius: 0; }
-    .wa-me::before { content: ""; position: absolute; top: 0; right: -8px; width: 0; height: 0; border-top: 10px solid #dcf8c6; border-right: 10px solid transparent; }
-    .wa-other { background-color: #ffffff; border-top-left-radius: 0; }
-    .wa-other::before { content: ""; position: absolute; top: 0; left: -8px; width: 0; height: 0; border-top: 10px solid #ffffff; border-left: 10px solid transparent; }
-    
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+    .wa-bubble { position: relative; padding: 6px 12px 20px 12px; border-radius: 8px; font-size: 13px; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); max-width: 85%; }
+    .wa-time { position: absolute; bottom: 4px; right: 8px; font-size: 9px; color: #667781; }
+    .wa-me { background-color: #dcf8c6; border-top-right-radius: 0; align-self: flex-end; }
+    .wa-other { background-color: #ffffff; border-top-left-radius: 0; align-self: flex-start; }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px;} 
+    ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; border: 2px solid #f1f5f9; }
+    ::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
   </style>
 </head>
 <body class="text-gray-800 antialiased h-screen flex overflow-hidden">
 
   <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-200">
-    <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-sm border-t-8 border-vw-blue text-center">
-      <i class="ph-fill ph-car-profile text-5xl text-vw-blue mb-4"></i>
-      <h1 class="text-2xl font-black text-gray-900 mb-6 uppercase tracking-tight">Castellana Wagen M-40 Departamento de entregas</h1>
-      <select id="userRole" class="w-full p-4 mb-4 bg-gray-50 border border-gray-300 rounded-xl font-bold outline-none focus:ring-2 focus:ring-vw-light">
-        <option value="taller">Taller</option><option value="recambios">Recambios</option><option value="entregas">Entregas</option>
+    <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-sm border-t-8 border-[#001e50] text-center">
+      <i class="ph-fill ph-car-profile text-5xl text-[#001e50] mb-4"></i>
+      <h1 class="text-2xl font-black text-[#001e50] mb-6 uppercase tracking-tight">VW System</h1>
+      <select id="userRole" class="w-full p-4 mb-4 bg-gray-50 border border-gray-300 rounded-xl font-bold outline-none focus:ring-2 focus:ring-[#00b0f0]">
+        <option value="entregas">Dpto. Entregas / Jefatura</option>
+        <option value="taller">Dpto. Taller</option>
+        <option value="recambios">Dpto. Recambios</option>
       </select>
-      <input type="password" id="userPass" placeholder="Clave de acceso" class="w-full p-4 mb-6 bg-gray-50 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-vw-light font-medium">
-      <button onclick="iniciar()" class="w-full bg-vw-blue text-white font-bold py-4 rounded-xl hover:bg-blue-900 transition-colors shadow-lg">Acceder</button>
+      <input type="password" id="userPass" placeholder="Clave de acceso" class="w-full p-4 mb-6 bg-gray-50 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-[#00b0f0] font-medium">
+      <button onclick="iniciar()" class="w-full bg-[#001e50] text-white font-bold py-4 rounded-xl hover:bg-blue-900 transition-colors shadow-lg">Entrar al Sistema</button>
     </div>
   </div>
 
-  <aside class="w-64 bg-vw-blue text-white flex flex-col z-20 shadow-2xl" id="sidebarApp" style="display:none;">
-    <div class="p-6 border-b border-white/10">
-      <h2 class="text-2xl font-black tracking-tighter">Castellana Wagen M-40</h2>
-      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Portal Entregas</p>
+  <aside class="w-64 bg-[#001e50] text-white flex flex-col z-20 shadow-2xl" id="sidebarApp" style="display:none;">
+    <div class="p-6 border-b border-white/10 text-center">
+      <h2 class="text-3xl font-black tracking-tighter">VW WAGEN</h2>
+      <p class="text-[10px] text-gray-300 font-bold uppercase tracking-widest mt-1">Gestión Interna</p>
     </div>
     <nav id="tabsEntregas" class="hidden flex-col p-4 gap-2 flex-1">
-      <button onclick="cambiarPestana('todos')" class="p-3 bg-white/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all shadow-sm"><i class="ph-bold ph-squares-four text-lg"></i> Vehículos</button>
-      <button onclick="cambiarPestana('agenda')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-lg"></i> Citas Programadas</button>
+      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1">Pre-Recepción</p>
+      <button onclick="cambiarPestana('logistica')" class="p-3 text-amber-300 bg-amber-500/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all border border-amber-500/30 mb-4"><i class="ph-bold ph-truck text-lg"></i> Logística Renting</button>
+      
+      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1">Concesionario</p>
+      <button onclick="cambiarPestana('todos')" class="p-3 bg-white/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all shadow-sm"><i class="ph-bold ph-squares-four text-lg"></i> Inventario Total</button>
+      <button onclick="cambiarPestana('agenda')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-lg"></i> Agenda Citas</button>
+      <button onclick="cambiarPestana('entregados')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-4 border border-white/20"><i class="ph-bold ph-check-square-offset text-lg"></i> Historial Entregados</button>
     </nav>
-    <div class="p-6 bg-black/20 mt-auto">
-      <p class="text-[10px] text-gray-400 uppercase font-bold">Usuario Activo</p>
-      <p id="roleBadge" class="font-bold text-sm uppercase"></p>
+    <div class="p-6 bg-black/20 mt-auto border-t border-white/10">
+      <p id="roleBadge" class="font-bold text-sm uppercase text-white"></p>
       <button onclick="cerrarSesion()" class="mt-4 text-xs text-red-400 hover:text-red-300 font-bold flex items-center gap-1 p-2 rounded-lg hover:bg-red-500/10 transition-colors"><i class="ph-bold ph-power"></i> Cerrar Sesión</button>
     </div>
   </aside>
 
-  <main class="flex-1 flex flex-col relative" id="mainApp" style="display:none;">
-    <header class="bg-white border-b border-gray-200 flex flex-col px-8 py-5 shadow-sm shrink-0 gap-4 z-10" id="mainHeader">
+  <main class="flex-1 flex flex-col relative min-w-0" id="mainApp" style="display:none;">
+    <header class="bg-white border-b border-gray-200 flex flex-col px-8 py-4 shadow-sm shrink-0 z-10 gap-3">
       <div class="flex items-center justify-between">
-         <div class="relative w-full max-w-lg">
+         <div class="relative w-full max-w-sm">
              <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg"></i>
-             <input type="text" id="buscadorInput" onkeyup="filtrarCoches()" placeholder="Buscar Bastidor, Matrícula o Modelo..." class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium outline-none focus:bg-white focus:ring-2 focus:ring-vw-light transition-all shadow-inner">
+             <input type="text" id="buscadorInput" onkeyup="filtrarCoches()" placeholder="Buscar Bastidor o Matrícula..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-[#00b0f0] focus:ring-1 focus:ring-[#00b0f0] transition-all">
          </div>
          
-         <button id="btnAnadirCoche" onclick="abrirLectorPDF()" class="hidden bg-vw-blue hover:bg-blue-900 text-white px-5 py-3 rounded-xl text-sm font-bold flex items-center gap-2 shadow-md transition-colors border border-blue-800">
-            <i class="ph-bold ph-scan"></i> Escanear PDF
-         </button>
+         <div class="flex items-center gap-2">
+            <div id="botonesAdd" class="hidden flex items-center gap-2">
+                <button onclick="abrirLectorPDF()" class="bg-white border border-[#001e50] text-[#001e50] px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-50 transition-colors shadow-sm">
+                  <i class="ph-bold ph-files text-base"></i> Subir PDFs
+                </button>
+                <button onclick="anadirVehiculoManual()" class="bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-900 transition-colors shadow-sm">
+                  <i class="ph-bold ph-keyboard text-base"></i> Añadir Manual
+                </button>
+            </div>
+            
+            <div id="controlesVistaExcel" class="hidden flex items-center gap-2 border-l border-gray-300 pl-3 ml-1">
+                <button onclick="descargarExcelReal()" class="bg-[#107c41] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0c5e31] transition-colors shadow-sm">
+                  <i class="ph-bold ph-microsoft-excel-logo text-base"></i> Exportar
+                </button>
+                <div class="bg-gray-100 p-1 rounded-lg flex gap-1 border border-gray-300">
+                   <button id="btnVistaTarjetas" onclick="cambiarModoVisualizacion('tarjetas')" class="bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all"><i class="ph-bold ph-squares-four text-sm"></i> Tarjetas</button>
+                   <button id="btnVistaTabla" onclick="cambiarModoVisualizacion('tabla')" class="text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all"><i class="ph-bold ph-table text-sm"></i> Excel</button>
+                </div>
+            </div>
+         </div>
       </div>
-      
+
       <div id="filtrosVisuales" class="hidden flex gap-2 overflow-x-auto pb-1 mt-1">
-         <button onclick="aplicarFiltroVisual('todos', this)" class="filtro-btn bg-gray-800 text-white border border-gray-800 px-5 py-2 rounded-xl text-xs font-bold shadow-sm transition-all">Todos (<span id="c-todos">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('listos', this)" class="filtro-btn bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 px-5 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-check-circle text-emerald-500 text-sm"></i> Listos (<span id="c-listos">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('taller', this)" class="filtro-btn bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 px-5 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-wrench text-amber-500 text-sm"></i> Taller (<span id="c-taller">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('recambios', this)" class="filtro-btn bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 px-5 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-package text-teal-500 text-sm"></i> Recambios (<span id="c-recambios">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('alerta', this)" class="filtro-btn bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 px-5 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-warning text-red-600 text-sm"></i> Alertas (<span id="c-alerta">0</span>)</button>
+         <button onclick="aplicarFiltroVisual('todos', this)" class="filtro-btn bg-[#001e50] text-white border border-[#001e50] px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-all">Activos (<span id="c-todos">0</span>)</button>
+         <button onclick="aplicarFiltroVisual('listos', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-check-circle text-emerald-500 text-sm"></i> Listos (<span id="c-listos">0</span>)</button>
+         <button onclick="aplicarFiltroVisual('taller', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-wrench text-amber-500 text-sm"></i> Taller (<span id="c-taller">0</span>)</button>
+         <button onclick="aplicarFiltroVisual('recambios', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-package text-teal-500 text-sm"></i> Recambios (<span id="c-recambios">0</span>)</button>
       </div>
     </header>
     
-    <div class="flex-1 overflow-y-auto p-8">
-      <div id="contenedorPrincipal" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
-      <div id="contenedorAgenda" class="hidden max-w-4xl mx-auto space-y-4"></div>
+    <div class="flex-1 overflow-y-auto p-6 bg-gray-100 w-full">
+      <div id="contenedorLogistica" class="hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full"></div>
+      <div id="contenedorTarjetas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 w-full"></div>
+      <div id="contenedorTabla" class="hidden w-full bg-white rounded-lg shadow-sm border border-gray-300 overflow-auto" style="max-height: calc(100vh - 190px);"></div>
+      <div id="contenedorAgenda" class="hidden max-w-full mx-auto w-full"></div>
     </div>
   </main>
 
   <input type="file" id="inputUploadPDF" accept=".pdf" multiple class="hidden" onchange="procesarPDFs(event)">
 
   <div id="chatModal" class="fixed inset-0 z-50 hidden bg-black/60 flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col h-[550px] overflow-hidden">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col h-[550px] overflow-hidden border-t-8 border-[#075e54]">
       <div class="px-4 py-3 bg-[#075e54] text-white flex items-center justify-between shadow-md z-10">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"><i class="ph-fill ph-car text-xl"></i></div>
@@ -126,18 +156,18 @@
         </div>
         <button onclick="cerrarChat()" class="p-2 hover:bg-white/10 rounded-full transition-colors"><i class="ph-bold ph-x"></i></button>
       </div>
-      <div id="chatMessages" class="p-4 flex-grow overflow-y-auto bg-whatsapp space-y-3 flex flex-col"></div>
-      <div class="p-3 bg-[#f0f0f0] flex gap-2 items-center">
+      <div id="chatMessages" class="p-4 flex-grow overflow-y-auto bg-whatsapp flex flex-col gap-2"></div>
+      <div class="p-3 bg-[#f0f0f0] flex gap-2 items-center border-t border-gray-300">
         <input type="hidden" id="chatFilaActiva">
-        <input type="text" id="chatInput" placeholder="Escribe un mensaje" class="flex-grow px-4 py-3 bg-white border-transparent rounded-full outline-none text-sm shadow-sm focus:ring-1 focus:ring-gray-300">
-        <button onclick="enviarMensajeChat()" class="w-12 h-12 bg-[#128c7e] text-white rounded-full shadow-sm flex items-center justify-center hover:bg-[#0b5c53] transition-colors"><i class="ph-fill ph-paper-plane-right text-lg"></i></button>
+        <input type="text" id="chatInput" placeholder="Escribe un mensaje..." class="flex-grow px-4 py-2.5 bg-white border border-gray-300 rounded-full outline-none text-sm shadow-sm focus:border-[#128c7e]">
+        <button onclick="enviarMensajeChat()" class="w-10 h-10 flex-shrink-0 bg-[#128c7e] text-white rounded-full shadow-sm flex items-center justify-center hover:bg-[#0b5c53]"><i class="ph-fill ph-paper-plane-right text-lg"></i></button>
       </div>
     </div>
   </div>
 
   <script>
-    let userRole = ""; let activeTab = 'todos'; let unsubscribeFirebase = null; 
-    let todosLosCoches = []; let filtroActual = 'todos';
+    let userRole = ""; let activeTab = 'logistica'; let modoVistaActual = 'tarjetas'; 
+    let unsubscribeFirebase = null; let todosLosCoches = []; let filtroActual = 'todos';
 
     window.onload = function() {
       const rol = localStorage.getItem('vw_departamento');
@@ -148,23 +178,25 @@
       userRole = document.getElementById('userRole').value;
       const pass = document.getElementById('userPass').value;
       const pwd = { 'taller': 'taller2026', 'recambios': 'piezas2026', 'entregas': 'vw2026' };
+      
       if (pass !== pwd[userRole]) { Swal.fire('Error', 'Clave incorrecta', 'error'); return; }
-      localStorage.setItem('vw_departamento', userRole); iniciarAppDirectamente(userRole);
+      
+      localStorage.setItem('vw_departamento', userRole); 
+      iniciarAppDirectamente(userRole);
     }
 
     function iniciarAppDirectamente(rol) {
-      document.getElementById('roleBadge').innerText = rol;
+      document.getElementById('roleBadge').innerText = "Perfil: " + rol;
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('sidebarApp').style.display = 'flex';
       document.getElementById('mainApp').style.display = 'flex';
       
       if (rol === 'entregas') {
         document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
-        document.getElementById('btnAnadirCoche').classList.remove('hidden');
-        document.getElementById('filtrosVisuales').classList.replace('hidden', 'flex');
-        cambiarPestana('todos');
+        document.getElementById('botonesAdd').classList.replace('hidden', 'flex');
+        cambiarPestana('logistica');
       } else { 
-        document.getElementById('contenedorPrincipal').style.display = 'grid';
+        document.getElementById('contenedorTarjetas').style.display = 'grid';
         cargar(); 
       }
     }
@@ -174,210 +206,305 @@
     function cambiarPestana(pestana) {
       activeTab = pestana;
       const botones = document.querySelectorAll('#tabsEntregas button');
-      botones.forEach(b => { b.classList.remove('bg-white/10', 'text-white'); b.classList.add('text-gray-300'); });
-      if (pestana === 'todos') botones[0].classList.add('bg-white/10', 'text-white');
-      if (pestana === 'agenda') botones[1].classList.add('bg-white/10', 'text-white');
+      botones.forEach(b => { 
+        b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-amber-500/10', 'border-amber-500/30'); 
+        b.classList.add('text-gray-300'); 
+      });
+      
+      if (pestana === 'logistica') botones[0].classList.add('text-amber-300', 'bg-amber-500/10', 'border-amber-500/30');
+      if (pestana === 'todos') botones[1].classList.add('bg-white/10', 'text-white');
+      if (pestana === 'agenda') botones[2].classList.add('bg-white/10', 'text-white');
+      if (pestana === 'entregados') botones[3].classList.add('bg-white/10', 'text-white');
 
-      if (pestana === 'agenda') {
-        document.getElementById('contenedorPrincipal').style.display = 'none';
-        document.getElementById('filtrosVisuales').style.display = 'none';
-        document.getElementById('contenedorAgenda').style.display = 'block';
-        document.getElementById('btnAnadirCoche').style.display = 'none';
-      } else {
-        document.getElementById('contenedorPrincipal').style.display = 'grid';
+      document.getElementById('contenedorLogistica').style.display = 'none';
+      document.getElementById('contenedorTarjetas').style.display = 'none';
+      document.getElementById('contenedorTabla').style.display = 'none';
+      document.getElementById('contenedorAgenda').style.display = 'none';
+      document.getElementById('filtrosVisuales').style.display = 'none';
+      document.getElementById('controlesVistaExcel').style.display = 'none';
+      document.getElementById('botonesAdd').style.display = 'none';
+      document.getElementById('buscadorInput').style.display = 'block';
+
+      if (pestana === 'logistica') {
+        document.getElementById('contenedorLogistica').style.display = 'grid';
+        document.getElementById('botonesAdd').style.display = 'flex';
+      } else if (pestana === 'todos') {
+        document.getElementById('controlesVistaExcel').style.display = 'flex';
         document.getElementById('filtrosVisuales').style.display = 'flex';
-        document.getElementById('contenedorAgenda').style.display = 'none';
-        document.getElementById('btnAnadirCoche').style.display = 'flex';
+        cambiarModoVisualizacion(modoVistaActual);
+      } else if (pestana === 'agenda') {
+        document.getElementById('contenedorAgenda').style.display = 'block';
+        document.getElementById('buscadorInput').style.display = 'none';
+      } else if (pestana === 'entregados') {
+        document.getElementById('contenedorTarjetas').style.display = 'grid';
       }
       cargar();
     }
 
+    function cambiarModoVisualizacion(modo) {
+       modoVistaActual = modo;
+       const btnT = document.getElementById('btnVistaTarjetas');
+       const btnE = document.getElementById('btnVistaTabla');
+       if (modo === 'tarjetas') {
+          btnT.className = "bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
+          btnE.className = "text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
+          document.getElementById('contenedorTarjetas').style.display = 'grid';
+          document.getElementById('contenedorTabla').style.display = 'none';
+       } else {
+          btnE.className = "bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
+          btnT.className = "text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
+          document.getElementById('contenedorTarjetas').style.display = 'none';
+          document.getElementById('contenedorTabla').style.display = 'block';
+       }
+       renderizarVistas();
+    }
+
+    function aplicarFiltroVisual(filtro, btnElement) {
+       filtroActual = filtro;
+       document.querySelectorAll('.filtro-btn').forEach(b => {
+          b.className = "filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all";
+       });
+       btnElement.className = "filtro-btn bg-[#001e50] text-white border border-[#001e50] px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all";
+       renderizarVistas();
+    }
+
+    function calcularProgreso(c) {
+        let pct = 20; 
+        let enInventario = c.pasoAInventario !== false; 
+        if (enInventario) pct += 20; 
+        if (enInventario && (!c.enTaller || c.finTaller)) pct += 20;
+        if (enInventario && (!c.enRecambios || c.finRecambios)) pct += 20;
+        if (c.fechaCita) pct += 20; 
+        if (pct > 100) pct = 100;
+        if (c.entregado) pct = 100;
+
+        let color = 'bg-red-500';
+        if (pct >= 40) color = 'bg-orange-500';
+        if (pct >= 60) color = 'bg-amber-400';
+        if (pct >= 80) color = 'bg-[#00b0f0]';
+        if (pct === 100) color = 'bg-emerald-500';
+        return { pct, color };
+    }
+
+    function obtenerBurbujaChat(chatObj) {
+      if (!chatObj || !chatObj.history) return '';
+      let hs = chatObj.history;
+      let lo = chatObj.lastOpened ? (chatObj.lastOpened[userRole.toUpperCase()] || 0) : 0;
+      let nl = hs.filter(m => m.fecha > lo && m.rol.toUpperCase() !== userRole.toUpperCase()).length;
+      if (nl > 0) return `<span class="absolute -top-2 -right-2 bg-red-500 border-2 border-white text-white text-[9px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-md animate-pulse">${nl}</span>`;
+      return '';
+    }
+
     function cargar() {
       if(unsubscribeFirebase) unsubscribeFirebase();
-      
       unsubscribeFirebase = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
         todosLosCoches = [];
-        snapshot.forEach(doc => { let c = doc.data(); c.fila = doc.id; c.A = c.bastidor || ""; c.B = c.matricula || ""; c.C = c.modelo || ""; todosLosCoches.push(c); });
+        snapshot.forEach(doc => { 
+            let c = doc.data(); 
+            c.fila = doc.id; 
+            c.A = c.bastidor || "Sin Bastidor"; 
+            c.B = c.matricula || c.Matricula || "S/M"; 
+            c.C = c.modelo || "VW"; 
+            
+            let chatProcess = c.chatInfo;
+            if (!chatProcess && c.chat && typeof c.chat === 'string') {
+                try { chatProcess = JSON.parse(c.chat); } catch(e) {}
+            }
+            c.chatData = chatProcess || {history: [], lastOpened: {}};
+            todosLosCoches.push(c); 
+        });
+        
         todosLosCoches.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
 
-        if (userRole === 'taller') renderizarDepartamentos('taller');
-        else if (userRole === 'recambios') renderizarDepartamentos('recambios');
-        else if (userRole === 'entregas') {
-          if (activeTab === 'todos') { actualizarContadoresFiltros(); renderizarEntregasVisual(); }
+        if (userRole === 'taller' || userRole === 'recambios') {
+           renderizarDepartamentos(userRole);
+        } else if (userRole === 'entregas') {
+          if (activeTab === 'logistica') renderLogistica();
+          else if (activeTab === 'todos') { actualizarContadores(); renderizarVistas(); }
           else if (activeTab === 'agenda') renderAgenda();
+          else if (activeTab === 'entregados') renderEntregados();
         }
       });
     }
 
-    // ==========================================
-    // ESCÁNER PDF INTELIGENTE (MODELOS VW)
-    // ==========================================
-    function abrirLectorPDF() { document.getElementById('inputUploadPDF').click(); }
-
-    async function procesarPDFs(evento) {
-      const archivos = evento.target.files;
-      if (!archivos || archivos.length === 0) return;
-      
-      Swal.fire({ title: 'Analizando Documentos...', html: 'Extrayendo Datos y Modelos...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-      let cochesAñadidos = 0;
-      // Diccionario de modelos VW para el escáner
-      const vwModels = ["GOLF", "POLO", "TIGUAN", "T-ROC", "T-CROSS", "TAIGO", "PASSAT", "ARTEON", "TOUAREG", "ID.3", "ID.4", "ID.5", "ID.7", "ID. BUZZ", "CADDY", "CRAFTER", "MULTIVAN", "AMAROK", "TOURAN", "UP!"];
-
-      for (let file of archivos) {
-        try {
-          const fileURL = URL.createObjectURL(file);
-          const pdf = await pdfjsLib.getDocument(fileURL).promise;
-          let textoCompleto = "";
-          
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const pagina = await pdf.getPage(i);
-            const contenido = await pagina.getTextContent();
-            textoCompleto += contenido.items.map(item => item.str).join(" ");
-          }
-
-          const regexBastidor = /\b[A-HJ-NPR-Z0-9]{17}\b/gi;
-          const matchBastidor = textoCompleto.match(regexBastidor);
-          const regexMatricula = /\b\d{4}\s?[B-DF-HJ-NP-TV-Z]{3}\b/gi;
-          const matchMatricula = textoCompleto.match(regexMatricula);
-
-          if (matchBastidor) {
-             const bastidorEncontrado = matchBastidor[0].toUpperCase();
-             const matriculaEncontrada = matchMatricula ? matchMatricula[0].replace(/\s/g, '').toUpperCase() : 'S/M';
-             
-             // Buscar modelo en el texto
-             let modeloDetectado = "VW " + file.name.split('.')[0].substring(0, 10); // Fallback: Parte del nombre del archivo
-             let textoUpper = textoCompleto.toUpperCase();
-             for(let mod of vwModels) {
-                 if(textoUpper.includes(mod)) {
-                     modeloDetectado = "VW " + mod;
-                     break;
-                 }
-             }
-             
-             await window.setDoc(window.doc(window.db, "vehiculos", bastidorEncontrado), {
-                bastidor: bastidorEncontrado, matricula: matriculaEncontrada, modelo: modeloDetectado, creadoEn: new Date().getTime()
-             });
-             cochesAñadidos++;
-          }
-        } catch (error) { console.error("Error PDF", error); }
-      }
-      document.getElementById('inputUploadPDF').value = ""; 
-      Swal.fire('¡Escaneo Listo!', `Se han detectado y añadido ${cochesAñadidos} vehículos.`, 'success');
-    }
-
-    // ==========================================
-    // SISTEMA DE FILTROS Y MOTIVOS DE ALERTA
-    // ==========================================
-    function aplicarFiltroVisual(filtro, btnElement) {
-       filtroActual = filtro;
-       document.querySelectorAll('.filtro-btn').forEach(b => {
-          b.className = "filtro-btn bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 px-5 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all";
-       });
-       btnElement.className = "filtro-btn bg-gray-800 text-white border border-gray-800 px-5 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all";
-       renderizarEntregasVisual();
-    }
-
-    // Calcula si es alerta y por qué
-    function obtenerInfoAlerta(c) {
-        let isAlert = false; let motivo = "";
-        let enT = c.enTaller && !c.finTaller; let enR = c.enRecambios && !c.finRecambios;
-        
-        if (c.fechaCita && (enT || enR)) {
-            isAlert = true; 
-            motivo = `Tiene cita (${c.fechaCita}) y sigue retenido en ` + (enT ? "Taller" : "Recambios");
-        } else if (c.estado && c.estado.toUpperCase().includes("RIESGO")) {
-            isAlert = true; motivo = "Marcado con Riesgo de Entrega";
-        } else if (enT && enR) {
-            isAlert = true; motivo = "Bloqueado en Taller y Recambios simultáneamente";
-        }
-        return { isAlert, motivo };
-    }
-
-    function actualizarContadoresFiltros() {
-       let lst = 0; let tll = 0; let rcb = 0; let alt = 0;
+    function actualizarContadores() {
+       let listos = 0, taller = 0, recambios = 0, alertas = 0, total = 0;
        todosLosCoches.forEach(c => {
-          let enT = c.enTaller && !c.finTaller; let enR = c.enRecambios && !c.finRecambios;
-          if (!enT && !enR) lst++; if (enT) tll++; if (enR) rcb++;
-          if (obtenerInfoAlerta(c).isAlert) alt++;
+          let enInventario = c.pasoAInventario !== false; 
+          if(!c.entregado && enInventario) {
+              total++;
+              let enT = c.enTaller && !c.finTaller; let enR = c.enRecambios && !c.finRecambios;
+              if (!enT && !enR) listos++; if (enT) taller++; if (enR) recambios++;
+              if (c.fechaCita && (enT || enR)) alertas++;
+          }
        });
-       document.getElementById('c-todos').innerText = todosLosCoches.length;
-       document.getElementById('c-listos').innerText = lst;
-       document.getElementById('c-taller').innerText = tll;
-       document.getElementById('c-recambios').innerText = rcb;
-       document.getElementById('c-alerta').innerText = alt;
+       document.getElementById('c-todos').innerText = total; document.getElementById('c-listos').innerText = listos;
+       document.getElementById('c-taller').innerText = taller; document.getElementById('c-recambios').innerText = recambios;
     }
 
-    function renderizarEntregasVisual() {
-       let div = document.getElementById('contenedorPrincipal');
-       let filtrados = todosLosCoches.filter(c => {
+    function renderLogistica() {
+       let logistica = todosLosCoches.filter(c => c.pasoAInventario === false && !c.entregado);
+       let div = document.getElementById('contenedorLogistica');
+       
+       if (logistica.length === 0) {
+           div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay vehículos en fase de logística previa.</p></div>`;
+       } else {
+           div.innerHTML = logistica.map(c => {
+               let btnDoc = c.fechaDoc ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Doc: ${c.fechaDoc}</div>` : `<button onclick="marcarPaso('${c.fila}', 'fechaDoc')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">Documentación</button>`;
+               let btnTrans = c.fechaTransporte ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Trans: ${c.fechaTransporte}</div>` : `<button onclick="marcarPaso('${c.fila}', 'fechaTransporte')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Transporte</button>`;
+               let btnPrep = c.fechaPreparacion ? `<div class="bg-amber-100 text-amber-800 text-[9px] font-bold py-1.5 px-2 rounded border border-amber-300 text-center">⚠️ Prep: ${c.fechaPreparacion}</div>` : `<button onclick="marcarPaso('${c.fila}', 'fechaPreparacion')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Preparación</button>`;
+
+               return `
+               <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm fila-coche">
+                 <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
+                 <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
+                 <div class="grid grid-cols-3 gap-2 mt-4 mb-4">
+                    ${btnDoc} ${btnTrans} ${btnPrep}
+                 </div>
+                 <button onclick="pasarAInventario('${c.fila}')" class="w-full bg-[#001e50] text-white font-bold py-3 rounded-lg text-xs hover:bg-blue-900 shadow-sm flex items-center justify-center gap-2">
+                    <i class="ph-bold ph-check"></i> Marcar como "Listo para Entrega"
+                 </button>
+               </div>`;
+           }).join('');
+       }
+    }
+
+    async function marcarPaso(id, campo) {
+        let update = {}; update[campo] = new Date().toLocaleDateString();
+        await window.updateDoc(window.doc(window.db, "vehiculos", id), update);
+    }
+
+    async function pasarAInventario(id) {
+        Swal.fire({
+            title: '¿Recepcionar Vehículo?',
+            text: "Pasará al Inventario Central y constará como Listo en el portal de Renting.",
+            icon: 'question', showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Sí, Recepcionar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                await window.updateDoc(window.doc(window.db, "vehiculos", id), { pasoAInventario: true, fechaRecepcionBase: new Date().toLocaleDateString() });
+                Swal.fire('¡Recepcionado!', 'El vehículo ya está en el circuito principal.', 'success');
+            }
+        });
+    }
+
+    function renderizarVistas() {
+       let activos = todosLosCoches.filter(c => !c.entregado && c.pasoAInventario !== false);
+       let filtrados = activos.filter(c => {
           let enT = c.enTaller && !c.finTaller; let enR = c.enRecambios && !c.finRecambios;
           if (filtroActual === 'todos') return true;
           if (filtroActual === 'listos') return !enT && !enR;
           if (filtroActual === 'taller') return enT;
           if (filtroActual === 'recambios') return enR;
-          if (filtroActual === 'alerta') return obtenerInfoAlerta(c).isAlert;
+          if (filtroActual === 'alerta') return (c.fechaCita && (enT || enR));
           return true;
        });
-       if (filtrados.length === 0) {
-          div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-2xl shadow-sm text-center border border-gray-200 mt-10"><i class="ph-fill ph-folder-open text-6xl text-gray-300 mb-4"></i><p class="text-gray-500 font-bold text-lg">Categoría vacía.</p></div>`;
-          return;
+
+       if (modoVistaActual === 'tarjetas') {
+           let div = document.getElementById('contenedorTarjetas');
+           if (filtrados.length === 0) {
+               div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay vehículos en esta categoría.</p></div>`;
+           } else {
+               div.innerHTML = filtrados.map(c => renderTarjetaCompacta(c)).join('');
+           }
+       } else {
+           renderTablaModoExcel(filtrados);
        }
-       div.innerHTML = filtrados.map(c => renderTarjetaCompacta(c)).join('');
     }
 
-    // ==========================================
-    // TARJETAS COMPACTAS (CON INFO RECUPERADA)
-    // ==========================================
+    function renderTablaModoExcel(datosFiltrados) {
+       let contenedor = document.getElementById('contenedorTabla');
+       if(datosFiltrados.length === 0){ contenedor.innerHTML = "<p class='text-center p-10 font-bold text-gray-500'>Sin resultados en esta categoría.</p>"; return; }
+       
+       let html = `
+       <table class="tabla-excel whitespace-nowrap">
+         <thead>
+           <tr>
+             <th>Progreso</th><th>Modelo</th><th>Matrícula</th><th>Bastidor</th><th>Renting</th><th>Agencia</th>
+             <th>Taller</th><th>Instr. Taller</th><th>Nº Orden</th><th>Entrada Tall.</th><th>Prev. Tall.</th><th>Fin Tall.</th>
+             <th>Recambios</th><th>Instr. Recambios</th><th>Nº Pedido</th><th>Entrada Rec.</th><th>Prev. Rec.</th><th>Fin Rec.</th>
+             <th class="bg-[#00b0f0]">Cita Entrega</th><th>Gestión</th>
+           </tr>
+         </thead><tbody id="filasTablaExcel">`;
+
+       datosFiltrados.forEach(c => {
+          let mS = encodeURIComponent(c.C || ''); let maS = encodeURIComponent(c.B || ''); 
+          let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]}));
+          let checkTaller = c.finTaller ? `<div class="excel-check check-fin">✓</div> FIN` : (c.enTaller ? `<div class="excel-check check-curso">X</div> CURSO` : `<div class="excel-check"></div> SOLICITAR`);
+          let checkRecambios = c.finRecambios ? `<div class="excel-check check-fin">✓</div> FIN` : (c.enRecambios ? `<div class="excel-check check-curso">X</div> CURSO` : `<div class="excel-check"></div> SOLICITAR`);
+          let prog = calcularProgreso(c);
+
+          html += `
+          <tr class="fila-coche hover:bg-[#e0f2fe]">
+             <td class="text-center font-bold text-white ${prog.color}">${prog.pct}%</td>
+             <td class="font-bold text-gray-900">${c.C}</td>
+             <td class="font-bold bg-gray-50 text-center border-l border-r border-gray-200">${c.B}</td>
+             <td class="font-mono text-gray-500 text-[10px]">${c.A}</td>
+             <td class="cursor-pointer text-blue-600 hover:underline" onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')">${c.renting || '-'}</td>
+             <td class="cursor-pointer text-blue-600 hover:underline border-r border-gray-200" onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')">${c.agencia || '-'}</td>
+
+             <td class="cursor-pointer hover:bg-gray-100" onclick="pedirInst(this, '${c.fila}', 'taller')">${checkTaller}</td>
+             <td class="text-gray-500 truncate max-w-[120px]" title="${c.instruccionTaller||''}">${c.instruccionTaller || '-'}</td>
+             <td class="text-center font-bold text-gray-600">${c.ordenTaller || '-'}</td>
+             <td class="text-center text-gray-400">${c.fechaEntradaTaller || '-'}</td>
+             <td class="text-center text-gray-500">${c.fechaTaller || '-'}</td>
+             <td class="text-center text-emerald-600 font-bold border-r border-gray-200">${c.fechaFinTaller || '-'}</td>
+             
+             <td class="cursor-pointer hover:bg-gray-100" onclick="pedirInst(this, '${c.fila}', 'recambios')">${checkRecambios}</td>
+             <td class="text-gray-500 truncate max-w-[120px]" title="${c.instruccionRecambios||''}">${c.instruccionRecambios || '-'}</td>
+             <td class="text-center font-bold text-gray-600">${c.ordenRecambios || '-'}</td>
+             <td class="text-center text-gray-400">${c.fechaEntradaRecambios || '-'}</td>
+             <td class="text-center text-gray-500">${c.fechaRecambios || '-'}</td>
+             <td class="text-center text-emerald-600 font-bold border-r border-gray-200">${c.fechaFinRecambios || '-'}</td>
+             
+             <td class="font-bold text-[#001e50] text-center bg-blue-50">${c.fechaCita || '-'}</td>
+             <td class="text-center flex items-center justify-center gap-3 pt-2 pb-2 px-2">
+                <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="text-[#25D366] hover:scale-110 relative"><i class="ph-fill ph-whatsapp-logo text-xl"></i>${obtenerBurbujaChat(c.chatData)}</button>
+                <button onclick="marcarComoEntregado('${c.fila}')" class="text-gray-400 hover:text-emerald-600" title="Entregar"><i class="ph-bold ph-key text-xl"></i></button>
+             </td>
+          </tr>`;
+       });
+       html += `</tbody></table>`; contenedor.innerHTML = html;
+    }
+
     function renderTarjetaCompacta(c) {
-      let chatJson = encodeURIComponent(c.chat || "[]"); let mS = encodeURIComponent(c.C); let maS = encodeURIComponent(c.B);
-      
-      let infoAlerta = obtenerInfoAlerta(c);
-      let borderAlerta = infoAlerta.isAlert && filtroActual === 'alerta' ? 'border-l-8 border-red-500 bg-red-50/20' : 'border-l-8 border-vw-blue';
-      
-      // Barra de progreso calculada (3 pasos: Ingreso -> Taller/Piezas Terminadas -> Listo)
-      let pts = 0; let totalPts = 1; // Ingreso base
-      if(c.enTaller) { totalPts++; if(c.finTaller) pts++; }
-      if(c.enRecambios) { totalPts++; if(c.finRecambios) pts++; }
-      if((!c.enTaller || c.finTaller) && (!c.enRecambios || c.finRecambios)) pts = totalPts; // Listo = 100%
-      let pctProgreso = Math.round((pts/totalPts)*100);
-      let colorProgreso = pctProgreso === 100 ? 'bg-emerald-500' : 'bg-vw-light';
+      let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})); 
+      let mS = encodeURIComponent(c.C || ''); let maS = encodeURIComponent(c.B || '');
+      let isAlerta = c.fechaCita && ((c.enTaller && !c.finTaller) || (c.enRecambios && !c.finRecambios));
+      let borderAlerta = isAlerta ? 'border-l-8 border-red-500 bg-red-50/20' : 'border-l-8 border-[#001e50]';
+      let prog = calcularProgreso(c);
 
-      // Botones de estado interactivos
-      let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Taller OK</span>` : 
-                    c.enTaller ? `<span class="status-btn bg-amber-100 text-amber-800"><i class="ph-bold ph-wrench"></i> Taller...</span>` : 
-                    `<button onclick="pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200">Taller <i class="ph-bold ph-plus"></i></button>`;
-                    
-      let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Piezas OK</span>` : 
-                       c.enRecambios ? `<span class="status-btn bg-teal-100 text-teal-800"><i class="ph-bold ph-package"></i> Piezas...</span>` : 
-                       `<button onclick="pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200">Piezas <i class="ph-bold ph-plus"></i></button>`;
+      let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<span class="status-btn bg-amber-100 text-amber-800"><i class="ph-bold ph-wrench"></i> Tall. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
+      let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<span class="status-btn bg-teal-100 text-teal-800"><i class="ph-bold ph-package"></i> Rec. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
 
-      // Recuperación de la información de taller/recambios (Fechas y Orden)
-      let txtTallerInfo = (c.ordenTaller || c.fechaTaller) ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold"><i class="ph-fill ph-wrench"></i> OR: ${c.ordenTaller||'-'} | Prev: ${c.fechaTaller||'-'}</div>` : '';
-      let txtRecambiosInfo = (c.ordenRecambios || c.fechaRecambios) ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold"><i class="ph-fill ph-package"></i> OR: ${c.ordenRecambios||'-'} | Prev: ${c.fechaRecambios||'-'}</div>` : '';
-
-      // Mostrar cita muy visual
-      let uiCita = c.fechaCita ? `<div class="bg-blue-100 text-blue-800 border border-blue-200 px-2 py-1 rounded-md font-black text-xs flex items-center gap-1 shadow-sm"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : '';
+      let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
+      let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
 
       return `
-      <div class="card-mini ${borderAlerta} p-5">
-        <div class="flex justify-between items-start mb-3 gap-2">
+      <div class="card-mini ${borderAlerta} p-5 fila-coche">
+        <div class="flex justify-between items-start mb-2 gap-2">
           <div class="min-w-0 pr-2">
-            <h3 class="font-black text-gray-900 text-base truncate uppercase" title="${c.C}">${c.C}</h3>
-            <p class="text-[10px] font-bold text-gray-400 mt-1 tracking-widest truncate">VIN: <span class="text-vw-blue">${c.A}</span></p>
+            <h3 class="font-black text-base text-[#001e50] truncate uppercase">${c.C}</h3>
+            <p class="text-[10px] font-bold text-gray-400 mt-0.5 tracking-widest truncate">VIN: ${c.A}</p>
           </div>
-          <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-10 h-10 flex-shrink-0 bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-xl"></i></button>
+          <div class="flex gap-1 flex-shrink-0">
+             <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${obtenerBurbujaChat(c.chatData)}</button>
+             <button onclick="marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors"><i class="ph-bold ph-key text-lg"></i></button>
+          </div>
         </div>
         
-        <div class="flex items-center justify-between mb-4 mt-2">
-           <span class="bg-gray-100 border border-gray-200 text-gray-800 px-2.5 py-1 rounded text-xs font-black tracking-widest shadow-inner">${c.B}</span>
-           ${uiCita}
+        <div class="flex gap-2 mb-3">
+            <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
+            <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
         </div>
 
-        ${infoAlerta.isAlert && filtroActual === 'alerta' ? `<div class="bg-red-100 text-red-700 text-[10px] font-bold p-2 rounded-lg mb-3 flex items-start gap-1"><i class="ph-fill ph-warning-circle text-sm"></i> <span>${infoAlerta.motivo}</span></div>` : ''}
+        <div class="flex items-center justify-between mb-3">
+           <span class="bg-gray-100 border border-gray-300 text-gray-800 px-2.5 py-1 rounded text-xs font-black tracking-widest shadow-sm">${c.B}</span>
+           ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1 rounded font-black text-xs flex items-center gap-1"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}
+        </div>
 
-        <div class="w-full bg-gray-200 rounded-full h-1.5 mb-4">
-          <div class="${colorProgreso} h-1.5 rounded-full transition-all duration-500" style="width: ${pctProgreso}%"></div>
+        <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden">
+           <div class="${prog.color} h-2 transition-all duration-500" style="width: ${prog.pct}%"></div>
+           <span class="absolute inset-0 flex items-center justify-center text-[7px] font-black text-gray-800 drop-shadow-md mix-blend-overlay">${prog.pct}%</span>
         </div>
 
         <div class="flex flex-col gap-2 mt-auto">
@@ -389,109 +516,352 @@
       </div>`;
     }
 
-    // ==========================================
-    // RENDERIZADO TALLER Y RECAMBIOS (DOBLE BANDEJA)
-    // ==========================================
     function renderizarDepartamentos(depto) {
-       let divP = document.getElementById('contenedorPrincipal');
-       let activos = todosLosCoches.filter(c => depto === 'taller' ? (c.enTaller && !c.finTaller) : (c.enRecambios && !c.finRecambios));
-       let nuevos = activos.filter(c => depto === 'taller' ? !c.ordenTaller : !c.ordenRecambios);
-       let enRep = activos.filter(c => depto === 'taller' ? c.ordenTaller : c.ordenRecambios);
-       
-       let icon = depto === 'taller' ? 'ph-wrench' : 'ph-package';
-       let labelRep = depto === 'taller' ? 'En Reparación' : 'Solicitudes Activas';
+       let divP = document.getElementById('contenedorTarjetas');
+       let activos = todosLosCoches.filter(c => !c.entregado && c.pasoAInventario !== false && (depto === 'taller' ? (c.enTaller && !c.finTaller) : (c.enRecambios && !c.finRecambios)));
        let p = depto === 'taller' ? 'p' : 'r';
        let propInfo = depto === 'taller' ? 'ordenTaller' : 'ordenRecambios';
        let Tipo = depto === 'taller' ? 'Taller' : 'Recambios';
 
+       let nuevos = activos.filter(c => !c[propInfo]);
+       let enRep = activos.filter(c => c[propInfo]);
+
        divP.innerHTML = `
-         <div class="col-span-full mb-2"><h3 class="text-xl font-black flex items-center gap-2"><i class="ph-fill ph-tray-arrow-down text-vw-blue"></i> Ingresos Recientes</h3></div>
-         ${nuevos.length ? nuevos.map(c => renderActiva(c, p, c[propInfo], Tipo)).join('') : '<p class="text-gray-400 text-sm font-bold col-span-full mb-6">Ningún ingreso nuevo.</p>'}
+         <div class="col-span-full mb-1"><h3 class="text-xl font-black flex items-center gap-2 text-[#001e50]"><i class="ph-fill ph-tray-arrow-down"></i> Bandeja Entrada (Nuevas Peticiones)</h3></div>
+         ${nuevos.length ? nuevos.map(c => renderActivaDpto(c, p, c, Tipo)).join('') : '<p class="text-gray-400 font-bold col-span-full mb-6 bg-white p-4 rounded-xl border border-gray-200 text-center">Ninguna petición pendiente.</p>'}
          
-         <div class="col-span-full mb-2 mt-8 border-t border-gray-200 pt-6"><h3 class="text-xl font-black flex items-center gap-2"><i class="ph-fill ${icon} text-vw-blue"></i> ${labelRep}</h3></div>
-         ${enRep.length ? enRep.map(c => renderActiva(c, p, c[propInfo], Tipo)).join('') : '<p class="text-gray-400 text-sm font-bold col-span-full">Sin gestiones activas.</p>'}
+         <div class="col-span-full mb-1 mt-6 border-t border-gray-200 pt-6"><h3 class="text-xl font-black flex items-center gap-2 text-[#001e50]"><i class="ph-fill ${depto==='taller'?'ph-wrench':'ph-package'}"></i> Gestión en Curso</h3></div>
+         ${enRep.length ? enRep.map(c => renderActivaDpto(c, p, c, Tipo)).join('') : '<p class="text-gray-400 font-bold col-span-full bg-white p-4 rounded-xl border border-gray-200 text-center">Sin vehículos en curso.</p>'}
        `;
     }
 
-    function renderActiva(c, pre, info, tipo) {
-      let chatJson = encodeURIComponent(c.chat || "[]"); let mS = encodeURIComponent(c.C); let maS = encodeURIComponent(c.B);
+    function renderActivaDpto(c, pre, obj, tipo) {
+      let chatJson = encodeURIComponent(JSON.stringify(c.chatData));
+      let mS = encodeURIComponent(c.C || ''); let maS = encodeURIComponent(c.B || '');
       let bClass = tipo === 'Taller' ? 'border-t-4 border-amber-400' : 'border-t-4 border-teal-500';
-      let btnRecambios = tipo === 'Taller' ? `<button onclick="pedirInst(this, '${c.fila}', 'recambios')" class="mt-3 w-full bg-gray-50 border border-gray-200 text-gray-600 font-bold py-2 rounded-lg text-[11px] hover:bg-gray-100 transition-colors uppercase flex items-center justify-center gap-1"><i class="ph-bold ph-share-network"></i> Derivar a Recambios</button>` : '';
+      let infoExtra = tipo === 'Taller' ? c.instruccionTaller : c.instruccionRecambios;
+      let fEntrada = tipo === 'Taller' ? c.fechaEntradaTaller : c.fechaEntradaRecambios;
 
       return `
-      <div class="card-mini ${bClass} p-5 flex flex-col">
+      <div class="card-mini ${bClass} p-5 flex flex-col fila-coche">
         <div class="flex justify-between items-start mb-3">
            <div class="min-w-0 pr-2">
-             <h3 class="font-black text-lg text-gray-900 uppercase truncate" title="${c.C}">${c.C}</h3>
-             <p class="text-[11px] font-bold text-gray-400 mt-1 tracking-widest truncate">VIN: <span class="text-gray-800">${c.A}</span></p>
+             <h3 class="font-black text-lg text-[#001e50] uppercase truncate">${c.C}</h3>
+             <p class="text-[11px] font-bold text-gray-400 mt-1 tracking-widest truncate">VIN: ${c.A}</p>
            </div>
-           <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-10 h-10 flex-shrink-0 bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-xl"></i></button>
+           <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-10 h-10 flex-shrink-0 bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm relative transition-transform hover:scale-105"><i class="ph-fill ph-whatsapp-logo text-xl"></i>${obtenerBurbujaChat(c.chatData)}</button>
         </div>
         
-        <div class="bg-gray-50 p-3 rounded-lg mb-4 border border-gray-100 flex-grow">
-          <p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Instrucciones</p>
-          <p class="text-sm font-bold text-gray-800 line-clamp-3">${info || 'Ninguna instrucción inicial.'}</p>
-          ${c.urlParte ? `<a href="${c.urlParte}" target="_blank" class="text-xs text-red-600 font-bold mt-2 inline-flex items-center gap-1"><i class="ph-bold ph-file-pdf"></i> Abrir PDF adjunto</a>` : ''}
+        <div class="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
+           <span class="bg-gray-100 border border-gray-200 text-gray-800 px-2 py-0.5 rounded text-[10px] font-black tracking-widest">${c.B}</span>
+           <span class="text-[9px] font-bold text-gray-400">Petición: ${fEntrada || '-'}</span>
+        </div>
+
+        <div class="bg-gray-50 p-3 rounded-lg mb-4 border border-gray-200 flex-grow">
+          <p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Motivo / Instrucciones</p>
+          <p class="text-sm font-bold text-gray-800 line-clamp-3">${infoExtra || 'Sin motivo especificado.'}</p>
+          ${c.urlParte ? `<a href="${c.urlParte}" target="_blank" class="text-xs text-red-600 font-bold mt-2 inline-flex items-center gap-1 hover:underline"><i class="ph-bold ph-file-pdf"></i> Abrir PDF adjunto</a>` : ''}
         </div>
 
         <div class="space-y-3">
           <div class="flex gap-2">
              <div class="flex-1">
-               <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1 ml-1">Orden / Albarán</label>
-               <input type="text" id="o-${pre}-${c.fila}" value="${c.ordenTaller || c.ordenRecambios || ''}" placeholder="Escribir..." class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 outline-none focus:ring-1 focus:ring-vw-blue transition-all">
+               <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1 ml-1">Nº Orden / Pedido</label>
+               <input type="text" id="o-${pre}-${c.fila}" value="${c.ordenTaller || c.ordenRecambios || ''}" placeholder="Tu Nº Interno..." class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-700 outline-none focus:ring-1 focus:ring-[#00b0f0] shadow-sm">
              </div>
              <div class="flex-1">
-               <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1 ml-1">Previsión Entrega</label>
-               <input type="date" id="f-${pre}-${c.fila}" value="${c.fechaTaller || c.fechaRecambios || ''}" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-700 outline-none focus:ring-1 focus:ring-vw-blue transition-all">
+               <label class="block text-[10px] uppercase font-bold text-gray-400 mb-1 ml-1">Previsión Fin</label>
+               <input type="date" id="f-${pre}-${c.fila}" value="${c.fechaTaller || c.fechaRecambios || ''}" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-xs font-bold text-gray-700 outline-none focus:ring-1 focus:ring-[#00b0f0] shadow-sm">
              </div>
           </div>
           <div class="flex gap-2">
-            <button onclick="ejecutar('${tipo}', '${c.fila}', false)" class="flex-1 bg-gray-200 text-gray-800 font-bold py-2.5 rounded-lg text-[11px] hover:bg-gray-300 transition-colors uppercase">Guardar</button>
-            <button onclick="ejecutar('${tipo}', '${c.fila}', true)" class="flex-[2] bg-emerald-500 text-white font-bold py-2.5 rounded-lg text-[11px] hover:bg-emerald-600 transition-colors uppercase flex items-center justify-center gap-1"><i class="ph-bold ph-check"></i> Finalizar Trabajo</button>
+            <button onclick="ejecutarDpto('${tipo}', '${c.fila}', false)" class="flex-1 bg-gray-200 text-gray-800 font-bold py-2.5 rounded-lg text-[11px] hover:bg-gray-300 transition-colors uppercase shadow-sm"><i class="ph-bold ph-floppy-disk"></i> Guardar</button>
+            <button onclick="ejecutarDpto('${tipo}', '${c.fila}', true)" class="flex-[1.5] bg-[#001e50] text-white font-bold py-2.5 rounded-lg text-[11px] hover:bg-blue-900 transition-colors uppercase flex items-center justify-center gap-1 shadow-sm"><i class="ph-bold ph-check-circle text-sm"></i> Finalizar Trabajo</button>
           </div>
-          ${btnRecambios}
         </div>
       </div>`;
     }
 
+    async function ejecutarDpto(tipo, id, fin) {
+      const p = tipo === 'Taller' ? 'p' : 'r';
+      let fFin = fin ? new Date().toLocaleDateString() : "";
+      let upd = tipo === 'Taller' ? 
+        { finTaller: fin, ordenTaller: document.getElementById(`o-${p}-${id}`).value, fechaTaller: document.getElementById(`f-${p}-${id}`).value, fechaFinTaller: fFin } : 
+        { finRecambios: fin, ordenRecambios: document.getElementById(`o-${p}-${id}`).value, fechaRecambios: document.getElementById(`f-${p}-${id}`).value, fechaFinRecambios: fFin };
+      await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
+      Swal.fire({ icon: 'success', title: fin ? 'Coche Finalizado' : 'Datos Guardados', showConfirmButton: false, timer: 1000 });
+    }
+
     // ==========================================
-    // AGENDA Y FUNCIONES AUXILIARES
+    // NUEVO CUADRANTE PRO EN LA AGENDA
     // ==========================================
-    function renderAgenda() {
+    async function renderAgenda() {
        let div = document.getElementById('contenedorAgenda');
-       let conCita = todosLosCoches.filter(c => c.fechaCita);
-       if(conCita.length === 0) { div.innerHTML = "<p class='text-center text-gray-500 font-bold mt-10'>No hay citas programadas.</p>"; return; }
        
-       div.innerHTML = conCita.map(c => {
-         let block = (c.enTaller && !c.finTaller) || (c.enRecambios && !c.finRecambios);
-         let bd = block ? 'border-red-500 bg-red-50' : 'border-vw-blue bg-white';
-         return `
-         <div class="${bd} p-5 rounded-2xl shadow-sm border-l-8 flex justify-between items-center transition-all hover:shadow-md">
-            <div>
-              <p class="font-black text-lg uppercase">${c.C}</p>
-              <p class="font-mono text-xs text-gray-500 mt-1">VIN: ${c.A}</p>
-              ${block ? '<p class="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-1 rounded-md mt-2 inline-flex items-center gap-1 uppercase"><i class="ph-fill ph-warning-circle"></i> Riesgo: En Taller/Piezas</p>' : ''}
+       // 🚨 PON AQUÍ LA URL DE TU APLICACIÓN WEB DE GOOGLE SCRIPT 🚨
+       const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqD3kagU--t1lAmBRoqy3ngBgneeWCCLFdWWxsFDaHLROrCi-9CqTyE-rFpIEhwQd9/exec";
+       
+       if (SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzqD3kagU--t1lAmBRoqy3ngBgneeWCCLFdWWxsFDaHLROrCi-9CqTyE-rFpIEhwQd9/exec") {
+           div.innerHTML = `<div class="bg-white p-10 rounded-xl shadow-sm border border-gray-200 text-center"><i class="ph-fill ph-warning-circle text-4xl text-amber-500 mb-3"></i><p class="font-bold text-gray-600">Aún no has pegado la URL de tu Google Script en el código.</p></div>`;
+           return;
+       }
+
+       div.innerHTML = `<div class="bg-white p-16 rounded-xl shadow-sm border border-gray-200 text-center flex flex-col items-center"><i class="ph-bold ph-spinner animate-spin text-5xl text-[#001e50] mb-4"></i><p class="font-black text-gray-500 tracking-widest uppercase">Sincronizando con Outlook y Excel...</p></div>`;
+
+       try {
+           const [resM, resA] = await Promise.all([
+               fetch(`${SCRIPT_URL}?action=getAgenda&agente=MANUEL`),
+               fetch(`${SCRIPT_URL}?action=getAgenda&agente=ALEJANDRO`)
+           ]);
+           
+           const citasM = await resM.json();
+           const citasA = await resA.json();
+           const todasLasCitas = [...citasM, ...citasA];
+
+           let agendaEstructurada = {};
+           let diasUnicos = new Set();
+           const horasLaborales = ['09', '10', '11', '12', '13', '16', '17', '18'];
+
+           todasLasCitas.forEach(cita => {
+               if (!cita.fechaHora) return;
+               let fecha = new Date(cita.fechaHora);
+               let diaStr = fecha.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase();
+               let horaStr = fecha.getHours().toString().padStart(2, '0');
+               
+               diasUnicos.add(diaStr);
+               
+               if (!agendaEstructurada[diaStr]) agendaEstructurada[diaStr] = {};
+               if (!agendaEstructurada[diaStr][horaStr]) agendaEstructurada[diaStr][horaStr] = { MANUEL: null, ALEJANDRO: null };
+               agendaEstructurada[diaStr][horaStr][cita.agente.toUpperCase()] = cita;
+           });
+
+           let diasArray = Array.from(diasUnicos).sort();
+
+           if (diasArray.length === 0) {
+               div.innerHTML = `<div class="bg-white p-10 rounded-xl shadow-sm border border-gray-200 text-center"><p class="font-bold text-gray-500">No hay citas programadas próximamente.</p></div>`;
+               return;
+           }
+
+           let html = `
+           <div class="bg-white rounded-xl shadow-xl border border-[#001e50] overflow-hidden">
+               <div class="bg-[#001e50] text-white p-4 flex justify-between items-center">
+                  <h2 class="text-lg font-black tracking-widest uppercase flex items-center gap-2"><i class="ph-bold ph-calendar-grid-week text-2xl"></i> Cuadrante de Entregas</h2>
+                  <div class="flex gap-4 text-xs font-bold">
+                     <span class="flex items-center gap-1"><div class="w-3 h-3 bg-[#c9daf8] rounded-full border border-blue-300"></div> MANUEL</span>
+                     <span class="flex items-center gap-1"><div class="w-3 h-3 bg-[#f9cb9c] rounded-full border border-orange-300"></div> ALEJANDRO</span>
+                  </div>
+               </div>
+               <div class="overflow-x-auto">
+                 <table class="w-full text-left border-collapse">
+                   <thead>
+                     <tr>
+                       <th class="p-3 border-b-2 border-r-2 border-gray-200 bg-gray-50 text-center w-20"><i class="ph-bold ph-clock text-xl text-gray-400"></i></th>
+                       ${diasArray.map(dia => `<th class="p-3 border-b-2 border-r border-gray-200 bg-gray-50 text-center font-black text-[#001e50] min-w-[250px]">${dia}</th>`).join('')}
+                     </tr>
+                   </thead>
+                   <tbody>
+           `;
+
+           horasLaborales.forEach(hora => {
+               html += `<tr><td class="p-3 border-b border-r-2 border-gray-200 bg-gray-50 text-center font-black text-gray-600 text-lg align-top pt-4">${hora}:00</td>`;
+               diasArray.forEach(dia => {
+                   html += `<td class="p-2 border-b border-r border-gray-100 align-top">
+                               <div class="flex flex-col gap-2 h-full">`;
+                   let cM = agendaEstructurada[dia] && agendaEstructurada[dia][hora] ? agendaEstructurada[dia][hora].MANUEL : null;
+                   html += renderizarCeldaCita(cM, 'MANUEL', '#c9daf8', 'text-blue-900', 'border-blue-200');
+                   let cA = agendaEstructurada[dia] && agendaEstructurada[dia][hora] ? agendaEstructurada[dia][hora].ALEJANDRO : null;
+                   html += renderizarCeldaCita(cA, 'ALEJANDRO', '#f9cb9c', 'text-orange-900', 'border-orange-300');
+                   html += `   </div>
+                             </td>`;
+               });
+               html += `</tr>`;
+           });
+
+           html += `</tbody></table></div></div>`;
+           div.innerHTML = html;
+
+       } catch (error) {
+           console.error(error);
+           div.innerHTML = `<div class="bg-red-50 p-10 rounded-xl shadow-sm border border-red-200 text-center"><p class="font-bold text-red-600">Error al conectar con el servidor de Outlook/Excel.</p></div>`;
+       }
+    }
+
+    function renderizarCeldaCita(cita, nombreAgente, bgColor, textColor, borderColor) {
+       if (!cita) {
+           return `<div class="flex-1 border border-dashed border-gray-300 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center min-h-[80px] opacity-50 hover:opacity-100 transition-opacity cursor-pointer group" title="Hueco Libre - ${nombreAgente}">
+                      <span class="text-[10px] font-bold text-gray-400 group-hover:text-gray-600 uppercase tracking-widest">+ LIBRE</span>
+                   </div>`;
+       }
+       let cocheEnBaseDatos = todosLosCoches.find(c => c.B === cita.matricula || (c.A && c.A === cita.bastidor));
+       let estaRetenido = cocheEnBaseDatos && ((cocheEnBaseDatos.enTaller && !cocheEnBaseDatos.finTaller) || (cocheEnBaseDatos.enRecambios && !cocheEnBaseDatos.finRecambios));
+       
+       let alertaVisual = estaRetenido 
+           ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse cursor-pointer" onclick="comprobarAlertaEntrega('${cita.matricula}', '${cita.modelo}')" title="Vehículo bloqueado. Haz clic para Reagendar."><i class="ph-bold ph-warning"></i></div>` 
+           : '';
+
+       return `
+       <div class="flex-1 rounded-lg p-2.5 relative border shadow-sm min-h-[80px] flex flex-col justify-between" style="background-color: ${bgColor}; border-color: ${borderColor};">
+          ${alertaVisual}
+          <div>
+            <div class="flex justify-between items-start mb-1">
+              <h4 class="font-black text-xs ${textColor} uppercase leading-tight line-clamp-1" title="${cita.modelo}">${cita.modelo}</h4>
             </div>
-            <div class="text-right">
-              <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Cita Cliente</p>
-              <p class="font-black text-vw-blue text-2xl">${c.fechaCita}</p>
-            </div>
-         </div>`;
-       }).join('');
+            <p class="font-bold text-[10px] bg-white/60 px-1.5 py-0.5 rounded text-gray-800 w-max tracking-widest shadow-sm">${cita.matricula}</p>
+          </div>
+          <div class="mt-2 text-[9px] font-bold ${textColor} leading-tight border-t border-white/40 pt-1">
+             <p class="truncate uppercase"><i class="ph-fill ph-user"></i> ${cita.cliente}</p>
+             <p class="truncate uppercase mt-0.5"><i class="ph-fill ph-buildings"></i> ${cita.renting}</p>
+          </div>
+       </div>`;
+    }
+
+    // Función de alerta que se lanza desde el cuadrante si hay retención
+    window.comprobarAlertaEntrega = function(matricula, modelo) {
+        Swal.fire({
+            title: '⚠️ ALERTA: ENTREGA INMINENTE',
+            text: `El coche ${modelo} (${matricula}) se entrega pronto y sigue bloqueado en Taller o Recambios. ¿Deseas reagendar la cita?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#001e50',
+            confirmButtonText: 'Ir a Bookings',
+            cancelButtonText: 'Cerrar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.open("https://outlook.office.com/book/EntregasVWMadrid@porscheholding.onmicrosoft.com/?ismsaljsauthenabled", "_blank");
+            }
+        });
+    };
+
+    function renderEntregados() {
+       let entregados = todosLosCoches.filter(c => c.entregado);
+       let div = document.getElementById('contenedorTarjetas');
+       if(entregados.length === 0) { div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">Aún no hay vehículos en el historial.</p></div>`; } 
+       else {
+           div.innerHTML = entregados.map(c => `
+             <div class="card-mini border-l-8 border-gray-400 p-5 fila-coche bg-gray-50 opacity-80">
+                <h3 class="font-black text-base text-gray-600 uppercase">${c.C}</h3>
+                <p class="text-[10px] font-bold text-gray-400 mt-1 tracking-widest">VIN: ${c.A}</p>
+                <div class="mt-3 bg-gray-200 text-center py-1 rounded text-xs font-bold text-gray-600">${c.B}</div>
+                <div class="mt-4 pt-3 border-t border-gray-200 text-center text-xs font-bold text-emerald-700 flex items-center justify-center gap-1">
+                   <i class="ph-fill ph-check-circle text-lg"></i> Entregado: ${c.fechaEntrega || 'Completado'}
+                </div>
+             </div>`).join('');
+       }
     }
 
     function filtrarCoches() {
       const t = document.getElementById('buscadorInput').value.toLowerCase();
-      document.querySelectorAll('#contenedorPrincipal .card-mini').forEach(card => {
-        card.style.display = card.innerText.toLowerCase().includes(t) ? '' : 'none';
-      });
+      document.querySelectorAll('.fila-coche').forEach(el => { el.style.display = el.innerText.toLowerCase().includes(t) ? '' : 'none'; });
+    }
+
+    function abrirLectorPDF() { document.getElementById('inputUploadPDF').click(); }
+
+    async function procesarPDFs(evento) {
+      const archivos = evento.target.files;
+      if (!archivos || archivos.length === 0) return;
+      Swal.fire({ title: `Analizando ${archivos.length} PDFs...`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+      let cochesAnadidos = 0;
+      const vwModels = ["GOLF", "POLO", "TIGUAN", "T-ROC", "T-CROSS", "TAIGO", "PASSAT", "ARTEON", "TOUAREG", "ID.3", "ID.4", "ID.5", "ID.7", "ID. BUZZ", "CADDY", "CRAFTER", "MULTIVAN", "AMAROK", "TOURAN", "UP!"];
+
+      for (let file of archivos) {
+        try {
+          const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
+          let txt = "";
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const pagina = await pdf.getPage(i);
+            const contenido = await pagina.getTextContent();
+            txt += contenido.items.map(item => item.str).join(" ");
+          }
+
+          const matchBastidor = txt.match(/\b[A-HJ-NPR-Z0-9]{17}\b/gi);
+          if (matchBastidor) {
+             const bastidor = matchBastidor[0].toUpperCase();
+             const matchMatricula = txt.match(/\b\d{4}\s?[B-DF-HJ-NP-TV-Z]{3}\b/i);
+             const matricula = matchMatricula ? matchMatricula[0].replace(/\s/g, '').toUpperCase() : 'S/M';
+             let modD = "VW " + file.name.split('.')[0].substring(0, 10); 
+             for(let mod of vwModels) { if(txt.toUpperCase().includes(mod)) { modD = "VW " + mod; break; } }
+
+             await window.setDoc(window.doc(window.db, "vehiculos", bastidor), { 
+                 bastidor: bastidor, matricula: matricula, modelo: modD, 
+                 creadoEn: new Date().getTime(), entregado: false, pasoAInventario: false 
+             });
+             cochesAnadidos++;
+          }
+        } catch (error) { console.error(error); }
+      }
+      document.getElementById('inputUploadPDF').value = ""; 
+      Swal.fire('¡Carga Completa!', `Se han enviado ${cochesAnadidos} vehículos a Logística Previa.`, 'success');
+    }
+
+    async function anadirVehiculoManual() {
+        const { value: formValues } = await Swal.fire({
+            title: 'Añadir Vehículo Manual',
+            html: `
+                <input id="swal-bastidor" class="swal2-input !w-3/4 text-center font-mono uppercase" placeholder="Bastidor (17 dígitos)" maxlength="17">
+                <input id="swal-matricula" class="swal2-input !w-3/4 text-center uppercase" placeholder="Matrícula (Ej: 1234 ABC)">
+                <input id="swal-modelo" class="swal2-input !w-3/4 text-center uppercase" placeholder="Modelo (Ej: VW TIGUAN)">
+            `,
+            showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Guardar',
+            preConfirm: () => {
+                const b = document.getElementById('swal-bastidor').value.toUpperCase().trim();
+                const m = document.getElementById('swal-matricula').value.toUpperCase().trim();
+                const mod = document.getElementById('swal-modelo').value.toUpperCase().trim();
+                if (!b || b.length !== 17) { Swal.showValidationMessage('El bastidor debe tener 17 caracteres'); return false; }
+                if (!mod) { Swal.showValidationMessage('Indica el modelo'); return false; }
+                return { bastidor: b, matricula: m || "S/M", modelo: mod };
+            }
+        });
+
+        if (formValues) {
+            Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
+            await window.setDoc(window.doc(window.db, "vehiculos", formValues.bastidor), { 
+                bastidor: formValues.bastidor, matricula: formValues.matricula, modelo: formValues.modelo, creadoEn: new Date().getTime(), entregado: false, pasoAInventario: false
+            });
+            Swal.fire('¡Añadido!', 'Vehículo enviado a Logística Previa.', 'success');
+        }
+    }
+
+    function descargarExcelReal() {
+       let cochesAExportar = todosLosCoches.filter(c => !c.entregado && c.pasoAInventario !== false);
+       if (cochesAExportar.length === 0) { Swal.fire('Aviso', 'No hay datos activos en inventario', 'info'); return; }
+       Swal.fire({title: 'Generando Excel...', didOpen: () => Swal.showLoading()});
+       
+       let datosExcel = cochesAExportar.map(c => ({
+           "MODELO": c.C, "MATRÍCULA": c.B, "BASTIDOR (VIN)": c.A, "RENTING": c.renting || "", "AGENCIA": c.agencia || "",
+           "TALLER": c.finTaller ? "FINALIZADO" : (c.enTaller ? "EN TALLER" : "PENDIENTE"),
+           "MOTIVO TALLER": c.instruccionTaller || "", "Nº ORDEN TALLER": c.ordenTaller || "", "ENTRADA TALLER": c.fechaEntradaTaller || "", "PREVISIÓN TALLER": c.fechaTaller || "", "FIN TALLER": c.fechaFinTaller || "",
+           "RECAMBIOS": c.finRecambios ? "FINALIZADO" : (c.enRecambios ? "EN CURSO" : "PENDIENTE"),
+           "MOTIVO RECAMBIOS": c.instruccionRecambios || "", "Nº PEDIDO": c.ordenRecambios || "", "ENTRADA RECAMBIOS": c.fechaEntradaRecambios || "", "PREVISIÓN RECAMBIOS": c.fechaRecambios || "", "FIN RECAMBIOS": c.fechaFinRecambios || "",
+           "CITA CLIENTE": c.fechaCita || ""
+       }));
+
+       const worksheet = XLSX.utils.json_to_sheet(datosExcel);
+       const workbook = XLSX.utils.book_new();
+       XLSX.utils.book_append_sheet(workbook, worksheet, "Flota_Activa");
+       XLSX.writeFile(workbook, "VW_Flota_" + new Date().toLocaleDateString().replace(/\//g, '-') + ".xlsx");
+       Swal.close();
+    }
+
+    async function editarRentingAgencia(id, rActual, aActual) {
+        const { value: formValues } = await Swal.fire({
+            title: 'Renting / Agencia',
+            html: `<input id="swal-renting" class="swal2-input uppercase" placeholder="Empresa Renting..." value="${rActual || ''}"><input id="swal-agencia" class="swal2-input uppercase" placeholder="Agencia Transporte..." value="${aActual || ''}">`,
+            showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Guardar'
+        });
+        if (formValues) {
+            await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
+                renting: document.getElementById('swal-renting').value.toUpperCase(),
+                agencia: document.getElementById('swal-agencia').value.toUpperCase()
+            });
+        }
     }
 
     function pedirInst(btn, idCoche, depto) {
       Swal.fire({
-        title: 'Enviar a ' + depto,
-        html: `<input type="text" id="instInput" class="swal2-input" placeholder="Añadir Instrucción..."><br><input type="file" id="fileInput" class="mt-4 text-sm" accept=".pdf,image/*">`,
-        showCancelButton: true, confirmButtonColor: '#001e50'
+        title: 'Enviar a ' + depto.charAt(0).toUpperCase() + depto.slice(1),
+        html: `<input type="text" id="instInput" class="swal2-input" placeholder="Escribe el Motivo/Instrucción..."><br><input type="file" id="fileInput" class="mt-4 text-sm w-3/4" accept=".pdf,image/*">`,
+        showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Confirmar Solicitud'
       }).then((result) => {
         if (result.isConfirmed) { 
           let ins = document.getElementById('instInput').value; let f = document.getElementById('fileInput').files[0];
@@ -501,14 +871,15 @@
     }
 
     async function subirYEnviar(id, depto, ins, file) {
-      Swal.fire({title: 'Procesando Documento...', didOpen: () => Swal.showLoading()});
+      Swal.fire({title: 'Adjuntando...', didOpen: () => Swal.showLoading()});
       const reader = new FileReader(); reader.readAsDataURL(file);
       reader.onload = async () => {
         const urlDrive = 'https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec'; 
         try {
           const res = await fetch(urlDrive, { method: 'POST', body: JSON.stringify({ base64: reader.result, fileName: file.name, mimeType: file.type }) });
           const data = await res.json();
-          let upd = depto === 'taller' ? { enTaller: true, ordenTaller: ins, urlParte: data.url } : { enRecambios: true, ordenRecambios: ins, urlParte: data.url };
+          let fHoy = new Date().toLocaleDateString();
+          let upd = depto === 'taller' ? { enTaller: true, instruccionTaller: ins, urlParte: data.url, fechaEntradaTaller: fHoy, finTaller: false } : { enRecambios: true, instruccionRecambios: ins, urlParte: data.url, fechaEntradaRecambios: fHoy, finRecambios: false };
           await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
           Swal.fire('Éxito', 'Enviado correctamente', 'success');
         } catch (e) { Swal.fire('Error', e.message, 'error'); }
@@ -516,42 +887,40 @@
     }
 
     async function mandar(id, depto, ins) {
-      let upd = depto === 'taller' ? { enTaller: true, ordenTaller: ins } : { enRecambios: true, ordenRecambios: ins };
+      let fHoy = new Date().toLocaleDateString();
+      let upd = depto === 'taller' ? { enTaller: true, instruccionTaller: ins, fechaEntradaTaller: fHoy, finTaller: false } : { enRecambios: true, instruccionRecambios: ins, fechaEntradaRecambios: fHoy, finRecambios: false };
       await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
     }
 
-    async function ejecutar(tipo, id, fin) {
-      const p = tipo === 'Taller' ? 'p' : 'r';
-      let upd = tipo === 'Taller' ? 
-        { finTaller: fin, ordenTaller: document.getElementById(`o-${p}-${id}`).value, fechaTaller: document.getElementById(`f-${p}-${id}`).value } : 
-        { finRecambios: fin, ordenRecambios: document.getElementById(`o-${p}-${id}`).value, fechaRecambios: document.getElementById(`f-${p}-${id}`).value };
-      await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
-      Swal.fire({ icon: 'success', title: fin ? 'Finalizado' : 'Guardado', showConfirmButton: false, timer: 1000 });
-    }
-
-    // ==========================================
-    // CHAT WHATSAPP
-    // ==========================================
-    async function abrirChat(id, mod, mat, json) {
+    async function abrirChat(id, mod, mat, jsonStr) {
       document.getElementById('chatFilaActiva').value = id;
       document.getElementById('chatTituloCoche').innerText = decodeURIComponent(mod);
       document.getElementById('chatSubtitulo').innerText = "Matrícula: " + decodeURIComponent(mat);
-      let obj = { history: [] };
-      try { if (json && json !== "null") { let d = JSON.parse(decodeURIComponent(json)); obj = d.history ? d : { history: d }; } } catch(e) {}
-      dibujarMsj(obj.history);
-      document.getElementById('chatModal').classList.remove('hidden');
+      
+      let chatObj = { history: [], lastOpened: {} }; 
+      try { 
+         if (jsonStr && jsonStr !== "undefined") { 
+             chatObj = JSON.parse(decodeURIComponent(jsonStr)); 
+         } 
+      } catch(e) {}
+      
+      let updateData = {};
+      updateData[`chatInfo.lastOpened.${userRole.toUpperCase()}`] = new Date().getTime();
+      window.updateDoc(window.doc(window.db, "vehiculos", id), updateData).catch(e=>console.log(e));
+
+      dibujarMsj(chatObj.history); document.getElementById('chatModal').classList.remove('hidden');
     }
 
     function cerrarChat() { document.getElementById('chatModal').classList.add('hidden'); }
 
     function dibujarMsj(hist) {
       const cont = document.getElementById('chatMessages');
-      if (!hist || hist.length === 0) { cont.innerHTML = `<p class="text-center text-xs font-bold text-gray-500 mt-4 bg-white/50 p-2 rounded-lg mx-auto w-max shadow-sm">Los mensajes están cifrados.</p>`; return; }
+      if (!hist || hist.length === 0) { cont.innerHTML = `<p class="text-center text-xs font-bold text-gray-500 mt-4 bg-white/50 p-2 rounded-lg mx-auto w-max border border-gray-200">Historial vacío.</p>`; return; }
       cont.innerHTML = hist.map(m => {
         const isMe = (m.rol || "").toUpperCase() === userRole.toUpperCase();
         let hStr = m.fecha ? new Date(m.fecha).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
-        let rStr = isMe ? '' : `<div class="text-[11px] font-bold text-[#075e54] mb-0.5">${m.rol}</div>`;
-        return `<div class="wa-bubble ${isMe ? 'wa-me self-end' : 'wa-other self-start'}">${rStr}<div>${m.texto}</div><span class="wa-time">${hStr}</span></div>`;
+        let rStr = isMe ? '' : `<div class="text-[10px] font-bold text-[#075e54] mb-0.5">${m.rol}</div>`;
+        return `<div class="wa-bubble ${isMe ? 'wa-me' : 'wa-other border border-gray-200 shadow-sm'}">${rStr}<div>${m.texto}</div><span class="wa-time">${hStr}</span></div>`;
       }).join('');
       setTimeout(() => cont.scrollTop = cont.scrollHeight, 50);
     }
@@ -559,12 +928,14 @@
     async function enviarMensajeChat() {
       const input = document.getElementById('chatInput'); const id = document.getElementById('chatFilaActiva').value; const txt = input.value.trim();
       if (!id || !txt) return; input.value = "";
+      
+      const nuevoMensaje = { rol: userRole.toUpperCase(), fecha: new Date().getTime(), texto: txt };
       const ref = window.doc(window.db, "vehiculos", id);
-      const snap = await window.getDoc(ref);
-      let obj = { history: [] }; try { let d = JSON.parse(snap.data().chat || "[]"); obj = d.history ? d : { history: d }; } catch(e) {}
-      obj.history.push({ rol: userRole.toUpperCase(), fecha: new Date().getTime(), texto: txt });
-      await window.updateDoc(ref, { chat: JSON.stringify(obj) });
-      dibujarMsj(obj.history);
+      
+      let updateData = { "chatInfo.history": window.arrayUnion(nuevoMensaje) };
+      updateData[`chatInfo.lastOpened.${userRole.toUpperCase()}`] = new Date().getTime();
+      
+      await window.updateDoc(ref, updateData);
     }
   </script>
 </body>
