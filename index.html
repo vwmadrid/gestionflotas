@@ -601,7 +601,7 @@
        // 🚨 PON AQUÍ LA URL DE TU APLICACIÓN WEB DE GOOGLE SCRIPT 🚨
        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqD3kagU--t1lAmBRoqy3ngBgneeWCCLFdWWxsFDaHLROrCi-9CqTyE-rFpIEhwQd9/exec";
        
-       if (SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzqD3kagU--t1lAmBRoqy3ngBgneeWCCLFdWWxsFDaHLROrCi-9CqTyE-rFpIEhwQd9/exec") {
+       if (SCRIPT_URL === "PON_AQUI_TU_URL_DE_GOOGLE_SCRIPT") {
            div.innerHTML = `<div class="bg-white p-10 rounded-xl shadow-sm border border-gray-200 text-center"><i class="ph-fill ph-warning-circle text-4xl text-amber-500 mb-3"></i><p class="font-bold text-gray-600">Aún no has pegado la URL de tu Google Script en el código.</p></div>`;
            return;
        }
@@ -632,7 +632,8 @@
                
                if (!agendaEstructurada[diaStr]) agendaEstructurada[diaStr] = {};
                if (!agendaEstructurada[diaStr][horaStr]) agendaEstructurada[diaStr][horaStr] = { MANUEL: null, ALEJANDRO: null };
-               agendaEstructurada[diaStr][horaStr][cita.agente.toUpperCase()] = cita;
+               let nombreAgente = (cita.entregador || cita.agente || "MANUEL").toUpperCase();
+agendaEstructurada[diaStr][horaStr][nombreAgente] = cita;
            });
 
            let diasArray = Array.from(diasUnicos).sort();
