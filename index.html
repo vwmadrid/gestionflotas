@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <link rel="manifest" href="manifest.json">
   <meta charset="UTF-8">
   <title>VCastellana Wagen M-40 - Control de Vehículos</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -949,20 +948,41 @@
     // ==========================================
     // SECCIÓN DE AUDITORÍA (LIMPIEZA DE BASE DE DATOS)
     // ==========================================
-    function renderAuditoria() {
-       let lista = document.getElementById('listaAuditoria');
-       let activos = todosLosCoches.filter(c => !c.entregado);
-       
-       lista.innerHTML = activos.map(c => `
-          <label class="flex items-center gap-4 p-3 border-b border-gray-100 hover:bg-red-50/50 cursor-pointer transition-colors rounded-lg">
-             <input type="checkbox" class="check-limpieza w-5 h-5 accent-red-600 cursor-pointer" value="${c.fila}">
-             <div class="flex-1">
-                <p class="font-bold text-sm text-gray-800">${c.C} - <span class="text-[#001e50] bg-gray-100 px-2 py-0.5 rounded border border-gray-200">${c.B}</span></p>
-                <p class="text-[10px] text-gray-500 font-mono mt-1">VIN: ${c.A}</p>
-             </div>
-          </label>
-       `).join('');
+    function renderAuditoria(query = "") {
+    let lista = document.getElementById('listaAuditoria');
+    
+    // Convertimos a minúsculas y limpiamos espacios accidentales al principio o final
+    let q = query.toLowerCase().trim(); 
+    
+    // Filtramos los coches
+    let activos = todosLosCoches.filter(c => {
+        // Si ya está entregado, lo descartamos inmediatamente
+        if (c.entregado) return false;
+        
+        // Creamos una gran cadena de texto con Modelo, Matrícula y Bastidor
+        let textoBusqueda = (c.C || "") + " " + (c.B || "") + " " + (c.A || "");
+        
+        // Comprobamos si lo que has escrito está dentro de esa gran cadena
+        return textoBusqueda.toLowerCase().includes(q);
+    });
+    
+    // Si la búsqueda no encuentra nada, mostramos un mensaje amigable
+    if (activos.length === 0) {
+        lista.innerHTML = '<p class="text-center text-gray-500 font-bold p-4">No se encontraron vehículos con esos datos.</p>';
+        return;
     }
+
+    // Si hay resultados, los pintamos
+    lista.innerHTML = activos.map(c => `
+        <label class="flex items-center gap-4 p-3 border-b border-gray-100 hover:bg-red-50/50 cursor-pointer transition-colors rounded-lg">
+           <input type="checkbox" class="check-limpieza w-5 h-5 accent-red-600 cursor-pointer" value="${c.fila}">
+           <div class="flex-1">
+              <p class="font-bold text-sm text-gray-800">${c.C} - <span class="text-[#001e50] bg-gray-100 px-2 py-0.5 rounded border border-gray-200">${c.B}</span></p>
+              <p class="text-[10px] text-gray-500 font-mono mt-1">VIN: ${c.A}</p>
+           </div>
+        </label>
+    `).join('');
+}
 
     async function ejecutarLimpieza() {
        let seleccionados = Array.from(document.querySelectorAll('.check-limpieza:checked')).map(cb => cb.value);
@@ -1253,13 +1273,6 @@ window.borrarVehiculo = async function(id, modelo) {
         
         Swal.fire('¡Éxito!', `Se han movido ${cochesAConvertir.length} vehículos a Logística.`, 'success');
     }
-}
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((reg) => console.log('Service Worker registrado', reg))
-      .catch((err) => console.log('Error al registrar SW', err));
-  });
 }
   </script>
 </body>
