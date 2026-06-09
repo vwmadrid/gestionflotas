@@ -63,8 +63,7 @@
 </head>
 <body class="text-gray-800 antialiased h-screen flex overflow-hidden">
 
-  <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-200">
-<div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50">
+  <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50">
     <div class="bg-white w-full h-full flex flex-col items-center justify-center p-8 border-t-[20px] border-[#001e50] text-center">
         
         <div class="mb-12 w-full max-w-md">
@@ -87,8 +86,6 @@
         </div>
 
     </div>
-</div>
-    </div>
   </div>
 
   <aside class="w-64 bg-[#001e50] text-white flex flex-col z-20 shadow-2xl" id="sidebarApp" style="display:none;">
@@ -101,7 +98,7 @@
       <button onclick="cambiarPestana('logistica')" class="p-3 text-amber-300 bg-amber-500/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all border border-amber-500/30 mb-4"><i class="ph-bold ph-truck text-lg"></i> Logística Renting</button>
       
       <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1">Concesionario</p>
-      <button onclick="cambiarPestana('todos')" class="p-3 bg-white/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all shadow-sm"><i class="ph-bold ph-squares-four text-lg"></i> Inventario Total</button>
+     <button onclick="cambiarPestana('todos')" class="p-3 bg-white/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all shadow-sm"><i class="ph-bold ph-car text-lg"></i> Vehículos</button>
       <button onclick="cambiarPestana('agenda')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-lg"></i> Agenda Citas</button>
       <button onclick="cambiarPestana('entregados')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-4 border border-white/20"><i class="ph-bold ph-check-square-offset text-lg"></i> Historial Entregados</button>
       
@@ -144,11 +141,12 @@
       </div>
 
       <div id="filtrosVisuales" class="hidden flex gap-2 overflow-x-auto pb-1 mt-1">
-         <button onclick="aplicarFiltroVisual('todos', this)" class="filtro-btn bg-[#001e50] text-white border border-[#001e50] px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-all">Activos (<span id="c-todos">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('listos', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-check-circle text-emerald-500 text-sm"></i> Listos (<span id="c-listos">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('taller', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-wrench text-amber-500 text-sm"></i> Taller (<span id="c-taller">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('recambios', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-package text-teal-500 text-sm"></i> Recambios (<span id="c-recambios">0</span>)</button>
-      </div>
+   <button onclick="aplicarFiltroVisual('todos', this)" class="filtro-btn bg-[#001e50] text-white border border-[#001e50] px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-all">Todos (<span id="c-todos">0</span>)</button>
+   <button onclick="aplicarFiltroVisual('pendientes', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-clock text-gray-400 text-sm"></i> Ptes. Cita (<span id="c-pendientes">0</span>)</button>
+   <button onclick="aplicarFiltroVisual('concita', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-calendar-check text-blue-500 text-sm"></i> Con Cita (<span id="c-concita">0</span>)</button>
+   <button onclick="aplicarFiltroVisual('taller', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-wrench text-amber-500 text-sm"></i> Taller (<span id="c-taller">0</span>)</button>
+   <button onclick="aplicarFiltroVisual('recambios', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-package text-teal-500 text-sm"></i> Recambios (<span id="c-recambios">0</span>)</button>
+</div>
     </header>
     
     <div class="flex-1 overflow-y-auto p-6 bg-gray-100 w-full relative">
@@ -204,6 +202,7 @@
   <script>
     let userRole = ""; let activeTab = 'logistica'; let modoVistaActual = 'tarjetas'; 
     let unsubscribeFirebase = null; let todosLosCoches = []; let filtroActual = 'todos';
+    window.memoriaAuditoria = new Set();
 
     window.onload = function() {
       const rol = localStorage.getItem('vw_departamento');
@@ -377,19 +376,30 @@
       });
     }
 
-    function actualizarContadores() {
-       let listos = 0, taller = 0, recambios = 0, alertas = 0, total = 0;
+function actualizarContadores() {
+       let pendientes = 0, concita = 0, taller = 0, recambios = 0, total = 0;
+       
        todosLosCoches.forEach(c => {
           let enInventario = c.pasoAInventario !== false; 
           if(!c.entregado && enInventario) {
               total++;
-              let enT = c.enTaller && !c.finTaller; let enR = c.enRecambios && !c.finRecambios;
-              if (!enT && !enR) listos++; if (enT) taller++; if (enR) recambios++;
-              if (c.fechaCita && (enT || enR)) alertas++;
+              let enT = c.enTaller && !c.finTaller; 
+              let enR = c.enRecambios && !c.finRecambios;
+              let tieneCita = !!c.fechaCita;
+
+              // Lógica inteligente de prioridad: Si está en taller, cuenta como taller aunque tenga cita.
+              if (enT) { taller++; }
+              else if (enR) { recambios++; }
+              else if (tieneCita) { concita++; }
+              else { pendientes++; }
           }
        });
-       document.getElementById('c-todos').innerText = total; document.getElementById('c-listos').innerText = listos;
-       document.getElementById('c-taller').innerText = taller; document.getElementById('c-recambios').innerText = recambios;
+       
+       document.getElementById('c-todos').innerText = total; 
+       if(document.getElementById('c-pendientes')) document.getElementById('c-pendientes').innerText = pendientes;
+       if(document.getElementById('c-concita')) document.getElementById('c-concita').innerText = concita;
+       document.getElementById('c-taller').innerText = taller; 
+       document.getElementById('c-recambios').innerText = recambios;
     }
 
     function renderLogistica() {
@@ -400,18 +410,56 @@
            div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay vehículos en fase de logística previa.</p></div>`;
        } else {
            div.innerHTML = logistica.map(c => {
+               // 1. Botones originales de estado logístico
                let btnDoc = c.fechaDoc ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Doc: ${c.fechaDoc}</div>` : `<button onclick="marcarPaso('${c.fila}', 'fechaDoc')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">Documentación</button>`;
                let btnTrans = c.fechaTransporte ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Trans: ${c.fechaTransporte}</div>` : `<button onclick="marcarPaso('${c.fila}', 'fechaTransporte')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Transporte</button>`;
                let btnPrep = c.fechaPreparacion ? `<div class="bg-amber-100 text-amber-800 text-[9px] font-bold py-1.5 px-2 rounded border border-amber-300 text-center">⚠️ Prep: ${c.fechaPreparacion}</div>` : `<button onclick="marcarPaso('${c.fila}', 'fechaPreparacion')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Preparación</button>`;
 
+               // 2. Lógica para el Chat
+               let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})); 
+               let mS = encodeURIComponent(c.C || ''); 
+               let maS = encodeURIComponent(c.B || '');
+
+               // 3. Lógica para Taller y Recambios (Exactamente igual que en el inventario)
+               let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<span class="status-btn bg-amber-100 text-amber-800"><i class="ph-bold ph-wrench"></i> Tall. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
+               let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<span class="status-btn bg-teal-100 text-teal-800"><i class="ph-bold ph-package"></i> Rec. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
+
+               // 4. Lógica para la información de previsión y orden
+               let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
+               let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
+
                return `
-               <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm fila-coche">
-                 <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
-                 <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
-                 <div class="grid grid-cols-3 gap-2 mt-4 mb-4">
+               <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm fila-coche flex flex-col relative">
+                 
+                 <div class="flex justify-between items-start mb-2 gap-2">
+                    <div class="min-w-0 pr-2">
+                        <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
+                        <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
+                    </div>
+<div class="flex gap-1 flex-shrink-0">
+    <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${obtenerBurbujaChat(c.chatData)}</button>
+     <button onclick="editarVehiculoBasico('${c.fila}', '${c.A}', '${c.B}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info del vehículo"><i class="ph-bold ph-pencil-simple text-lg"></i></button> 
+     <button onclick="borrarVehiculo('${c.fila}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>            
+     </div>
+                 </div>
+
+                 <div class="flex gap-2 mb-3">
+                    <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
+                    <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
+                 </div>
+
+                 <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
                     ${btnDoc} ${btnTrans} ${btnPrep}
                  </div>
-                 <button onclick="pasarAInventario('${c.fila}')" class="w-full bg-[#001e50] text-white font-bold py-3 rounded-lg text-xs hover:bg-blue-900 shadow-sm flex items-center justify-center gap-2">
+
+                 <div class="flex flex-col gap-2 mb-4">
+                   <div class="flex gap-2 w-full">
+                     <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
+                     <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+                   </div>
+                 </div>
+
+                 <button onclick="pasarAInventario('${c.fila}')" class="w-full mt-auto bg-[#001e50] text-white font-bold py-3 rounded-lg text-xs hover:bg-blue-900 shadow-sm flex items-center justify-center gap-2">
                     <i class="ph-bold ph-check"></i> Marcar como "Listo para Entrega"
                  </button>
                </div>`;
@@ -419,33 +467,18 @@
        }
     }
 
-    async function marcarPaso(id, campo) {
-        let update = {}; update[campo] = new Date().toLocaleDateString();
-        await window.updateDoc(window.doc(window.db, "vehiculos", id), update);
-    }
-
-    async function pasarAInventario(id) {
-        Swal.fire({
-            title: '¿Recepcionar Vehículo?',
-            text: "Pasará al Inventario Central y constará como Listo en el portal de Renting.",
-            icon: 'question', showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Sí, Recepcionar'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                await window.updateDoc(window.doc(window.db, "vehiculos", id), { pasoAInventario: true, fechaRecepcionBase: new Date().toLocaleDateString() });
-                Swal.fire('¡Recepcionado!', 'El vehículo ya está en el circuito principal.', 'success');
-            }
-        });
-    }
-
     function renderizarVistas() {
        let activos = todosLosCoches.filter(c => !c.entregado && c.pasoAInventario !== false);
        let filtrados = activos.filter(c => {
-          let enT = c.enTaller && !c.finTaller; let enR = c.enRecambios && !c.finRecambios;
+          let enT = c.enTaller && !c.finTaller; 
+          let enR = c.enRecambios && !c.finRecambios;
+          let tieneCita = !!c.fechaCita;
+
           if (filtroActual === 'todos') return true;
-          if (filtroActual === 'listos') return !enT && !enR;
+          if (filtroActual === 'pendientes') return !enT && !enR && !tieneCita;
+          if (filtroActual === 'concita') return !enT && !enR && tieneCita;
           if (filtroActual === 'taller') return enT;
           if (filtroActual === 'recambios') return enR;
-          if (filtroActual === 'alerta') return (c.fechaCita && (enT || enR));
           return true;
        });
 
@@ -519,11 +552,17 @@
        html += `</tbody></table>`; contenedor.innerHTML = html;
     }
 
-    function renderTarjetaCompacta(c) {
+  function renderTarjetaCompacta(c) {
       let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})); 
       let mS = encodeURIComponent(c.C || ''); let maS = encodeURIComponent(c.B || '');
-      let isAlerta = c.fechaCita && ((c.enTaller && !c.finTaller) || (c.enRecambios && !c.finRecambios));
-      let borderAlerta = isAlerta ? 'border-l-8 border-red-500 bg-red-50/20' : 'border-l-8 border-[#001e50]';
+      
+      let enT = c.enTaller && !c.finTaller;
+      let enR = c.enRecambios && !c.finRecambios;
+      let tieneCita = !!c.fechaCita;
+
+      // Detectamos si es una ALERTA: Está bloqueado en taller/recambios pero TIENE CITA
+      let isAlerta = tieneCita && (enT || enR);
+      let borderAlerta = isAlerta ? 'border-l-8 border-red-600 bg-red-50/50' : 'border-l-8 border-[#001e50]';
       let prog = calcularProgreso(c);
 
       let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<span class="status-btn bg-amber-100 text-amber-800"><i class="ph-bold ph-wrench"></i> Tall. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
@@ -532,8 +571,12 @@
       let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
       let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
 
+      // BLOQUE VISUAL DE ALERTA
+      let htmlAlerta = isAlerta ? `<div class="bg-red-600 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-warning-circle text-sm"></i> ¡URGENTE! TIENE CITA EL ${c.fechaCita}</div>` : '';
+
       return `
       <div class="card-mini ${borderAlerta} p-5 fila-coche">
+        ${htmlAlerta}
         <div class="flex justify-between items-start mb-2 gap-2">
           <div class="min-w-0 pr-2">
             <h3 class="font-black text-base text-[#001e50] truncate uppercase">${c.C}</h3>
@@ -541,11 +584,10 @@
           </div>
           <div class="flex gap-1 flex-shrink-0">
              <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${obtenerBurbujaChat(c.chatData)}</button>
+             <button onclick="editarVehiculoBasico('${c.fila}', '${c.A}', '${c.B}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info"><i class="ph-bold ph-pencil-simple text-lg"></i></button>
              <button onclick="marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors"><i class="ph-bold ph-key text-lg"></i></button>
-             <button onclick="borrarVehiculo('${c.fila}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar">
-    <i class="ph-bold ph-trash text-lg"></i>
-</button>      
-             </div>
+             <button onclick="borrarVehiculo('${c.fila}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>      
+          </div>
         </div>
         
         <div class="flex gap-2 mb-3">
@@ -574,7 +616,8 @@
 
     function renderizarDepartamentos(depto) {
        let divP = document.getElementById('contenedorTarjetas');
-       let activos = todosLosCoches.filter(c => !c.entregado && c.pasoAInventario !== false && (depto === 'taller' ? (c.enTaller && !c.finTaller) : (c.enRecambios && !c.finRecambios)));
+       // 🔥 ELIMINADA LA RESTRICCIÓN DE c.pasoAInventario !== false 🔥
+       let activos = todosLosCoches.filter(c => !c.entregado && (depto === 'taller' ? (c.enTaller && !c.finTaller) : (c.enRecambios && !c.finRecambios)));
        let p = depto === 'taller' ? 'p' : 'r';
        let propInfo = depto === 'taller' ? 'ordenTaller' : 'ordenRecambios';
        let Tipo = depto === 'taller' ? 'Taller' : 'Recambios';
@@ -649,7 +692,7 @@
     }
 
     // ==========================================
-    // AGENDA Y CUADRANTE WEB (SIN FINES DE SEMANA)
+    // AGENDA Y CUADRANTE WEB
     // ==========================================
     window.datosAgenda = [];
     window.mesVistaActual = new Date();
@@ -657,8 +700,6 @@
 
     async function renderAgenda() {
        let div = document.getElementById('contenedorAgenda');
-       
-       // 🚨 PON AQUÍ LA URL DE TU APLICACIÓN WEB DE GOOGLE SCRIPT 🚨
        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqD3kagU--t1lAmBRoqy3ngBgneeWCCLFdWWxsFDaHLROrCi-9CqTyE-rFpIEhwQd9/exec";
 
        div.innerHTML = `<div class="bg-white p-16 rounded-xl shadow-sm border border-gray-200 text-center flex flex-col items-center"><i class="ph-bold ph-spinner animate-spin text-5xl text-[#001e50] mb-4"></i><p class="font-black text-gray-500 tracking-widest uppercase">Sincronizando con Outlook y Excel...</p></div>`;
@@ -948,44 +989,49 @@
     // ==========================================
     // SECCIÓN DE AUDITORÍA (LIMPIEZA DE BASE DE DATOS)
     // ==========================================
-    function renderAuditoria(query = "") {
-    let lista = document.getElementById('listaAuditoria');
-    
-    // Convertimos a minúsculas y limpiamos espacios accidentales al principio o final
-    let q = query.toLowerCase().trim(); 
-    
-    // Filtramos los coches
-    let activos = todosLosCoches.filter(c => {
-        // Si ya está entregado, lo descartamos inmediatamente
-        if (c.entregado) return false;
+    window.renderAuditoria = function(query = "") {
+        let lista = document.getElementById('listaAuditoria');
+        let q = query.toLowerCase().trim(); 
         
-        // Creamos una gran cadena de texto con Modelo, Matrícula y Bastidor
-        let textoBusqueda = (c.C || "") + " " + (c.B || "") + " " + (c.A || "");
+        let activos = todosLosCoches.filter(c => {
+            if (c.entregado) return false;
+            let textoBusqueda = (c.C || "") + " " + (c.B || "") + " " + (c.A || "");
+            return textoBusqueda.toLowerCase().includes(q);
+        });
         
-        // Comprobamos si lo que has escrito está dentro de esa gran cadena
-        return textoBusqueda.toLowerCase().includes(q);
-    });
-    
-    // Si la búsqueda no encuentra nada, mostramos un mensaje amigable
-    if (activos.length === 0) {
-        lista.innerHTML = '<p class="text-center text-gray-500 font-bold p-4">No se encontraron vehículos con esos datos.</p>';
-        return;
-    }
+        if (activos.length === 0) {
+            lista.innerHTML = '<p class="text-center text-gray-500 font-bold p-4">No se encontraron vehículos con esos datos.</p>';
+            return;
+        }
 
-    // Si hay resultados, los pintamos
-    lista.innerHTML = activos.map(c => `
-        <label class="flex items-center gap-4 p-3 border-b border-gray-100 hover:bg-red-50/50 cursor-pointer transition-colors rounded-lg">
-           <input type="checkbox" class="check-limpieza w-5 h-5 accent-red-600 cursor-pointer" value="${c.fila}">
-           <div class="flex-1">
-              <p class="font-bold text-sm text-gray-800">${c.C} - <span class="text-[#001e50] bg-gray-100 px-2 py-0.5 rounded border border-gray-200">${c.B}</span></p>
-              <p class="text-[10px] text-gray-500 font-mono mt-1">VIN: ${c.A}</p>
-           </div>
-        </label>
-    `).join('');
-}
+        lista.innerHTML = activos.map(c => {
+            // Comprobamos la memoria: si el ID está guardado, marcamos la casilla
+            let estaMarcado = window.memoriaAuditoria.has(c.fila) ? "checked" : "";
+            
+            return `
+            <label class="flex items-center gap-4 p-3 border-b border-gray-100 hover:bg-red-50/50 cursor-pointer transition-colors rounded-lg">
+               <input type="checkbox" class="check-limpieza w-5 h-5 accent-red-600 cursor-pointer" value="${c.fila}" onchange="actualizarMemoriaAuditoria(this)" ${estaMarcado}>
+               <div class="flex-1">
+                  <p class="font-bold text-sm text-gray-800">${c.C} - <span class="text-[#001e50] bg-gray-100 px-2 py-0.5 rounded border border-gray-200">${c.B}</span></p>
+                  <p class="text-[10px] text-gray-500 font-mono mt-1">VIN: ${c.A}</p>
+               </div>
+            </label>
+            `;
+        }).join('');
+    };
 
-    async function ejecutarLimpieza() {
-       let seleccionados = Array.from(document.querySelectorAll('.check-limpieza:checked')).map(cb => cb.value);
+    // Función que añade o quita el coche de la memoria al hacer clic
+    window.actualizarMemoriaAuditoria = function(checkbox) {
+        if (checkbox.checked) {
+            window.memoriaAuditoria.add(checkbox.value);
+        } else {
+            window.memoriaAuditoria.delete(checkbox.value);
+        }
+    };
+
+    window.ejecutarLimpieza = async function() {
+       // Leemos los seleccionados de la memoria directa, no del HTML
+       let seleccionados = Array.from(window.memoriaAuditoria);
        let activos = todosLosCoches.filter(c => !c.entregado);
        let aBorrar = activos.filter(c => !seleccionados.includes(c.fila));
 
@@ -1006,13 +1052,17 @@
            for (let c of aBorrar) {
                await window.deleteDoc(window.doc(window.db, "vehiculos", c.fila));
            }
+           
+           // Limpiamos la memoria para la próxima vez
+           window.memoriaAuditoria.clear();
+           
            Swal.fire('¡Limpieza realizada!', `Se han borrado ${aBorrar.length} vehículos obsoletos.`, 'success');
            setTimeout(() => cambiarPestana('todos'), 1500);
        }
-    }
+    };
 
     // ==========================================
-    // RESTO DE FUNCIONES MENORES
+    // RESTO DE FUNCIONES
     // ==========================================
     function renderEntregados() {
        let entregados = todosLosCoches.filter(c => c.entregado);
@@ -1030,24 +1080,131 @@
              </div>`).join('');
        }
     }
-window.borrarVehiculo = async function(id, modelo) {
-    const result = await Swal.fire({
-        title: '¿Estás seguro?',
-        text: `Vas a eliminar permanentemente el vehículo: ${modelo}. No se podrá deshacer.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Sí, borrar',
-        cancelButtonText: 'Cancelar'
-    });
 
-    if (result.isConfirmed) {
-        await window.deleteDoc(window.doc(window.db, "vehiculos", id));
-        Swal.fire('Borrado', 'El vehículo ha sido eliminado del sistema.', 'success');
-        // No hace falta recargar, Firestore detectará el cambio y actualizará la lista solo
+    // NUEVA FUNCIÓN: Mover a inventario (faltaba en tu código original)
+    window.pasarAInventario = async function(id) {
+        Swal.fire({
+            title: '¿Mover a Inventario?',
+            text: "El vehículo dejará Logística y pasará a Concesionario (Vehículos).",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#001e50',
+            confirmButtonText: '<i class="ph-bold ph-check"></i> Sí, Mover'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'Moviendo...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+                await window.updateDoc(window.doc(window.db, "vehiculos", id), { pasoAInventario: true });
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Movido a Inventario', showConfirmButton: false, timer: 1500 });
+            }
+        });
+    };
+
+    window.editarVehiculoBasico = async function(id, bastidorActual, matriculaActual, modeloActual) {
+        const { value: formValues } = await Swal.fire({
+            title: 'Editar Vehículo',
+            html: `
+                <div class="text-left mb-2 text-xs font-bold text-gray-500 uppercase">Bastidor (VIN)</div>
+                <input id="edit-bastidor" class="swal2-input !w-full !m-0 !mb-4 text-center font-mono uppercase" value="${bastidorActual}">
+                
+                <div class="text-left mb-2 text-xs font-bold text-gray-500 uppercase">Matrícula</div>
+                <input id="edit-matricula" class="swal2-input !w-full !m-0 !mb-4 text-center uppercase" value="${matriculaActual}">
+                
+                <div class="text-left mb-2 text-xs font-bold text-gray-500 uppercase">Modelo</div>
+                <input id="edit-modelo" class="swal2-input !w-full !m-0 text-center uppercase" value="${modeloActual}">
+            `,
+            showCancelButton: true, 
+            confirmButtonColor: '#001e50', 
+            confirmButtonText: '<i class="ph-bold ph-floppy-disk"></i> Guardar Cambios',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const b = document.getElementById('edit-bastidor').value.toUpperCase().trim();
+                const m = document.getElementById('edit-matricula').value.toUpperCase().trim();
+                const mod = document.getElementById('edit-modelo').value.toUpperCase().trim();
+                
+                if (!b || b.length < 3) { Swal.showValidationMessage('El bastidor debe tener al menos 3 caracteres'); return false; }
+                if (!mod) { Swal.showValidationMessage('El modelo es obligatorio'); return false; }
+                
+                return { bastidor: b, matricula: m || "S/M", modelo: mod };
+            }
+        });
+
+        if (formValues) {
+            Swal.fire({title: 'Actualizando...', didOpen: () => Swal.showLoading()});
+            await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
+                bastidor: formValues.bastidor, 
+                matricula: formValues.matricula,
+                Matricula: formValues.matricula,
+                modelo: formValues.modelo 
+            });
+            Swal.fire('¡Actualizado!', 'Los datos se han corregido.', 'success');
+        }
+    };
+
+    window.marcarPaso = async function(id, campo) {
+        try {
+            Swal.fire({ title: 'Actualizando estado...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+            const hoy = new Date();
+            const fechaFormateada = hoy.toLocaleDateString('es-ES');
+            
+            let updateData = {}; 
+            updateData[campo] = fechaFormateada;
+            
+            await window.updateDoc(window.doc(window.db, "vehiculos", id), updateData);
+            
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Estado actualizado', showConfirmButton: false, timer: 1500 });
+        } catch (error) {
+            console.error("Error al marcar paso:", error);
+            Swal.fire('Error', 'No se pudo actualizar el estado.', 'error');
+        }
+    };
+
+    window.enviarMensajeChat = async function() {
+      const input = document.getElementById('chatInput'); 
+      const id = document.getElementById('chatFilaActiva').value; 
+      const txt = input.value.trim();
+      
+      if (!id || !txt) return; 
+      input.value = "";
+      
+      const nuevoMensaje = { rol: userRole.toUpperCase(), fecha: new Date().getTime(), texto: txt };
+      
+      let cocheChat = todosLosCoches.find(c => c.fila === id);
+      if (cocheChat) {
+          if (!cocheChat.chatData) cocheChat.chatData = { history: [] };
+          if (!cocheChat.chatData.history) cocheChat.chatData.history = [];
+          cocheChat.chatData.history.push(nuevoMensaje);
+          dibujarMsj(cocheChat.chatData.history);
+      }
+
+      try {
+          const ref = window.doc(window.db, "vehiculos", id);
+          let updateData = { "chatInfo.history": window.arrayUnion(nuevoMensaje) };
+          updateData[`chatInfo.lastOpened.${userRole.toUpperCase()}`] = new Date().getTime();
+          await window.updateDoc(ref, updateData);
+      } catch (error) {
+          console.error("Error enviando chat:", error);
+          Swal.fire('Error', 'Fallo al guardar el mensaje en la nube', 'error');
+      }
+    };
+
+    window.borrarVehiculo = async function(id, modelo) {
+        const result = await Swal.fire({
+            title: '¿Estás seguro?',
+            text: `Vas a eliminar permanentemente el vehículo: ${modelo}. No se podrá deshacer.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, borrar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (result.isConfirmed) {
+            await window.deleteDoc(window.doc(window.db, "vehiculos", id));
+            Swal.fire('Borrado', 'El vehículo ha sido eliminado del sistema.', 'success');
+        }
     }
-}
+
     window.marcarComoEntregado = function(id) {
        Swal.fire({
            title: '¿Marcar como Entregado?', text: "El vehículo pasará al historial de entregados.", icon: 'question',
@@ -1109,7 +1266,7 @@ window.borrarVehiculo = async function(id, modelo) {
         const { value: formValues } = await Swal.fire({
             title: 'Añadir Vehículo Manual',
             html: `
-                <input id="swal-bastidor" class="swal2-input !w-3/4 text-center font-mono uppercase" placeholder="Bastidor (17 dígitos)" maxlength="17">
+                <input id="swal-bastidor" class="swal2-input !w-3/4 text-center font-mono uppercase" placeholder="Bastidor (Últimos dígitos o completo)" maxlength="17">
                 <input id="swal-matricula" class="swal2-input !w-3/4 text-center uppercase" placeholder="Matrícula (Ej: 1234 ABC)">
                 <input id="swal-modelo" class="swal2-input !w-3/4 text-center uppercase" placeholder="Modelo (Ej: VW TIGUAN)">
             `,
@@ -1118,8 +1275,10 @@ window.borrarVehiculo = async function(id, modelo) {
                 const b = document.getElementById('swal-bastidor').value.toUpperCase().trim();
                 const m = document.getElementById('swal-matricula').value.toUpperCase().trim();
                 const mod = document.getElementById('swal-modelo').value.toUpperCase().trim();
-                if (!b || b.length !== 17) { Swal.showValidationMessage('El bastidor debe tener 17 caracteres'); return false; }
+                
+                if (!b || b.length < 3) { Swal.showValidationMessage('Indica al menos 3 caracteres del bastidor'); return false; }
                 if (!mod) { Swal.showValidationMessage('Indica el modelo'); return false; }
+                
                 return { bastidor: b, matricula: m || "S/M", modelo: mod };
             }
         });
@@ -1231,20 +1390,7 @@ window.borrarVehiculo = async function(id, modelo) {
       setTimeout(() => cont.scrollTop = cont.scrollHeight, 50);
     }
 
-    window.enviarMensajeChat = async function() {
-      const input = document.getElementById('chatInput'); const id = document.getElementById('chatFilaActiva').value; const txt = input.value.trim();
-      if (!id || !txt) return; input.value = "";
-      
-      const nuevoMensaje = { rol: userRole.toUpperCase(), fecha: new Date().getTime(), texto: txt };
-      const ref = window.doc(window.db, "vehiculos", id);
-      
-      let updateData = { "chatInfo.history": window.arrayUnion(nuevoMensaje) };
-      updateData[`chatInfo.lastOpened.${userRole.toUpperCase()}`] = new Date().getTime();
-      
-      await window.updateDoc(ref, updateData);
-    }
     window.migrarTodosALogistica = async function() {
-    // Filtramos solo los que están actualmente en inventario (pasoAInventario === true) y no entregados
     const cochesAConvertir = todosLosCoches.filter(c => c.pasoAInventario === true && !c.entregado);
 
     if (cochesAConvertir.length === 0) {
@@ -1265,7 +1411,6 @@ window.borrarVehiculo = async function(id, modelo) {
         Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
         
         for (let c of cochesAConvertir) {
-            // Actualizamos en Firebase
             await window.updateDoc(window.doc(window.db, "vehiculos", c.fila), { 
                 pasoAInventario: false 
             });
