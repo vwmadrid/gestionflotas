@@ -123,9 +123,13 @@
                 <button onclick="abrirLectorPDF()" class="bg-white border border-[#001e50] text-[#001e50] px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-50 transition-colors shadow-sm">
                   <i class="ph-bold ph-files text-base"></i> Subir PDFs
                 </button>
-                <button onclick="anadirVehiculoManual()" class="bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-900 transition-colors shadow-sm">
-                  <i class="ph-bold ph-keyboard text-base"></i> Añadir Manual
-                </button>
+              <button onclick="anadirVehiculoManual()" class="bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-900 transition-colors shadow-sm">
+    <i class="ph-bold ph-keyboard text-base"></i> Añadir Manual
+</button>
+
+<button id="btnSyncCitas" onclick="sincronizarCitasSilencioso()" class="bg-[#00b0f0] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0090c0] transition-colors shadow-sm ml-2">
+    <i class="ph-bold ph-arrows-clockwise text-base"></i> Sincronizar Outlook
+</button>
             </div>
             
             <div id="controlesVistaExcel" class="hidden flex items-center gap-2 border-l border-gray-300 pl-3 ml-1">
@@ -201,6 +205,7 @@
 
   <script>
     let userRole = ""; let activeTab = 'logistica'; let modoVistaActual = 'tarjetas'; 
+    let primeraCargaDb = true;
     let unsubscribeFirebase = null; let todosLosCoches = []; let filtroActual = 'todos';
     window.memoriaAuditoria = new Set();
 
@@ -372,6 +377,12 @@
           else if (activeTab === 'agenda') renderAgenda();
           else if (activeTab === 'entregados') renderEntregados();
           else if (activeTab === 'auditoria') renderAuditoria();
+          
+          // 🔥 AQUÍ SE LANZA LA SINCRONIZACIÓN AUTOMÁTICA 🔥
+          if (primeraCargaDb) {
+              primeraCargaDb = false;
+              setTimeout(() => { sincronizarCitasSilencioso(); }, 1500); 
+          }
         }
       });
     }
@@ -705,10 +716,12 @@ function actualizarContadores() {
        div.innerHTML = `<div class="bg-white p-16 rounded-xl shadow-sm border border-gray-200 text-center flex flex-col items-center"><i class="ph-bold ph-spinner animate-spin text-5xl text-[#001e50] mb-4"></i><p class="font-black text-gray-500 tracking-widest uppercase">Sincronizando con Outlook y Excel...</p></div>`;
 
        try {
-           const [resM, resA] = await Promise.all([
-               fetch(`${SCRIPT_URL}?action=getAgenda&agente=MANUEL`),
-               fetch(`${SCRIPT_URL}?action=getAgenda&agente=ALEJANDRO`)
-           ]);
+          // Añadimos una marca de tiempo (timestamp) para que el navegador nunca use datos cacheados
+const timestamp = new Date().getTime();
+const [resM, resA] = await Promise.all([
+    fetch(`${SCRIPT_URL}?action=getAgenda&agente=MANUEL&t=${timestamp}`),
+    fetch(`${SCRIPT_URL}?action=getAgenda&agente=ANTONIO&t=${timestamp}`)
+]);
 
            const citasM = await resM.json();
            const citasA = await resA.json();
@@ -750,7 +763,7 @@ function actualizarContadores() {
             let horaStr = fecha.getHours().toString().padStart(2, '0');
 
             if (!agendaEstructurada[dateKey]) agendaEstructurada[dateKey] = {};
-            if (!agendaEstructurada[dateKey][horaStr]) agendaEstructurada[dateKey][horaStr] = { MANUEL: null, ALEJANDRO: null };
+            if (!agendaEstructurada[dateKey][horaStr]) agendaEstructurada[dateKey][horaStr] = { MANUEL: null, ANTONIO: null };
 
             let nombreAgente = (cita.entregador || cita.agente || "MANUEL").toUpperCase();
             agendaEstructurada[dateKey][horaStr][nombreAgente] = cita;
@@ -788,7 +801,7 @@ function actualizarContadores() {
 
                <div class="flex gap-4 text-xs font-bold">
                   <span class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-[#c9daf8] rounded-full border border-blue-300"></div> MANUEL</span>
-                  <span class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-[#f9cb9c] rounded-full border border-orange-300"></div> ALEJANDRO</span>
+                  <span class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-[#f9cb9c] rounded-full border border-orange-300"></div> ANTONIO</span>
                </div>
             </div>
             
@@ -829,15 +842,15 @@ function actualizarContadores() {
                             <div class="flex flex-col gap-2 h-full">`;
                 
                 let cM = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].MANUEL : null;
-                let cA = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].ALEJANDRO : null;
+                let cA = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].ANTONIO : null;
 
                 if (hora === '19') {
                     if (cM) html += renderizarCeldaCita(cM, 'MANUEL', '#c9daf8', 'text-blue-900', 'border-blue-200', true);
-                    else if (cA) html += renderizarCeldaCita(cA, 'ALEJANDRO', '#f9cb9c', 'text-orange-900', 'border-orange-300', true);
+                    else if (cA) html += renderizarCeldaCita(cA, 'ANTONIO', '#f9cb9c', 'text-orange-900', 'border-orange-300', true);
                     else html += renderizarCeldaCita(null, 'ÚNICA ENTREGA', '#f3f4f6', 'text-gray-400', 'border-gray-300', true);
                 } else {
                     html += renderizarCeldaCita(cM, 'MANUEL', '#c9daf8', 'text-blue-900', 'border-blue-200', false);
-                    html += renderizarCeldaCita(cA, 'ALEJANDRO', '#f9cb9c', 'text-orange-900', 'border-orange-300', false);
+                    html += renderizarCeldaCita(cA, 'ANTONIO', '#f9cb9c', 'text-orange-900', 'border-orange-300', false);
                 }
 
                 html += `   </div>
@@ -1419,6 +1432,60 @@ function actualizarContadores() {
         Swal.fire('¡Éxito!', `Se han movido ${cochesAConvertir.length} vehículos a Logística.`, 'success');
     }
 }
+window.sincronizarCitasSilencioso = async function() {
+        const btnSync = document.getElementById('btnSyncCitas');
+        if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-base"></i> Sincronizando...';
+
+        try {
+            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzqD3kagU--t1lAmBRoqy3ngBgneeWCCLFdWWxsFDaHLROrCi-9CqTyE-rFpIEhwQd9/exec";
+          // Añadimos una marca de tiempo (timestamp) para que el navegador nunca use datos cacheados
+const timestamp = new Date().getTime();
+const [resM, resA] = await Promise.all([
+    fetch(`${SCRIPT_URL}?action=getAgenda&agente=MANUEL&t=${timestamp}`),
+    fetch(`${SCRIPT_URL}?action=getAgenda&agente=ANTONIO&t=${timestamp}`)
+]);
+
+            const citasM = await resM.json();
+            const citasA = await resA.json();
+            window.datosAgenda = [...citasM, ...citasA];
+
+            let actualizaciones = 0;
+
+            // 1. INYECTAR NUEVAS CITAS AL INVENTARIO
+            for (let cita of window.datosAgenda) {
+                if(!cita.fechaHora) continue;
+
+                let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '').toUpperCase() : '';
+                let basCita = cita.bastidor ? String(cita.bastidor).toUpperCase() : '';
+
+                // Buscamos el coche en Firebase (que no esté entregado)
+                let cocheFb = todosLosCoches.find(c => !c.entregado && ((c.B && c.B.replace(/\s/g, '') === matCita) || (c.A && c.A === basCita)));
+
+                if (cocheFb) {
+                    let fObj = new Date(cita.fechaHora);
+                    let diaStr = fObj.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    let horaStr = fObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                    let fechaGuardar = `${diaStr} - ${horaStr}h`;
+
+                    // Si Firebase no tiene esta fecha, la inyectamos y actualizamos la tarjeta
+                    if (cocheFb.fechaCita !== fechaGuardar) {
+                        await window.updateDoc(window.doc(window.db, "vehiculos", cocheFb.fila), { fechaCita: fechaGuardar });
+                        actualizaciones++;
+                    }
+                }
+            }
+
+            if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-arrows-clockwise text-base"></i> Sincronizar Outlook';
+            
+            if (actualizaciones > 0) {
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Se han enlazado ${actualizaciones} citas con tu inventario`, showConfirmButton: false, timer: 4000 });
+            }
+
+        } catch (e) {
+            console.error("Error cruzando datos de Outlook:", e);
+            if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-warning text-base text-red-500"></i> Error Sync';
+        }
+    };
   </script>
 </body>
 </html>
