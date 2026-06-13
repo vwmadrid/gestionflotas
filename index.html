@@ -247,7 +247,10 @@
       if (rol) { userRole = rol; document.getElementById('userRole').value = rol; iniciarAppDirectamente(rol); }
     };
 
-    window.iniciar = function() {
+   window.iniciar = function() {
+      // Al hacer clic en "Entrar", desbloqueamos el audio del navegador
+      let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContext.resume();
       userRole = document.getElementById('userRole').value;
       const pass = document.getElementById('userPass').value;
       const pwd = { 'taller': 'taller2026', 'recambios': 'piezas2026', 'entregas': 'vw2026' };
@@ -258,22 +261,28 @@
       iniciarAppDirectamente(userRole);
     }
 
-    window.iniciarAppDirectamente = function(rol) {
+   window.iniciarAppDirectamente = function(rol) {
       document.getElementById('roleBadge').innerText = "Perfil: " + rol;
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('sidebarApp').style.display = 'flex';
       document.getElementById('mainApp').style.display = 'flex';
       
-      if (rol === 'entregas') {
-        document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
-        document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
-        cambiarPestana('logistica');
-      } else { 
-        document.getElementById('contenedorTarjetas').style.display = 'grid';
-        cargar(); 
-      }
+      // 🔥 RETRASAMOS EL INICIO DEL MOTOR PARA ASEGURAR CONEXIÓN
+     function iniciarMotorAlertas() {
+        console.log("Motor de alertas arrancado..."); // 🔥 ESTO SALDRÁ EN TU CONSOLA (F12)
+        if (window.unsubscribeAlertas) window.unsubscribeAlertas();
+        window.unsubscribeAlertas = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "modified") {
+                    const data = change.doc.data();
+                    console.log("Cambio detectado en:", data.matricula, "Puerta:", data.clienteEnPuerta); // 🔥 MIRA ESTO
+                    if (data.clienteEnPuerta === true && !data.alertaAtendida) {
+                        lanzarAlertaMovil(data, change.doc.id);
+                    }
+                }
+            });
+        });
     }
-
     window.cerrarSesion = function() { localStorage.removeItem('vw_departamento'); location.reload(); }
 
    window.cambiarPestana = function(pestana) {
