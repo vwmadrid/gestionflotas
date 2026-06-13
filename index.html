@@ -6,6 +6,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';</script>
@@ -28,12 +29,6 @@
     window.db = getFirestore(app);
     window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; window.arrayUnion = arrayUnion; window.deleteDoc = deleteDoc;
   </script>
-
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Gestión Flotas">
-  <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/6/6d/Volkswagen_logo_2019.svg">
 
   <style>
     body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; }
@@ -65,29 +60,6 @@
     ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; border: 2px solid #f1f5f9; }
     ::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
     .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
-    
-    /* Modo Entregador Móvil */
-    body.modo-movil { background: #fff !important; }
-    body.modo-movil #sidebarApp, body.modo-movil header { display: none !important; }
-    body.modo-movil #mainApp { width: 100%; padding: 0; }
-    
-    .vista-movil-entregas { display: grid !important; grid-template-columns: 1fr; padding: 10px; gap: 10px; }
-    .card-mini.modo-movil { border-left-width: 4px; padding: 12px; }
-    
-    /* Animación Alerta */
-    @keyframes parpadeoAlerta {
-      0%, 100% { border-color: #dc2626; background-color: #fee2e2; }
-      50% { border-color: #fca5a5; background-color: #fff1f2; }
-    }
-    .alerta-llegada { animation: parpadeoAlerta 1s infinite; border-width: 4px !important; }
-
-    /* Adaptación real al móvil */
-    @media (max-width: 768px) {
-        #sidebarApp { display: none !important; } 
-        #mainApp { width: 100% !important; margin: 0 !important; }
-        header { padding: 10px !important; }
-        .tabla-excel { font-size: 9px !important; }
-    }
   </style>
 </head>
 <body class="text-gray-800 antialiased h-screen flex overflow-hidden">
@@ -111,12 +83,7 @@
         </div>
     </div>
   </div>
-<!-- Barra de navegación inferior para móvil -->
-<nav id="mobileNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-[#001e50] text-white flex justify-around p-3 z-50">
-    <button onclick="cambiarPestana('todos')" class="flex flex-col items-center text-[10px]"><i class="ph-fill ph-car text-xl"></i> Vehículos</button>
-    <button onclick="cambiarPestana('agenda')" class="flex flex-col items-center text-[10px]"><i class="ph-fill ph-calendar-blank text-xl"></i> Agenda</button>
-    <button onclick="cambiarPestana('logistica')" class="flex flex-col items-center text-[10px]"><i class="ph-fill ph-truck text-xl"></i> Logística</button>
-</nav>
+
   <aside class="w-64 bg-[#001e50] text-white flex flex-col z-20 shadow-2xl" id="sidebarApp" style="display:none;">
     <div class="p-6 border-b border-white/10 text-center">
       <h2 class="text-3xl font-black tracking-tighter">Castellana Wagen M-40</h2>
@@ -130,6 +97,7 @@
       <button onclick="cambiarPestana('todos')" class="p-3 bg-white/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all shadow-sm"><i class="ph-bold ph-car text-lg"></i> Vehículos</button>
       <button onclick="cambiarPestana('agenda')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-lg"></i> Agenda Citas</button>
       <button onclick="cambiarPestana('entregados')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-4 border border-white/20"><i class="ph-bold ph-check-square-offset text-lg"></i> Historial Entregados</button>
+      <button onclick="cambiarPestana('dashboard')" class="p-3 text-emerald-400 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-1 border border-emerald-500/30"><i class="ph-bold ph-chart-pie-slice text-lg"></i> Dashboard Análisis</button>
     </nav>
    <div class="p-6 bg-black/20 mt-auto border-t border-white/10">
       <p id="roleBadge" class="font-bold text-sm uppercase text-white"></p>
@@ -138,9 +106,6 @@
         <i class="ph-bold ph-info"></i> Acerca de GesCar OS
       </button>
 
-      <button onclick="alternarModoEntregador()" class="mb-4 w-full text-xs text-[#00b0f0] font-bold flex items-center gap-2 p-3 rounded-lg bg-[#001e50]/50 transition-colors">
-  <i class="ph-bold ph-device-mobile"></i> Alternar Modo Móvil
-</button>
       <button onclick="cerrarSesion()" class="mt-2 text-xs text-red-400 hover:text-red-300 font-bold flex items-center gap-1 p-2 rounded-lg hover:bg-red-500/10 transition-colors">
         <i class="ph-bold ph-power"></i> Cerrar Sesión
       </button>
@@ -195,12 +160,56 @@
       </div>
     </header>
     
-    <div class="flex-1 overflow-y-auto p-6 bg-gray-100 w-full relative">
+<div class="flex-1 overflow-y-auto p-6 bg-gray-100 w-full relative">
+      <!-- Mantenemos todos tus contenedores originales intactos -->
       <div id="contenedorLogistica" class="hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full"></div>
       <div id="contenedorTarjetas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 w-full"></div>
       <div id="contenedorTabla" class="hidden w-full bg-white rounded-lg shadow-sm border border-gray-300 overflow-auto" style="max-height: calc(100vh - 190px);"></div>
       <div id="contenedorAgenda" class="hidden max-w-full mx-auto w-full"></div>
       <div id="contenedorEntregados" class="hidden max-w-full mx-auto w-full"></div>
+      
+      <!-- ACTUALIZAMOS SOLO EL CONTENEDOR DEL DASHBOARD -->
+      <div id="contenedorDashboard" class="hidden max-w-6xl mx-auto w-full space-y-6">
+        <h2 class="text-2xl font-black text-[#001e50] uppercase flex items-center gap-2"><i class="ph-bold ph-trend-up text-[#00b0f0]"></i> Rendimiento de la Flota</h2>
+        
+        <!-- Tarjetas de Cifras (KPIs) con iconos de coches -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
+                <i class="ph-fill ph-car-profile text-3xl text-emerald-500 mb-2"></i>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Entregas Hoy</h3>
+                <p id="kpi-hoy" class="text-4xl font-black text-[#001e50]">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
+                <i class="ph-fill ph-flag-checkered text-3xl text-blue-500 mb-2"></i>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Entregas</h3>
+                <p id="kpi-total" class="text-4xl font-black text-[#001e50]">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
+                <i class="ph-fill ph-wrench text-3xl text-amber-500 mb-2"></i>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Paso Taller/Recambios</h3>
+                <p id="kpi-reparados" class="text-4xl font-black text-[#001e50]">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
+                <i class="ph-fill ph-car-profile text-3xl text-purple-500 mb-2"></i>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Recogidas VO</h3>
+                <p id="kpi-devueltos" class="text-4xl font-black text-[#001e50]">0</p>
+            </div>
+        </div>
+
+        <!-- Gráficos Visuales -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Gráfico de Donut -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative h-80 flex flex-col items-center">
+                <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Estado del Inventario Activo</h3>
+                <div class="w-full h-full relative"><canvas id="graficoDonut"></canvas></div>
+            </div>
+            <!-- Gráfico Evolución Mensual -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative h-80 flex flex-col items-center">
+                <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Comparativa de Entregas Mensuales</h3>
+                <div class="w-full h-full relative"><canvas id="graficoMeses"></canvas></div>
+            </div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -255,8 +264,6 @@
       document.getElementById('sidebarApp').style.display = 'flex';
       document.getElementById('mainApp').style.display = 'flex';
       
-      iniciarMotorAlertas(); // 🔥 SE AÑADE ESTA LÍNEA
-
       if (rol === 'entregas') {
         document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
         document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
@@ -269,12 +276,12 @@
 
     window.cerrarSesion = function() { localStorage.removeItem('vw_departamento'); location.reload(); }
 
-    window.cambiarPestana = function(pestana) {
+   window.cambiarPestana = function(pestana) {
       activeTab = pestana;
       const botones = document.querySelectorAll('#tabsEntregas button');
       
       botones.forEach(b => { 
-        b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-amber-500/10', 'border-amber-500/30', 'bg-red-500/10', 'border-red-500/50'); 
+        b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-amber-500/10', 'border-amber-500/30', 'bg-red-500/10', 'border-red-500/50', 'bg-emerald-500/10'); 
         b.classList.add('text-gray-300');
       });
       
@@ -282,12 +289,14 @@
       else if (pestana === 'todos') botones[1].classList.add('bg-white/10', 'text-white');
       else if (pestana === 'agenda') botones[2].classList.add('bg-white/10', 'text-white');
       else if (pestana === 'entregados') botones[3].classList.add('bg-white/10', 'text-white');
+      else if (pestana === 'dashboard') botones[4].classList.add('text-emerald-400', 'bg-emerald-500/10', 'border-emerald-500/30');
 
       document.getElementById('contenedorLogistica').style.display = 'none';
       document.getElementById('contenedorTarjetas').style.display = 'none';
       document.getElementById('contenedorTabla').style.display = 'none';
       document.getElementById('contenedorAgenda').style.display = 'none';
       document.getElementById('contenedorEntregados').style.display = 'none';
+      document.getElementById('contenedorDashboard').style.display = 'none'; // 🔥 NUEVO
       
       document.getElementById('filtrosVisuales').style.display = 'none';
       document.getElementById('controlesVistaExcel').style.display = 'none';
@@ -310,11 +319,14 @@
         document.getElementById('contenedorEntregados').style.display = 'block';
         document.getElementById('buscadorInput').style.display = 'none';
         renderEntregados();
+      } else if (pestana === 'dashboard') {
+        document.getElementById('contenedorDashboard').style.display = 'block';
+        document.getElementById('buscadorInput').style.display = 'none';
+        renderizarDashboard(); // 🔥 LLAMAMOS A LOS GRÁFICOS
       }
       
-      cargar();
+      if(pestana !== 'dashboard') cargar();
     }
-
     window.cambiarModoVisualizacion = function(modo) {
        modoVistaActual = modo;
        const btnT = document.getElementById('btnVistaTarjetas');
@@ -432,7 +444,6 @@
        if(document.getElementById('c-concita')) document.getElementById('c-concita').innerText = concita;
        document.getElementById('c-taller').innerText = taller; 
        document.getElementById('c-recambios').innerText = recambios;
-       
     }
 
     function renderLogistica() {
@@ -495,40 +506,12 @@
        }
     }
 
-    // Función para saber si la cita es de esta semana
-    function esDeEstaSemana(fechaStr) {
-        if (!fechaStr || !fechaStr.includes('/')) return false;
-        let partesFecha = fechaStr.split(' - ')[0].split('/');
-        if (partesFecha.length < 3) return false;
-        
-        let fechaCita = new Date(partesFecha[2], partesFecha[1] - 1, partesFecha[0]);
-        let hoy = new Date();
-        
-        let diaSemana = hoy.getDay() || 7; 
-        let inicioSemana = new Date(hoy);
-        inicioSemana.setDate(hoy.getDate() - diaSemana + 1);
-        inicioSemana.setHours(0, 0, 0, 0);
-        
-        let finSemana = new Date(inicioSemana);
-        finSemana.setDate(inicioSemana.getDate() + 6);
-        finSemana.setHours(23, 59, 59, 999);
-        
-        return fechaCita >= inicioSemana && fechaCita <= finSemana;
-    }
-
     function renderizarVistas() {
        let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
-       let esModoMovil = document.body.classList.contains('modo-movil');
-
        let filtrados = activos.filter(c => {
           let enT = c.enTaller && !c.finTaller; 
           let enR = c.enRecambios && !c.finRecambios;
           let tieneCita = !!c.fechaCita;
-
-          // 🔥 EN MÓVIL SÓLO MOSTRAMOS CITAS DE ESTA SEMANA
-          if (esModoMovil && (!tieneCita || !esDeEstaSemana(c.fechaCita))) {
-              return false; 
-          }
 
           if (filtroActual === 'todos') return true;
           if (filtroActual === 'pendientes') return !enT && !enR && !tieneCita;
@@ -538,10 +521,10 @@
           return true;
        });
 
-       if (modoVistaActual === 'tarjetas' || esModoMovil) {
+       if (modoVistaActual === 'tarjetas') {
            let div = document.getElementById('contenedorTarjetas');
            if (filtrados.length === 0) {
-               div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay entregas programadas para esta semana.</p></div>`;
+               div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay vehículos en esta categoría.</p></div>`;
            } else {
                div.innerHTML = filtrados.map(c => renderTarjetaCompacta(c)).join('');
            }
@@ -550,62 +533,6 @@
        }
     }
 
-    function renderTarjetaCompacta(c) {
-      let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})); 
-      let mS = encodeURIComponent(c.C || ''); let maS = encodeURIComponent(c.B || '');
-      
-      let enT = c.enTaller && !c.finTaller;
-      let enR = c.enRecambios && !c.finRecambios;
-      let tieneCita = !!c.fechaCita;
-
-      let isAlerta = tieneCita && (enT || enR);
-      let borderAlerta = isAlerta ? 'border-l-8 border-red-600 bg-red-50/50' : 'border-l-8 border-[#001e50]';
-      let prog = calcularProgreso(c);
-
-      let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<span class="status-btn bg-amber-100 text-amber-800"><i class="ph-bold ph-wrench"></i> Tall. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
-      let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<span class="status-btn bg-teal-100 text-teal-800"><i class="ph-bold ph-package"></i> Rec. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
-
-      let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
-      let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
-      let htmlAlerta = isAlerta ? `<div class="bg-red-600 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-warning-circle text-sm"></i> ¡URGENTE! TIENE CITA EL ${c.fechaCita}</div>` : '';
-
-      return `
-      <div class="card-mini ${borderAlerta} p-5 fila-coche">
-        ${htmlAlerta}
-        <div class="flex justify-between items-start mb-2 gap-2 border-b border-gray-100 pb-3">
-          <div class="min-w-0 pr-2">
-            <h2 class="font-black text-xl text-gray-800 uppercase leading-tight mb-1 truncate"><i class="ph-fill ph-user text-[#00b0f0]"></i> ${c.cliente || 'Sin Nombre'}</h2>
-            <h3 class="font-bold text-sm text-[#001e50] truncate uppercase">${c.C}</h3>
-            <p class="text-[10px] font-bold text-gray-400 mt-0.5 tracking-widest truncate">MAT: ${c.B} | VIN: ${c.A}</p>
-          </div>
-          <div class="flex flex-col gap-1 flex-shrink-0">
-             <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${obtenerBurbujaChat(c.chatData)}</button>
-             <button onclick="marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors"><i class="ph-bold ph-key text-lg"></i></button>
-          </div>
-        </div>
-        
-        <div class="flex gap-2 mb-3 mt-2">
-            <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
-            <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
-        </div>
-
-        <div class="flex items-center justify-between mb-3">
-           ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1 rounded font-black text-xs flex items-center gap-1"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : '<span class="text-xs text-gray-400 font-bold">Sin cita</span>'}
-        </div>
-
-        <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden">
-           <div class="${prog.color} h-2 transition-all duration-500" style="width: ${prog.pct}%"></div>
-           <span class="absolute inset-0 flex items-center justify-center text-[7px] font-black text-gray-800 drop-shadow-md mix-blend-overlay">${prog.pct}%</span>
-        </div>
-
-        <div class="flex flex-col gap-2 mt-auto">
-          <div class="flex gap-2 w-full">
-            <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
-            <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
-          </div>
-        </div>
-      </div>`;
-    }
     function renderTablaModoExcel(datosFiltrados) {
        let contenedor = document.getElementById('contenedorTabla');
        if(datosFiltrados.length === 0){ contenedor.innerHTML = "<p class='text-center p-10 font-bold text-gray-500'>Sin resultados en esta categoría.</p>"; return; }
@@ -662,7 +589,66 @@
        html += `</tbody></table>`; contenedor.innerHTML = html;
     }
 
-    
+    function renderTarjetaCompacta(c) {
+      let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})); 
+      let mS = encodeURIComponent(c.C || ''); let maS = encodeURIComponent(c.B || '');
+      
+      let enT = c.enTaller && !c.finTaller;
+      let enR = c.enRecambios && !c.finRecambios;
+      let tieneCita = !!c.fechaCita;
+
+      let isAlerta = tieneCita && (enT || enR);
+      let borderAlerta = isAlerta ? 'border-l-8 border-red-600 bg-red-50/50' : 'border-l-8 border-[#001e50]';
+      let prog = calcularProgreso(c);
+
+      let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<span class="status-btn bg-amber-100 text-amber-800"><i class="ph-bold ph-wrench"></i> Tall. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
+      let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<span class="status-btn bg-teal-100 text-teal-800"><i class="ph-bold ph-package"></i> Rec. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
+
+      let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
+      let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
+
+      let htmlAlerta = isAlerta ? `<div class="bg-red-600 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-warning-circle text-sm"></i> ¡URGENTE! TIENE CITA EL ${c.fechaCita}</div>` : '';
+
+      return `
+      <div class="card-mini ${borderAlerta} p-5 fila-coche">
+        ${htmlAlerta}
+        <div class="flex justify-between items-start mb-2 gap-2">
+          <div class="min-w-0 pr-2">
+            <h3 class="font-black text-base text-[#001e50] truncate uppercase">${c.C}</h3>
+            <p class="text-[10px] font-bold text-gray-400 mt-0.5 tracking-widest truncate">VIN: ${c.A}</p>
+          </div>
+          <div class="flex gap-1 flex-shrink-0">
+             <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${obtenerBurbujaChat(c.chatData)}</button>
+             <button onclick="editarVehiculoBasico('${c.fila}', '${c.A}', '${c.B}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info"><i class="ph-bold ph-pencil-simple text-lg"></i></button>
+             <button onclick="marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors"><i class="ph-bold ph-key text-lg"></i></button>
+             <button onclick="borrarVehiculo('${c.fila}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>   
+          </div>
+        </div>
+        
+        <div class="flex gap-2 mb-3">
+            <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
+            <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
+        </div>
+
+        <div class="flex items-center justify-between mb-3">
+           <span class="bg-gray-100 border border-gray-300 text-gray-800 px-2.5 py-1 rounded text-xs font-black tracking-widest shadow-sm">${c.B}</span>
+           ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1 rounded font-black text-xs flex items-center gap-1"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}
+        </div>
+
+        <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden">
+           <div class="${prog.color} h-2 transition-all duration-500" style="width: ${prog.pct}%"></div>
+           <span class="absolute inset-0 flex items-center justify-center text-[7px] font-black text-gray-800 drop-shadow-md mix-blend-overlay">${prog.pct}%</span>
+        </div>
+
+        <div class="flex flex-col gap-2 mt-auto">
+          <div class="flex gap-2 w-full">
+            <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
+            <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+          </div>
+        </div>
+      </div>`;
+    }
+
     function renderizarDepartamentos(depto) {
        let divP = document.getElementById('contenedorTarjetas');
        let activos = todosLosCoches.filter(c => (c.entregado !== true && c.entregado !== "true") && (depto === 'taller' ? (c.enTaller && !c.finTaller) : (c.enRecambios && !c.finRecambios)));
@@ -775,18 +761,56 @@
         }
     };
 
-    window.marcarComoEntregado = function(id) {
-       Swal.fire({
-           title: '¿Marcar como Entregado?', text: "Pasará al Historial.", icon: 'question',
-           showCancelButton: true, confirmButtonColor: '#10b981', confirmButtonText: 'Sí, Entregar'
-       }).then(async (result) => {
-           if (result.isConfirmed) {
-               await window.updateDoc(window.doc(window.db, "vehiculos", id), { entregado: true, fechaEntrega: new Date().toLocaleDateString('es-ES') });
-               Swal.fire('¡Entregado!', '', 'success');
-           }
-       });
-    };
+   window.marcarComoEntregado = function(id) {
+    // 1. Buscamos los datos exactos del coche que estamos entregando
+    let coche = todosLosCoches.find(c => c.fila === id);
+    let nombreCliente = coche.cliente || "cliente";
+    let modeloCoche = coche.C || "tu nuevo vehículo";
 
+    // 2. Lanzamos el modal interactivo
+    Swal.fire({
+        title: '¿Completar Entrega?',
+        html: `
+            <p class="mb-4 text-sm text-gray-600">El coche pasará al historial. Opcionalmente, añade un enlace al vídeo de la experiencia para el cliente:</p>
+            <input id="linkVideo" class="swal2-input" placeholder="https://enlace-al-video.com (Opcional)">
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        confirmButtonText: 'Entregar y Avisar',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            // Capturamos lo que hayas escrito en el input del vídeo
+            return document.getElementById('linkVideo').value.trim();
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            let linkVideo = result.value;
+            
+            // 3. Actualizamos la base de datos en Firebase de forma silenciosa
+            await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
+                entregado: true, 
+                fechaEntrega: new Date().toLocaleDateString('es-ES') 
+            });
+            
+            // 4. Construimos el mensaje automatizado
+            let mensaje = `¡Hola, ${nombreCliente}! Ha sido un verdadero placer entregarte ${modeloCoche} hoy. Esperamos que lo disfrutes muchísimo. `;
+            
+            // Si pusiste un enlace de vídeo, lo añadimos al texto
+            if (linkVideo) {
+                mensaje += `Aquí tienes el vídeo resumen de tu experiencia con nosotros: ${linkVideo} `;
+            }
+            
+            mensaje += `¿Nos ayudarías con una reseña? ¡Gracias!`;
+            
+            // 5. Preparamos y abrimos el enlace de WhatsApp dinámico
+            let urlWa = "https://wa.me/?text=" + encodeURIComponent(mensaje);
+            window.open(urlWa, "_blank");
+
+            Swal.fire('¡Entregado!', 'El vehículo está en el historial y el mensaje preparado.', 'success');
+        }
+    });
+};
     window.pasarAInventario = async function(id) {
         Swal.fire({
             title: '¿Mover a Inventario?', text: "Dejará Logística Previa y pasará a Concesionario.", icon: 'question',
@@ -1234,15 +1258,112 @@
         } catch (e) { Swal.fire('Error', 'Fallo conexión con Webhook.', 'error'); }
     }
 
-    window.descargarExcelReal = function() {
-       let cochesAExportar = todosLosCoches.filter(c => (c.entregado !== true && c.entregado !== "true") && c.pasoAInventario !== false);
-       if (cochesAExportar.length === 0) { Swal.fire('Aviso', 'No hay datos activos en inventario', 'info'); return; }
-       Swal.fire({title: 'Generando...', didOpen: () => Swal.showLoading()});
-       let datosExcel = cochesAExportar.map(c => ({ "MODELO": c.C, "MATRÍCULA": c.B, "BASTIDOR": c.A, "TALLER": c.finTaller ? "FIN" : (c.enTaller ? "CURSO" : "PTE"), "RECAMBIOS": c.finRecambios ? "FIN" : (c.enRecambios ? "CURSO" : "PTE"), "CITA": c.fechaCita || "" }));
-       XLSX.writeFile(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(datosExcel), "Flota"), "Flota.xlsx");
-       Swal.close();
-    }
+    // Variables globales para evitar solapamientos gráficos
+    let chartObjDonut = null;
+    let chartObjBarras = null;
 
+    window.renderizarDashboard = function() {
+        // 1. Cálculos de listas generales
+        let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
+        let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
+        
+       // 2. Cálculos para las Tarjetas (Cifras)
+        let hoyStr = new Date().toLocaleDateString('es-ES');
+        let entregasHoy = entregados.filter(c => c.fechaEntrega === hoyStr).length;
+        
+        // Contamos coches que tienen o han tenido fecha de entrada a taller o recambios
+        let reparados = todosLosCoches.filter(c => c.fechaEntradaTaller || c.fechaEntradaRecambios).length;
+        
+        // 🔥 CORRECCIÓN: Leemos los "VO" (Devueltos) directamente de la Agenda
+        let devueltos = 0;
+        if (window.datosAgenda && window.datosAgenda.length > 0) {
+            devueltos = window.datosAgenda.filter(cita => {
+                let textoVO = String(cita.entregaVO || '').toUpperCase().trim();
+                return textoVO === 'SÍ' || textoVO === 'SI';
+            }).length;
+        }
+
+        // Inyectamos los números en el HTML
+        document.getElementById('kpi-hoy').innerText = entregasHoy;
+        document.getElementById('kpi-total').innerText = entregados.length;
+        document.getElementById('kpi-reparados').innerText = reparados;
+        document.getElementById('kpi-devueltos').innerText = devueltos;
+
+        // 3. Cálculos para el Gráfico Donut (Estado en tiempo real)
+        let pteLogistica = todosLosCoches.filter(c => c.pasoAInventario === false && c.entregado !== true).length;
+        let enTaller = activos.filter(c => c.enTaller && !c.finTaller).length;
+        let enRecambios = activos.filter(c => c.enRecambios && !c.finRecambios).length;
+        let listos = activos.length - enTaller - enRecambios;
+
+        // 4. Cálculos para la gráfica mensual
+        let mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        let conteoMeses = new Array(12).fill(0); // Empezamos todos los meses a 0
+
+        // Recorremos el historial para agrupar por mes
+        entregados.forEach(c => {
+            if (c.fechaEntrega) {
+                let partes = c.fechaEntrega.split('/');
+                if (partes.length === 3) {
+                    let mesIndex = parseInt(partes[1], 10) - 1; // 0 = Enero, 11 = Diciembre
+                    if (mesIndex >= 0 && mesIndex <= 11) {
+                        conteoMeses[mesIndex]++; // Sumamos 1 al mes correspondiente
+                    }
+                }
+            }
+        });
+
+        // 5. Destruimos gráficos anteriores para redibujar limpios
+        if(chartObjDonut) chartObjDonut.destroy();
+        if(chartObjMeses) chartObjMeses.destroy();
+
+        // 6. Dibujar Gráfico Donut
+        const ctxDonut = document.getElementById('graficoDonut').getContext('2d');
+        chartObjDonut = new Chart(ctxDonut, {
+            type: 'doughnut',
+            data: {
+                labels: ['Listos/Con Cita', 'En Taller', 'En Recambios', 'Logística Ptea.'],
+                datasets: [{
+                    data: [listos, enTaller, enRecambios, pteLogistica],
+                    backgroundColor: ['#10b981', '#f59e0b', '#14b8a6', '#94a3b8'],
+                    borderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { size: 11, family: 'Inter' } } } },
+                cutout: '65%' // Hace el anillo más fino y elegante
+            }
+        });
+
+        // 7. Dibujar Gráfico Mensual
+        const ctxMeses = document.getElementById('graficoMeses').getContext('2d');
+        chartObjMeses = new Chart(ctxMeses, {
+            type: 'bar',
+            data: {
+                labels: mesesNombres,
+                datasets: [{
+                    label: 'Vehículos Entregados',
+                    data: conteoMeses,
+                    backgroundColor: 'rgba(0, 176, 240, 0.2)', // Azul transparente
+                    borderColor: '#00b0f0', // Borde azul corporativo
+                    borderWidth: 2,
+                    borderRadius: 4, // Bordes redondeados
+                    hoverBackgroundColor: '#00b0f0'
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+                    x: { grid: { display: false } }
+                },
+                plugins: { legend: { display: false } } 
+            }
+        });
+    }
     window.abrirLectorPDF = function() { document.getElementById('inputUploadPDF').click(); }
 
     window.procesarPDFs = async function(evento) {
@@ -1299,10 +1420,9 @@
         if (formValues) {
             Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false});
             
-            // Guardamos el registro con la matrícula real introducida por el usuario
             await window.setDoc(window.doc(window.db, "vehiculos", formValues.bastidor), { 
                 bastidor: formValues.bastidor, 
-                matricula: formValues.matricula.replace(/\s/g, ''), // Limpia espacios en la matrícula para las búsquedas
+                matricula: formValues.matricula.replace(/\s/g, ''),
                 Matricula: formValues.matricula.replace(/\s/g, ''),
                 modelo: formValues.modelo, 
                 creadoEn: new Date().getTime(), 
@@ -1330,7 +1450,6 @@
         if (res.isConfirmed) { 
            let ins = document.getElementById('ins').value; 
            let f = document.getElementById('fileInput').files[0];
-           // Si hay archivo, subimos a Drive. Si no, solo mandamos texto.
            if(f) window.subirYEnviar(id, depto, ins, f); 
            else window.mandar(id, depto, ins);
         }
@@ -1364,7 +1483,6 @@
     window.abrirChat = async function(id, mod, mat, jsonStr) {
       document.getElementById('chatFilaActiva').value = id;
       
-      // Estas dos líneas devuelven el título dinámico del coche
       document.getElementById('chatTituloCoche').innerText = decodeURIComponent(mod);
       document.getElementById('chatSubtitulo').innerText = "Matrícula: " + decodeURIComponent(mat);
       
@@ -1411,30 +1529,8 @@
             if (act > 0) Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `${act} citas enlazadas`, showConfirmButton: false, timer: 3000 });
         } catch (e) { if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-warning text-red-500"></i> Error Sync'; }
     };
-   window.alternarModoEntregador = function() {
-        const body = document.body;
-        const isMobile = body.classList.toggle('modo-movil');
-        
-        const filtros = document.getElementById('filtrosVisuales');
-        const buscador = document.getElementById('buscadorInput');
-        const cont = document.getElementById('contenedorTarjetas');
-
-        if(isMobile) {
-            if(filtros) filtros.style.display = 'none';
-            if(buscador) buscador.parentElement.style.display = 'none';
-            document.getElementById('contenedorTabla').style.display = 'none';
-            cont.className = "vista-movil-entregas";
-            cont.style.display = 'grid';
-        } else {
-            if(filtros) filtros.style.display = 'flex';
-            if(buscador) buscador.parentElement.style.display = 'block';
-            cont.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 w-full";
-        }
-        renderizarVistas(); // Recargamos para aplicar el filtro de semana
-    };
-
     // ==========================================
-    // MOTOR DE ALERTAS Y LLEGADAS
+    // MOTOR DE ALERTAS Y LLEGADAS (EL MOTOR DE ESCUCHA)
     // ==========================================
     window.unsubscribeAlertas = null;
 
@@ -1472,24 +1568,29 @@
             window.updateDoc(window.doc(window.db, "vehiculos", docId), { alertaAtendida: true });
         });
     }
-</script>
+  </script>
 
-<div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6);">
+  <div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6);">
     <div style="background-color: #fff; margin: 10% auto; padding: 30px; border: 1px solid #ddd; width: 400px; border-radius: 12px; text-align: center; font-family: 'Inter', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
        <img src="Logo con nombre.png" alt="Logo GesCar OS" style="max-width: 85%; height: auto; margin: 0 auto 15px auto; display: block; mix-blend-mode: multiply;">
         <p style="font-size: 14px; color: #555;">Versión 1.0.0</p>
         <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Automotive Operations Platform</p>
+        <hr style="margin-bottom: 20px;">
+        <p style="font-size: 13px; font-weight: bold; color: #333;">&copy; 2026 GesCar OS.</p>
+        <p style="font-size: 11px; color: #666; margin-bottom: 25px;">Todos los derechos reservados.</p>
+        <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Desarrollado por: M2 Code Systems</p>
         <button id="btnClose" style="background-color: #001e50; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cerrar</button>
     </div>
-</div>
+  </div>
 
-<script>
-    const modal = document.getElementById("aboutModal");
-    const btn = document.getElementById("btnAbout");
-    const span = document.getElementById("btnClose");
-    btn.onclick = function() { modal.style.display = "block"; }
-    span.onclick = function() { modal.style.display = "none"; }
-    window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
-</script>
+  <script>
+      const modal = document.getElementById("aboutModal");
+      const btn = document.getElementById("btnAbout");
+      const span = document.getElementById("btnClose");
+
+      btn.onclick = function() { modal.style.display = "block"; }
+      span.onclick = function() { modal.style.display = "none"; }
+      window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
+  </script>
 </body>
 </html>
