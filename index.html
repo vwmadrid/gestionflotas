@@ -161,18 +161,15 @@
     </header>
     
 <div class="flex-1 overflow-y-auto p-6 bg-gray-100 w-full relative">
-      <!-- Mantenemos todos tus contenedores originales intactos -->
       <div id="contenedorLogistica" class="hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full"></div>
       <div id="contenedorTarjetas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 w-full"></div>
       <div id="contenedorTabla" class="hidden w-full bg-white rounded-lg shadow-sm border border-gray-300 overflow-auto" style="max-height: calc(100vh - 190px);"></div>
       <div id="contenedorAgenda" class="hidden max-w-full mx-auto w-full"></div>
       <div id="contenedorEntregados" class="hidden max-w-full mx-auto w-full"></div>
       
-      <!-- ACTUALIZAMOS SOLO EL CONTENEDOR DEL DASHBOARD -->
       <div id="contenedorDashboard" class="hidden max-w-6xl mx-auto w-full space-y-6">
         <h2 class="text-2xl font-black text-[#001e50] uppercase flex items-center gap-2"><i class="ph-bold ph-trend-up text-[#00b0f0]"></i> Rendimiento de la Flota</h2>
         
-        <!-- Tarjetas de Cifras (KPIs) con iconos de coches -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
                 <i class="ph-fill ph-car-profile text-3xl text-emerald-500 mb-2"></i>
@@ -196,14 +193,11 @@
             </div>
         </div>
 
-        <!-- Gráficos Visuales -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Gráfico de Donut -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative h-80 flex flex-col items-center">
                 <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Estado del Inventario Activo</h3>
                 <div class="w-full h-full relative"><canvas id="graficoDonut"></canvas></div>
             </div>
-            <!-- Gráfico Evolución Mensual -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative h-80 flex flex-col items-center">
                 <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Comparativa de Entregas Mensuales</h3>
                 <div class="w-full h-full relative"><canvas id="graficoMeses"></canvas></div>
@@ -242,13 +236,23 @@
     let unsubscribeFirebase = null; let todosLosCoches = []; let filtroActual = 'todos';
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRBEhgRYyLAFwqw6AP_EAxD1XgftJNDdhYk2eSjmuT4s0ON7A1pv2Z5unNaMpewCaZ/exec";
 
-    window.onload = function() {
-      const rol = localStorage.getItem('vw_departamento');
-      if (rol) { userRole = rol; document.getElementById('userRole').value = rol; iniciarAppDirectamente(rol); }
-    };
+    let chartObjDonut = null;
+    let chartObjMeses = null;
+
+   window.onload = function() {
+    const rol = localStorage.getItem('vw_departamento');
+    if (rol) { 
+        document.getElementById('userRole').value = rol;
+        setTimeout(() => iniciarAppDirectamente(rol), 500); 
+    } else {
+        setTimeout(() => { 
+            const splash = document.querySelector('#s-splash'); 
+            if(splash) splash.style.display = 'none'; 
+        }, 1000);
+    }
+};
 
    window.iniciar = function() {
-      // Al hacer clic en "Entrar", desbloqueamos el audio del navegador
       let audioContext = new (window.AudioContext || window.webkitAudioContext)();
       audioContext.resume();
       userRole = document.getElementById('userRole').value;
@@ -261,29 +265,26 @@
       iniciarAppDirectamente(userRole);
     }
 
-   window.iniciarAppDirectamente = function(rol) {
+window.iniciarAppDirectamente = function(rol) {
       document.getElementById('roleBadge').innerText = "Perfil: " + rol;
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('sidebarApp').style.display = 'flex';
       document.getElementById('mainApp').style.display = 'flex';
-     }
-      
-      // 🔥 RETRASAMOS EL INICIO DEL MOTOR PARA ASEGURAR CONEXIÓN
-     function iniciarMotorAlertas() {
-        console.log("Motor de alertas arrancado..."); // 🔥 ESTO SALDRÁ EN TU CONSOLA (F12)
-        if (window.unsubscribeAlertas) window.unsubscribeAlertas();
-        window.unsubscribeAlertas = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === "modified") {
-                    const data = change.doc.data();
-                    console.log("Cambio detectado en:", data.matricula, "Puerta:", data.clienteEnPuerta); // 🔥 MIRA ESTO
-                    if (data.clienteEnPuerta === true && !data.alertaAtendida) {
-                        lanzarAlertaMovil(data, change.doc.id);
-                    }
-                }
-            });
-        });
+
+      iniciarMotorAlertas();
+
+      if (rol === 'entregas') {
+        document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
+        document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
+        cambiarPestana('logistica');
+      } else { 
+        document.getElementById('contenedorTarjetas').style.display = 'grid';
+        cargar(); 
+      }
     }
+
+    window.unsubscribeAlertas = null;
+   
     window.cerrarSesion = function() { localStorage.removeItem('vw_departamento'); location.reload(); }
 
    window.cambiarPestana = function(pestana) {
@@ -306,12 +307,12 @@
       document.getElementById('contenedorTabla').style.display = 'none';
       document.getElementById('contenedorAgenda').style.display = 'none';
       document.getElementById('contenedorEntregados').style.display = 'none';
-      document.getElementById('contenedorDashboard').style.display = 'none'; // 🔥 NUEVO
+      document.getElementById('contenedorDashboard').style.display = 'none'; 
       
       document.getElementById('filtrosVisuales').style.display = 'none';
       document.getElementById('controlesVistaExcel').style.display = 'none';
       document.getElementById('botonesLogistica').style.display = 'none'; 
-      document.getElementById('botonesAgenda').style.display = 'none';    
+      document.getElementById('botonesAgenda').style.display = 'none';   
       document.getElementById('buscadorInput').style.display = 'block';
 
       if (pestana === 'logistica') {
@@ -332,11 +333,12 @@
       } else if (pestana === 'dashboard') {
         document.getElementById('contenedorDashboard').style.display = 'block';
         document.getElementById('buscadorInput').style.display = 'none';
-        renderizarDashboard(); // 🔥 LLAMAMOS A LOS GRÁFICOS
+        renderizarDashboard(); 
       }
       
       if(pestana !== 'dashboard') cargar();
     }
+
     window.cambiarModoVisualizacion = function(modo) {
        modoVistaActual = modo;
        const btnT = document.getElementById('btnVistaTarjetas');
@@ -394,6 +396,37 @@
       let nl = hs.filter(m => m.fecha > lo && m.rol.toUpperCase() !== userRole.toUpperCase()).length;
       if (nl > 0) return `<span class="absolute -top-2 -right-2 bg-red-500 border-2 border-white text-white text-[9px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-md animate-pulse">${nl}</span>`;
       return '';
+    }
+
+    window.unsubscribeAlertas = null;
+    function iniciarMotorAlertas() {
+        console.log("Motor de alertas arrancado...");
+        if (window.unsubscribeAlertas) window.unsubscribeAlertas();
+        window.unsubscribeAlertas = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "modified") {
+                    const data = change.doc.data();
+                    console.log("Cambio detectado en:", data.matricula, "Puerta:", data.clienteEnPuerta);
+                    if (data.clienteEnPuerta === true && !data.alertaAtendida) {
+                        lanzarAlertaMovil(data, change.doc.id);
+                    }
+                }
+            });
+        });
+    }
+
+    function lanzarAlertaMovil(data, docId) {
+        new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(e=>{});
+        
+        Swal.fire({
+            title: '🔔 ¡CLIENTE LLEGÓ!',
+            html: `<p class="font-bold text-lg">${data.cliente || 'Conductor'}</p><p class="text-sm">${data.modelo} - ${data.matricula}</p>`,
+            icon: 'warning',
+            confirmButtonColor: '#001e50',
+            confirmButtonText: 'IR A RECEPCIÓN'
+        }).then(() => {
+            window.updateDoc(window.doc(window.db, "vehiculos", docId), { alertaAtendida: true, clienteEnPuerta: false });
+        });
     }
 
     function cargar() {
@@ -772,12 +805,10 @@
     };
 
    window.marcarComoEntregado = function(id) {
-    // 1. Buscamos los datos exactos del coche que estamos entregando
     let coche = todosLosCoches.find(c => c.fila === id);
     let nombreCliente = coche.cliente || "cliente";
     let modeloCoche = coche.C || "tu nuevo vehículo";
 
-    // 2. Lanzamos el modal interactivo
     Swal.fire({
         title: '¿Completar Entrega?',
         html: `
@@ -790,30 +821,25 @@
         confirmButtonText: 'Entregar y Avisar',
         cancelButtonText: 'Cancelar',
         preConfirm: () => {
-            // Capturamos lo que hayas escrito en el input del vídeo
             return document.getElementById('linkVideo').value.trim();
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
             let linkVideo = result.value;
             
-            // 3. Actualizamos la base de datos en Firebase de forma silenciosa
             await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
                 entregado: true, 
                 fechaEntrega: new Date().toLocaleDateString('es-ES') 
             });
             
-            // 4. Construimos el mensaje automatizado
             let mensaje = `¡Hola, ${nombreCliente}! Ha sido un verdadero placer entregarte ${modeloCoche} hoy. Esperamos que lo disfrutes muchísimo. `;
             
-            // Si pusiste un enlace de vídeo, lo añadimos al texto
             if (linkVideo) {
                 mensaje += `Aquí tienes el vídeo resumen de tu experiencia con nosotros: ${linkVideo} `;
             }
             
             mensaje += `¿Nos ayudarías con una reseña? ¡Gracias!`;
             
-            // 5. Preparamos y abrimos el enlace de WhatsApp dinámico
             let urlWa = "https://wa.me/?text=" + encodeURIComponent(mensaje);
             window.open(urlWa, "_blank");
 
@@ -852,6 +878,26 @@
       await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
       Swal.fire({ icon: 'success', title: fin ? 'Coche Finalizado' : 'Datos Guardados', showConfirmButton: false, timer: 1000 });
     }
+
+    window.descargarExcelReal = function() {
+        let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
+        if (activos.length === 0) { Swal.fire('Aviso', 'No hay datos para exportar.', 'info'); return; }
+        Swal.fire({title: 'Generando Excel...', didOpen: () => Swal.showLoading()});
+        
+        let datosExcel = activos.map(c => ({
+            "PROGRESO": calcularProgreso(c).pct + "%",
+            "MODELO": c.C, "MATRÍCULA": c.B, "BASTIDOR": c.A,
+            "RENTING": c.renting || "", "AGENCIA": c.agencia || "", 
+            "TALLER": c.finTaller ? "FIN" : (c.enTaller ? "CURSO" : "SOLICITAR"),
+            "RECAMBIOS": c.finRecambios ? "FIN" : (c.enRecambios ? "CURSO" : "SOLICITAR"),
+            "CITA ENTREGA": c.fechaCita || "-"
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(datosExcel); 
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Vehículos");
+        XLSX.writeFile(workbook, `Vehiculos_Concesionario.xlsx`);
+        Swal.close();
+    };
 
     // ==========================================
     // AGENDA Y CUADRANTE WEB
@@ -1268,23 +1314,15 @@
         } catch (e) { Swal.fire('Error', 'Fallo conexión con Webhook.', 'error'); }
     }
 
-    // Variables globales para evitar solapamientos gráficos
-    let chartObjDonut = null;
-    let chartObjBarras = null;
-
     window.renderizarDashboard = function() {
-        // 1. Cálculos de listas generales
         let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
         let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
         
-       // 2. Cálculos para las Tarjetas (Cifras)
         let hoyStr = new Date().toLocaleDateString('es-ES');
         let entregasHoy = entregados.filter(c => c.fechaEntrega === hoyStr).length;
         
-        // Contamos coches que tienen o han tenido fecha de entrada a taller o recambios
         let reparados = todosLosCoches.filter(c => c.fechaEntradaTaller || c.fechaEntradaRecambios).length;
         
-        // 🔥 CORRECCIÓN: Leemos los "VO" (Devueltos) directamente de la Agenda
         let devueltos = 0;
         if (window.datosAgenda && window.datosAgenda.length > 0) {
             devueltos = window.datosAgenda.filter(cita => {
@@ -1293,40 +1331,34 @@
             }).length;
         }
 
-        // Inyectamos los números en el HTML
         document.getElementById('kpi-hoy').innerText = entregasHoy;
         document.getElementById('kpi-total').innerText = entregados.length;
         document.getElementById('kpi-reparados').innerText = reparados;
         document.getElementById('kpi-devueltos').innerText = devueltos;
 
-        // 3. Cálculos para el Gráfico Donut (Estado en tiempo real)
         let pteLogistica = todosLosCoches.filter(c => c.pasoAInventario === false && c.entregado !== true).length;
         let enTaller = activos.filter(c => c.enTaller && !c.finTaller).length;
         let enRecambios = activos.filter(c => c.enRecambios && !c.finRecambios).length;
         let listos = activos.length - enTaller - enRecambios;
 
-        // 4. Cálculos para la gráfica mensual
         let mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        let conteoMeses = new Array(12).fill(0); // Empezamos todos los meses a 0
+        let conteoMeses = new Array(12).fill(0); 
 
-        // Recorremos el historial para agrupar por mes
         entregados.forEach(c => {
             if (c.fechaEntrega) {
                 let partes = c.fechaEntrega.split('/');
                 if (partes.length === 3) {
-                    let mesIndex = parseInt(partes[1], 10) - 1; // 0 = Enero, 11 = Diciembre
+                    let mesIndex = parseInt(partes[1], 10) - 1; 
                     if (mesIndex >= 0 && mesIndex <= 11) {
-                        conteoMeses[mesIndex]++; // Sumamos 1 al mes correspondiente
+                        conteoMeses[mesIndex]++; 
                     }
                 }
             }
         });
 
-        // 5. Destruimos gráficos anteriores para redibujar limpios
         if(chartObjDonut) chartObjDonut.destroy();
         if(chartObjMeses) chartObjMeses.destroy();
 
-        // 6. Dibujar Gráfico Donut
         const ctxDonut = document.getElementById('graficoDonut').getContext('2d');
         chartObjDonut = new Chart(ctxDonut, {
             type: 'doughnut',
@@ -1343,11 +1375,10 @@
                 responsive: true, 
                 maintainAspectRatio: false, 
                 plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { size: 11, family: 'Inter' } } } },
-                cutout: '65%' // Hace el anillo más fino y elegante
+                cutout: '65%' 
             }
         });
 
-        // 7. Dibujar Gráfico Mensual
         const ctxMeses = document.getElementById('graficoMeses').getContext('2d');
         chartObjMeses = new Chart(ctxMeses, {
             type: 'bar',
@@ -1356,10 +1387,10 @@
                 datasets: [{
                     label: 'Vehículos Entregados',
                     data: conteoMeses,
-                    backgroundColor: 'rgba(0, 176, 240, 0.2)', // Azul transparente
-                    borderColor: '#00b0f0', // Borde azul corporativo
+                    backgroundColor: 'rgba(0, 176, 240, 0.2)', 
+                    borderColor: '#00b0f0', 
                     borderWidth: 2,
-                    borderRadius: 4, // Bordes redondeados
+                    borderRadius: 4, 
                     hoverBackgroundColor: '#00b0f0'
                 }]
             },
@@ -1374,6 +1405,7 @@
             }
         });
     }
+    
     window.abrirLectorPDF = function() { document.getElementById('inputUploadPDF').click(); }
 
     window.procesarPDFs = async function(evento) {
@@ -1501,6 +1533,7 @@
       window.dibujarMsj(chatObj.history); 
       document.getElementById('chatModal').classList.remove('hidden');
     }
+    
     window.cerrarChat = function() { document.getElementById('chatModal').classList.add('hidden'); }
 
     window.dibujarMsj = function(hist) {
@@ -1539,68 +1572,6 @@
             if (act > 0) Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `${act} citas enlazadas`, showConfirmButton: false, timer: 3000 });
         } catch (e) { if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-warning text-red-500"></i> Error Sync'; }
     };
-    // ==========================================
-    // MOTOR DE ALERTAS Y LLEGADAS (EL MOTOR DE ESCUCHA)
-    // ==========================================
-    window.unsubscribeAlertas = null;
-
-    function iniciarMotorAlertas() {
-        if (window.unsubscribeAlertas) window.unsubscribeAlertas();
-        window.unsubscribeAlertas = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === "modified") {
-                    const data = change.doc.data();
-                    if (data.clienteEnPuerta === true && !data.alertaAtendida) {
-                        lanzarAlertaMovil(data, change.doc.id);
-                    }
-                }
-            });
-        });
-    }
-
-    function lanzarAlertaMovil(data, docId) {
-        new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(e=>{});
-
-        const tarjetas = document.querySelectorAll('.fila-coche');
-        tarjetas.forEach(tarjeta => {
-            if (tarjeta.innerText.includes(data.matricula)) tarjeta.classList.add('alerta-llegada');
-        });
-
-        Swal.fire({
-            title: '🔔 ¡CLIENTE LLEGÓ!',
-            html: `<div class="text-left"><p class="font-bold text-lg">${data.cliente || 'Conductor'}</p><p class="text-sm">${data.modelo} - ${data.matricula}</p></div>`,
-            icon: 'warning',
-            confirmButtonColor: '#001e50',
-            confirmButtonText: 'IR A RECEPCIÓN'
-        }).then(() => {
-            tarjetas.forEach(t => t.classList.remove('alerta-llegada'));
-            // Apagamos la alerta en la BD para que no vuelva a sonar
-            window.updateDoc(window.doc(window.db, "vehiculos", docId), { alertaAtendida: true });
-        });
-    }
-  </script>
-
-  <div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6);">
-    <div style="background-color: #fff; margin: 10% auto; padding: 30px; border: 1px solid #ddd; width: 400px; border-radius: 12px; text-align: center; font-family: 'Inter', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-       <img src="Logo con nombre.png" alt="Logo GesCar OS" style="max-width: 85%; height: auto; margin: 0 auto 15px auto; display: block; mix-blend-mode: multiply;">
-        <p style="font-size: 14px; color: #555;">Versión 1.0.0</p>
-        <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Automotive Operations Platform</p>
-        <hr style="margin-bottom: 20px;">
-        <p style="font-size: 13px; font-weight: bold; color: #333;">&copy; 2026 GesCar OS.</p>
-        <p style="font-size: 11px; color: #666; margin-bottom: 25px;">Todos los derechos reservados.</p>
-        <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Desarrollado por: M2 Code Systems</p>
-        <button id="btnClose" style="background-color: #001e50; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cerrar</button>
-    </div>
-  </div>
-
-  <script>
-      const modal = document.getElementById("aboutModal");
-      const btn = document.getElementById("btnAbout");
-      const span = document.getElementById("btnClose");
-
-      btn.onclick = function() { modal.style.display = "block"; }
-      span.onclick = function() { modal.style.display = "none"; }
-      window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
   </script>
 </body>
 </html>
