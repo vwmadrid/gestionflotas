@@ -59,6 +59,27 @@
     ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; border: 2px solid #f1f5f9; }
     ::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
     .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+    /* Modo Entregador Móvil */
+  body.modo-movil { background: #fff !important; }
+  body.modo-movil #sidebarApp, body.modo-movil header { display: none !important; }
+  body.modo-movil #mainApp { width: 100%; padding: 0; }
+  
+  .vista-movil-entregas { 
+    display: grid !important; 
+    grid-template-columns: 1fr; 
+    padding: 10px; 
+    gap: 10px; 
+  }
+  .card-mini.modo-movil { border-left-width: 4px; padding: 12px; }
+  /* Animación para la tarjeta del cliente que llega */
+  @keyframes parpadeoAlerta {
+    0%, 100% { border-color: #dc2626; background-color: #fee2e2; }
+    50% { border-color: #fca5a5; background-color: #fff1f2; }
+  }
+  .alerta-llegada {
+    animation: parpadeoAlerta 1s infinite;
+    border-width: 4px !important;
+  }
   </style>
 </head>
 <body class="text-gray-800 antialiased h-screen flex overflow-hidden">
@@ -104,6 +125,9 @@
         <i class="ph-bold ph-info"></i> Acerca de GesCar OS
       </button>
 
+      <button onclick="alternarModoEntregador()" class="mb-4 w-full text-xs text-[#00b0f0] font-bold flex items-center gap-2 p-3 rounded-lg bg-[#001e50]/50 transition-colors">
+  <i class="ph-bold ph-device-mobile"></i> Alternar Modo Móvil
+</button>
       <button onclick="cerrarSesion()" class="mt-2 text-xs text-red-400 hover:text-red-300 font-bold flex items-center gap-1 p-2 rounded-lg hover:bg-red-500/10 transition-colors">
         <i class="ph-bold ph-power"></i> Cerrar Sesión
       </button>
@@ -1346,8 +1370,116 @@
             if (act > 0) Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `${act} citas enlazadas`, showConfirmButton: false, timer: 3000 });
         } catch (e) { if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-warning text-red-500"></i> Error Sync'; }
     };
-  </script>
-  <div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6);">
+    window.alternarModoEntregador = function() {
+    document.body.classList.toggle('modo-movil');
+    const cont = document.getElementById('contenedorTarjetas');
+    cont.classList.toggle('vista-movil-entregas');
+    
+    // Si entramos en modo móvil, forzamos vista tarjetas
+    if(document.body.classList.contains('modo-movil')) {
+        document.getElementById('contenedorTabla').style.display = 'none';
+        cont.style.display = 'grid';
+    }
+};
+
+// Motor de escucha en tiempo real
+function iniciarMotorAlertas() {
+    window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "modified") {
+                const data = change.doc.data();
+                // Si el cliente pulsa el botón "YA ESTOY AQUÍ"
+                if (data.clienteEnPuerta === true) {
+                    lanzarAlertaMovil(data);
+                }
+            }
+        });
+    });
+}
+
+function lanzarAlertaMovil(data) {
+    // 1. Sonido de aviso
+    new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play();
+
+    // 2. Buscar la tarjeta del coche en el DOM por su bastidor (u otro identificador único)
+    // Asumimos que cada tarjeta tiene un atributo data-vin o similar, 
+    // o buscamos por el modelo/matrícula que coincida con 'data'
+    const tarjetas = document.querySelectorAll('.fila-coche');
+    tarjetas.forEach(tarjeta => {
+        if (tarjeta.innerText.includes(data.matricula)) {
+            tarjeta.classList.add('alerta-llegada');
+        }
+    });
+
+    // 3. Aviso visual
+    Swal.fire({
+        title: '🔔 ¡CLIENTE LLEGÓ!',
+        html: `<div class="text-left">
+                 <p class="font-bold text-lg">${data.modelo}</p>
+                 <p class="text-sm">Matrícula: ${data.matricula}</p>
+               </div>`,
+        icon: 'warning',
+        confirmButtonColor: '#001e50',
+        confirmButtonText: 'IR A RECEPCIÓN'
+    }).then(() => {
+        // Al cerrar el aviso, quitamos la alerta visual de la tarjeta
+        tarjetas.forEach(t => t.classList.remove('alerta-llegada'));
+    });
+}
+
+// ==========================================
+// MOTOR DE ALERTAS Y LÓGICA DE CIERRE
+// ==========================================
+
+// Variable global para controlar el escuchador de alertas
+window.unsubscribeAlertas = null;
+
+function iniciarMotorAlertas() {
+    // Si ya existe un escuchador, lo matamos antes de crear uno nuevo
+    if (window.unsubscribeAlertas) window.unsubscribeAlertas();
+
+    window.unsubscribeAlertas = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "modified") {
+                const data = change.doc.data();
+                // Solo alertamos si el cambio es realmente la llegada del cliente
+                if (data.clienteEnPuerta === true) {
+                    lanzarAlertaMovil(data);
+                }
+            }
+        });
+    });
+}
+
+function lanzarAlertaMovil(data) {
+    // 1. Sonido de aviso
+    new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play();
+
+    // 2. Buscar la tarjeta del coche
+    const tarjetas = document.querySelectorAll('.fila-coche');
+    tarjetas.forEach(tarjeta => {
+        if (tarjeta.innerText.includes(data.matricula)) {
+            tarjeta.classList.add('alerta-llegada');
+        }
+    });
+
+    // 3. Aviso visual
+    Swal.fire({
+        title: '🔔 ¡CLIENTE LLEGÓ!',
+        html: `<div class="text-left">
+                 <p class="font-bold text-lg">${data.modelo}</p>
+                 <p class="text-sm">Matrícula: ${data.matricula}</p>
+               </div>`,
+        icon: 'warning',
+        confirmButtonColor: '#001e50',
+        confirmButtonText: 'IR A RECEPCIÓN'
+    }).then(() => {
+        tarjetas.forEach(t => t.classList.remove('alerta-llegada'));
+    });
+}
+</script>
+
+ <div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6);">
     <div style="background-color: #fff; margin: 10% auto; padding: 30px; border: 1px solid #ddd; width: 400px; border-radius: 12px; text-align: center; font-family: 'Inter', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
        <img src="Logo con nombre.png" alt="Logo GesCar OS" style="max-width: 85%; height: auto; margin: 0 auto 15px auto; display: block; mix-blend-mode: multiply;">
         <p style="font-size: 14px; color: #555;">Versión 1.0.0</p>
@@ -1360,14 +1492,16 @@
     </div>
   </div>
 
-  <script>
-      const modal = document.getElementById("aboutModal");
-      const btn = document.getElementById("btnAbout");
-      const span = document.getElementById("btnClose");
+<script>
+    const modal = document.getElementById("aboutModal");
+    const btn = document.getElementById("btnAbout");
+    const span = document.getElementById("btnClose");
 
-      btn.onclick = function() { modal.style.display = "block"; }
-      span.onclick = function() { modal.style.display = "none"; }
-      window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
-  </script>
-</body>
-</html>
+    btn.onclick = function() { modal.style.display = "block"; }
+    span.onclick = function() { modal.style.display = "none"; }
+    window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
+
+    // IMPORTANTE: Llamamos al motor cuando el usuario inicia sesión
+    // Modifica tu función 'iniciarAppDirectamente' para añadir esto:
+    // iniciarMotorAlertas(); 
+</script>
