@@ -263,9 +263,9 @@
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('sidebarApp').style.display = 'flex';
       document.getElementById('mainApp').style.display = 'flex';
-      
-      // 👇 AÑADIMOS ESTA LÍNEA PARA ACTIVAR EL ESCUCHADOR DE NOTIFICACIONES 👇
-      if (typeof iniciarMotorAlertas === 'function') iniciarMotorAlertas();
+
+      // 🔥 AÑADE ESTA LÍNEA PARA QUE EL TIMBRE FUNCIONE 🔥
+      iniciarMotorAlertas(); 
 
       if (rol === 'entregas') {
         document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
@@ -1567,8 +1567,8 @@
             confirmButtonText: 'IR A RECEPCIÓN'
         }).then(() => {
             tarjetas.forEach(t => t.classList.remove('alerta-llegada'));
-            // Apagamos la alerta en la BD para que no vuelva a sonar
-            window.updateDoc(window.doc(window.db, "vehiculos", docId), { alertaAtendida: true });
+            // 🔥 CAMBIO: Ponemos clienteEnPuerta a false para que puedas hacer la prueba tantas veces como quieras
+            window.updateDoc(window.doc(window.db, "vehiculos", docId), { alertaAtendida: true, clienteEnPuerta: false });
         });
     }
   </script>
