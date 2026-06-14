@@ -89,14 +89,20 @@
       <h2 class="text-3xl font-black tracking-tighter">Castellana Wagen M-40</h2>
       <p class="text-[10px] text-gray-300 font-bold uppercase tracking-widest mt-1">Gestión de Vehículos</p>
     </div>
-    <nav id="tabsEntregas" class="hidden flex-col p-4 gap-2 flex-1">
+  <nav id="tabsEntregas" class="hidden flex-col p-4 gap-2 flex-1">
       <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1">Pre-Recepción</p>
       <button onclick="cambiarPestana('logistica')" class="p-3 text-amber-300 bg-amber-500/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all border border-amber-500/30 mb-4"><i class="ph-bold ph-truck text-lg"></i> Logística Renting</button>
       
       <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1">Concesionario</p>
       <button onclick="cambiarPestana('todos')" class="p-3 bg-white/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all shadow-sm"><i class="ph-bold ph-car text-lg"></i> Vehículos</button>
       <button onclick="cambiarPestana('agenda')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-lg"></i> Agenda Citas</button>
-      <button onclick="cambiarPestana('entregados')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-4 border border-white/20"><i class="ph-bold ph-check-square-offset text-lg"></i> Historial Entregados</button>
+      
+      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1 mt-2">Monitorización</p>
+      <button onclick="cambiarPestana('global-taller')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-amber-500/20"><i class="ph-bold ph-wrench text-lg text-amber-400"></i> Todo en Taller</button>
+      <button onclick="cambiarPestana('global-recambios')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-teal-500/20"><i class="ph-bold ph-package text-lg text-teal-400"></i> Todo en Recambios</button>
+
+      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1 mt-4">Historial</p>
+      <button onclick="cambiarPestana('entregados')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-white/20"><i class="ph-bold ph-check-square-offset text-lg"></i> Historial Entregados</button>
       <button onclick="cambiarPestana('dashboard')" class="p-3 text-emerald-400 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-1 border border-emerald-500/30"><i class="ph-bold ph-chart-pie-slice text-lg"></i> Dashboard Análisis</button>
     </nav>
    <div class="p-6 bg-black/20 mt-auto border-t border-white/10">
@@ -288,30 +294,37 @@
       activeTab = pestana;
       const botones = document.querySelectorAll('#tabsEntregas button');
       
+      // Limpiamos los estilos activos de todos los botones
       botones.forEach(b => { 
         b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-amber-500/10', 'border-amber-500/30', 'bg-red-500/10', 'border-red-500/50', 'bg-emerald-500/10'); 
         b.classList.add('text-gray-300');
       });
       
+      // Asignamos el estilo iluminado al botón correspondiente basándonos en el nuevo orden
       if (pestana === 'logistica') botones[0].classList.add('text-amber-300', 'bg-amber-500/10', 'border-amber-500/30');
       else if (pestana === 'todos') botones[1].classList.add('bg-white/10', 'text-white');
       else if (pestana === 'agenda') botones[2].classList.add('bg-white/10', 'text-white');
-      else if (pestana === 'entregados') botones[3].classList.add('bg-white/10', 'text-white');
-      else if (pestana === 'dashboard') botones[4].classList.add('text-emerald-400', 'bg-emerald-500/10', 'border-emerald-500/30');
+      else if (pestana === 'global-taller') botones[3].classList.add('bg-white/10', 'text-white');
+      else if (pestana === 'global-recambios') botones[4].classList.add('bg-white/10', 'text-white');
+      else if (pestana === 'entregados') botones[5].classList.add('bg-white/10', 'text-white');
+      else if (pestana === 'dashboard') botones[6].classList.add('text-emerald-400', 'bg-emerald-500/10', 'border-emerald-500/30');
 
+      // Ocultamos todos los contenedores por defecto
       document.getElementById('contenedorLogistica').style.display = 'none';
       document.getElementById('contenedorTarjetas').style.display = 'none';
       document.getElementById('contenedorTabla').style.display = 'none';
       document.getElementById('contenedorAgenda').style.display = 'none';
       document.getElementById('contenedorEntregados').style.display = 'none';
-      document.getElementById('contenedorDashboard').style.display = 'none'; // 🔥 NUEVO
+      document.getElementById('contenedorDashboard').style.display = 'none';
       
+      // Control de cabeceras y buscadores
       document.getElementById('filtrosVisuales').style.display = 'none';
       document.getElementById('controlesVistaExcel').style.display = 'none';
       document.getElementById('botonesLogistica').style.display = 'none'; 
       document.getElementById('botonesAgenda').style.display = 'none';    
       document.getElementById('buscadorInput').style.display = 'block';
 
+      // Rutas de ejecución de pantalla
       if (pestana === 'logistica') {
         document.getElementById('contenedorLogistica').style.display = 'grid';
         document.getElementById('botonesLogistica').style.display = 'flex'; 
@@ -319,6 +332,9 @@
         document.getElementById('controlesVistaExcel').style.display = 'flex';
         document.getElementById('filtrosVisuales').style.display = 'flex';
         cambiarModoVisualizacion(modoVistaActual);
+      } else if (pestana === 'global-taller' || pestana === 'global-recambios') {
+        // Las dos nuevas vistas globales usarán la cuadrícula de tarjetas estándar
+        document.getElementById('contenedorTarjetas').style.display = 'grid';
       } else if (pestana === 'agenda') {
         document.getElementById('contenedorAgenda').style.display = 'block';
         document.getElementById('buscadorInput').style.display = 'none';
@@ -330,7 +346,7 @@
       } else if (pestana === 'dashboard') {
         document.getElementById('contenedorDashboard').style.display = 'block';
         document.getElementById('buscadorInput').style.display = 'none';
-        renderizarDashboard(); // 🔥 LLAMAMOS A LOS GRÁFICOS
+        renderizarDashboard();
       }
       
       if(pestana !== 'dashboard') cargar();
@@ -418,10 +434,34 @@
         if (userRole === 'taller' || userRole === 'recambios') {
            renderizarDepartamentos(userRole);
         } else if (userRole === 'entregas') {
-          if (activeTab === 'logistica') renderLogistica();
-          else if (activeTab === 'todos') { actualizarContadores(); renderizarVistas(); }
-          else if (activeTab === 'agenda') renderAgenda();
-          else if (activeTab === 'entregados') renderEntregados();
+          if (activeTab === 'logistica') {
+              renderLogistica();
+          } else if (activeTab === 'todos') { 
+              actualizarContadores(); 
+              renderizarVistas(); 
+          } else if (activeTab === 'global-taller') {
+              // 🔴 VISTA GLOBAL: Filtra cualquier coche que esté en taller en este momento
+              let cochesEnTaller = todosLosCoches.filter(c => c.enTaller && !c.finTaller && c.entregado !== true && c.entregado !== "true");
+              let div = document.getElementById('contenedorTarjetas');
+              if (cochesEnTaller.length === 0) {
+                  div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay ningún vehículo en Taller actualmente.</p></div>`;
+              } else {
+                  div.innerHTML = cochesEnTaller.map(c => renderTarjetaCompacta(c)).join('');
+              }
+          } else if (activeTab === 'global-recambios') {
+              // 🟢 VISTA GLOBAL: Filtra cualquier coche que esté en recambios en este momento
+              let cochesEnRecambios = todosLosCoches.filter(c => c.enRecambios && !c.finRecambios && c.entregado !== true && c.entregado !== "true");
+              let div = document.getElementById('contenedorTarjetas');
+              if (cochesEnRecambios.length === 0) {
+                  div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay ningún vehículo en Recambios actualmente.</p></div>`;
+              } else {
+                  div.innerHTML = cochesEnRecambios.map(c => renderTarjetaCompacta(c)).join('');
+              }
+          } else if (activeTab === 'agenda') {
+              renderAgenda();
+          } else if (activeTab === 'entregados') {
+              renderEntregados();
+          }
           
           if (primeraCargaDb) {
               primeraCargaDb = false;
@@ -1143,7 +1183,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 if (idFirebase !== 'no_db') {
-                    // 🔥 Un micro-retraso para que las ventanas no choquen
+                    // 🔥 Un micro-retraso para que las ventanas no choquen y lanzamos el nuevo sistema
                     setTimeout(() => {
                         window.marcarComoEntregado(idFirebase);
                     }, 150);
@@ -1155,7 +1195,6 @@
             }
         });
     };
-
     window.comprobarAlertaEntrega = function(matricula, modelo) {
         Swal.fire({
             title: 'ALERTA',
@@ -1328,23 +1367,25 @@
         } catch (e) { Swal.fire('Error', 'Fallo conexión con Webhook.', 'error'); }
     }
 
-    // Variables globales para evitar solapamientos gráficos
-    let chartObjDonut = null;
-    let chartObjBarras = null;
+    // Variables globales blindadas para los gráficos
+    window.chartObjDonut = null;
+    window.chartObjMeses = null;
+
+   // Variables globales blindadas para los gráficos
+    window.chartObjDonut = null;
+    window.chartObjMeses = null;
 
     window.renderizarDashboard = function() {
         // 1. Cálculos de listas generales
         let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
-        let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
+        // Cogemos ABSOLUTAMENTE TODOS los que no están entregados (tanto logística como concesionario)
+        let noEntregados = todosLosCoches.filter(c => c.entregado !== true && c.entregado !== "true");
         
-       // 2. Cálculos para las Tarjetas (Cifras)
+        // 2. Cálculos para las Tarjetas (Cifras)
         let hoyStr = new Date().toLocaleDateString('es-ES');
         let entregasHoy = entregados.filter(c => c.fechaEntrega === hoyStr).length;
-        
-        // Contamos coches que tienen o han tenido fecha de entrada a taller o recambios
         let reparados = todosLosCoches.filter(c => c.fechaEntradaTaller || c.fechaEntradaRecambios).length;
         
-        // 🔥 CORRECCIÓN: Leemos los "VO" (Devueltos) directamente de la Agenda
         let devueltos = 0;
         if (window.datosAgenda && window.datosAgenda.length > 0) {
             devueltos = window.datosAgenda.filter(cita => {
@@ -1359,81 +1400,98 @@
         document.getElementById('kpi-reparados').innerText = reparados;
         document.getElementById('kpi-devueltos').innerText = devueltos;
 
-        // 3. Cálculos para el Gráfico Donut (Estado en tiempo real)
-        let pteLogistica = todosLosCoches.filter(c => c.pasoAInventario === false && c.entregado !== true).length;
-        let enTaller = activos.filter(c => c.enTaller && !c.finTaller).length;
-        let enRecambios = activos.filter(c => c.enRecambios && !c.finRecambios).length;
-        let listos = activos.length - enTaller - enRecambios;
+        // 3. Cálculos para el Gráfico Donut (GLOBALES y sin duplicados)
+        let enTaller = noEntregados.filter(c => c.enTaller && !c.finTaller).length;
+        let enRecambios = noEntregados.filter(c => c.enRecambios && !c.finRecambios).length;
+        
+        // Para que el Donut sume un 100% perfecto, si un coche está en Taller/Recambios, 
+        // lo restamos de Logística Ptea o Listos para que no cuente doble.
+        let pteLogistica = noEntregados.filter(c => 
+            c.pasoAInventario === false && 
+            !(c.enTaller && !c.finTaller) && 
+            !(c.enRecambios && !c.finRecambios)
+        ).length;
+        
+        let listos = noEntregados.filter(c => 
+            c.pasoAInventario !== false && 
+            !(c.enTaller && !c.finTaller) && 
+            !(c.enRecambios && !c.finRecambios)
+        ).length;
 
         // 4. Cálculos para la gráfica mensual
         let mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        let conteoMeses = new Array(12).fill(0); // Empezamos todos los meses a 0
+        let conteoMeses = new Array(12).fill(0);
 
-        // Recorremos el historial para agrupar por mes
         entregados.forEach(c => {
             if (c.fechaEntrega) {
                 let partes = c.fechaEntrega.split('/');
                 if (partes.length === 3) {
-                    let mesIndex = parseInt(partes[1], 10) - 1; // 0 = Enero, 11 = Diciembre
+                    let mesIndex = parseInt(partes[1], 10) - 1; 
                     if (mesIndex >= 0 && mesIndex <= 11) {
-                        conteoMeses[mesIndex]++; // Sumamos 1 al mes correspondiente
+                        conteoMeses[mesIndex]++; 
                     }
                 }
             }
         });
 
-        // 5. Destruimos gráficos anteriores para redibujar limpios
-        if(chartObjDonut) chartObjDonut.destroy();
-        if(chartObjMeses) chartObjMeses.destroy();
+        // 5. Destruimos gráficos anteriores de forma segura para redibujar limpios
+        if(window.chartObjDonut) window.chartObjDonut.destroy();
+        if(window.chartObjMeses) window.chartObjMeses.destroy();
 
         // 6. Dibujar Gráfico Donut
-        const ctxDonut = document.getElementById('graficoDonut').getContext('2d');
-        chartObjDonut = new Chart(ctxDonut, {
-            type: 'doughnut',
-            data: {
-                labels: ['Listos/Con Cita', 'En Taller', 'En Recambios', 'Logística Ptea.'],
-                datasets: [{
-                    data: [listos, enTaller, enRecambios, pteLogistica],
-                    backgroundColor: ['#10b981', '#f59e0b', '#14b8a6', '#94a3b8'],
-                    borderWidth: 0,
-                    hoverOffset: 8
-                }]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { size: 11, family: 'Inter' } } } },
-                cutout: '65%' // Hace el anillo más fino y elegante
-            }
-        });
+        const canvasDonut = document.getElementById('graficoDonut');
+        if (canvasDonut) {
+            const ctxDonut = canvasDonut.getContext('2d');
+            window.chartObjDonut = new Chart(ctxDonut, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Listos/Con Cita', 'En Taller', 'En Recambios', 'Logística Ptea.'],
+                    datasets: [{
+                        data: [listos, enTaller, enRecambios, pteLogistica],
+                        backgroundColor: ['#10b981', '#f59e0b', '#14b8a6', '#94a3b8'],
+                        borderWidth: 0,
+                        hoverOffset: 8
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { size: 11, family: 'Inter' } } } },
+                    cutout: '65%' 
+                }
+            });
+        }
 
         // 7. Dibujar Gráfico Mensual
-        const ctxMeses = document.getElementById('graficoMeses').getContext('2d');
-        chartObjMeses = new Chart(ctxMeses, {
-            type: 'bar',
-            data: {
-                labels: mesesNombres,
-                datasets: [{
-                    label: 'Vehículos Entregados',
-                    data: conteoMeses,
-                    backgroundColor: 'rgba(0, 176, 240, 0.2)', // Azul transparente
-                    borderColor: '#00b0f0', // Borde azul corporativo
-                    borderWidth: 2,
-                    borderRadius: 4, // Bordes redondeados
-                    hoverBackgroundColor: '#00b0f0'
-                }]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                scales: { 
-                    y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
-                    x: { grid: { display: false } }
+        const canvasMeses = document.getElementById('graficoMeses');
+        if (canvasMeses) {
+            const ctxMeses = canvasMeses.getContext('2d');
+            window.chartObjMeses = new Chart(ctxMeses, {
+                type: 'bar',
+                data: {
+                    labels: mesesNombres,
+                    datasets: [{
+                        label: 'Vehículos Entregados',
+                        data: conteoMeses,
+                        backgroundColor: 'rgba(0, 176, 240, 0.2)', 
+                        borderColor: '#00b0f0', 
+                        borderWidth: 2,
+                        borderRadius: 4, 
+                        hoverBackgroundColor: '#00b0f0'
+                    }]
                 },
-                plugins: { legend: { display: false } } 
-            }
-        });
-    }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } } 
+                }
+            });
+        }
+    };
     window.abrirLectorPDF = function() { document.getElementById('inputUploadPDF').click(); }
 
     window.procesarPDFs = async function(evento) {
