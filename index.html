@@ -258,25 +258,30 @@
       iniciarAppDirectamente(userRole);
     }
 
-    window.iniciarAppDirectamente = function(rol) {
-      document.getElementById('roleBadge').innerText = "Perfil: " + rol;
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('sidebarApp').style.display = 'flex';
-      document.getElementById('mainApp').style.display = 'flex';
-
-      // 🔥 AÑADE ESTA LÍNEA PARA QUE EL TIMBRE FUNCIONE 🔥
-      iniciarMotorAlertas(); 
-
-      if (rol === 'entregas') {
-        document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
-        document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
-        cambiarPestana('logistica');
-      } else { 
-        document.getElementById('contenedorTarjetas').style.display = 'grid';
+   window.iniciarAppDirectamente = function(rol) {
+        document.getElementById('roleBadge').innerText = "Perfil: " + rol;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('sidebarApp').style.display = 'flex';
+        document.getElementById('mainApp').style.display = 'flex';
+        
+        // Cargamos los datos visuales para todos los departamentos
         cargar(); 
-      }
-    }
 
+        // Evaluamos el rol del usuario
+        if (rol === 'entregas') {
+            // 🔥 ENCENDEMOS EL MOTOR DE ALERTAS SOLO PARA ENTREGAS 🔥
+            if (typeof window.iniciarMotorAlertas === 'function') {
+                window.iniciarMotorAlertas(); 
+            }
+
+            document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
+            document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
+            cambiarPestana('logistica');
+        } else { 
+            // Configuración para Taller y Recambios (sin alertas de llegada)
+            document.getElementById('contenedorTarjetas').style.display = 'grid';
+        }
+    }
     window.cerrarSesion = function() { localStorage.removeItem('vw_departamento'); location.reload(); }
 
    window.cambiarPestana = function(pestana) {
@@ -1533,26 +1538,42 @@
         } catch (e) { if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-warning text-red-500"></i> Error Sync'; }
     };
     // ==========================================
-    // MOTOR DE ALERTAS Y LLEGADAS (EL MOTOR DE ESCUCHA)
+    // MOTOR DE ALERTAS Y LLEGADAS (ROBUSTO)
     // ==========================================
     window.unsubscribeAlertas = null;
 
-    function iniciarMotorAlertas() {
-        if (window.unsubscribeAlertas) window.unsubscribeAlertas();
+    window.iniciarMotorAlertas = function() {
+        console.log("🟢 [RADAR LLEGADAS] Encendiendo motor de escucha...");
+        
+        if (window.unsubscribeAlertas) {
+            window.unsubscribeAlertas();
+        }
+        
         window.unsubscribeAlertas = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
+            console.log("🟢 [RADAR LLEGADAS] Sincronizado con Firebase. Cambios en esta lectura: " + snapshot.docChanges().length);
+            
             snapshot.docChanges().forEach((change) => {
                 if (change.type === "modified") {
                     const data = change.doc.data();
-                    if (data.clienteEnPuerta === true && !data.alertaAtendida) {
-                        lanzarAlertaMovil(data, change.doc.id);
+                    console.log(`🟡 [RADAR] Modificado: ${data.matricula} | clienteEnPuerta: ${data.clienteEnPuerta} | alertaAtendida: ${data.alertaAtendida}`);
+                    
+                    // Si el cliente está en la puerta y no lo hemos atendido, disparamos
+                    if (data.clienteEnPuerta === true && data.alertaAtendida === false) {
+                        console.log("🔴 [RADAR] ¡CUMPLEN CONDICIONES! DISPARANDO ALARMA...");
+                        window.lanzarAlertaMovil(data, change.doc.id);
                     }
                 }
             });
         });
-    }
+    };
 
-    function lanzarAlertaMovil(data, docId) {
-        new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(e=>{});
+    window.lanzarAlertaMovil = function(data, docId) {
+        console.log("🔊 Lanzando alerta visual y sonora...");
+        
+        // Intentamos reproducir el sonido (el catch evita que la app se cuelgue si Chrome lo bloquea)
+        try {
+            new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(e => console.log("🔇 Audio bloqueado por falta de clics previos."));
+        } catch(e) {}
 
         const tarjetas = document.querySelectorAll('.fila-coche');
         tarjetas.forEach(tarjeta => {
@@ -1567,10 +1588,12 @@
             confirmButtonText: 'IR A RECEPCIÓN'
         }).then(() => {
             tarjetas.forEach(t => t.classList.remove('alerta-llegada'));
-            // 🔥 CAMBIO: Ponemos clienteEnPuerta a false para que puedas hacer la prueba tantas veces como quieras
-            window.updateDoc(window.doc(window.db, "vehiculos", docId), { alertaAtendida: true, clienteEnPuerta: false });
+            // Marcamos como atendida para el panel, pero NO borramos el clienteEnPuerta porque 
+            // el botón rojo de la app del cliente es el encargado de hacer ese reset.
+            console.log("✅ Alarma atendida por el usuario.");
+            window.updateDoc(window.doc(window.db, "vehiculos", docId), { alertaAtendida: true });
         });
-    }
+    };
   </script>
 
   <div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6);">
