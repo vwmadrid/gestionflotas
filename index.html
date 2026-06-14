@@ -769,56 +769,104 @@
         }
     };
 
-   window.marcarComoEntregado = function(id) {
-    // 1. Buscamos los datos exactos del coche que estamos entregando
-    let coche = todosLosCoches.find(c => c.fila === id);
-    let nombreCliente = coche.cliente || "cliente";
-    let modeloCoche = coche.C || "tu nuevo vehículo";
-
-    // 2. Lanzamos el modal interactivo
-    Swal.fire({
-        title: '¿Completar Entrega?',
-        html: `
-            <p class="mb-4 text-sm text-gray-600">El coche pasará al historial. Opcionalmente, añade un enlace al vídeo de la experiencia para el cliente:</p>
-            <input id="linkVideo" class="swal2-input" placeholder="https://enlace-al-video.com (Opcional)">
-        `,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#10b981',
-        confirmButtonText: 'Entregar y Avisar',
-        cancelButtonText: 'Cancelar',
-        preConfirm: () => {
-            // Capturamos lo que hayas escrito en el input del vídeo
-            return document.getElementById('linkVideo').value.trim();
+ window.marcarComoEntregado = function(id) {
+        // 1. Buscamos el coche en Firebase (con protección por si ya no está)
+        let coche = todosLosCoches.find(c => c.fila === id);
+        if (!coche) {
+            Swal.fire('Error', 'No se ha encontrado el vehículo. Es posible que ya esté entregado.', 'error');
+            return;
         }
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            let linkVideo = result.value;
-            
-            // 3. Actualizamos la base de datos en Firebase de forma silenciosa
-            await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
-                entregado: true, 
-                fechaEntrega: new Date().toLocaleDateString('es-ES') 
-            });
-            
-            // 4. Construimos el mensaje automatizado
-            let mensaje = `¡Hola, ${nombreCliente}! Ha sido un verdadero placer entregarte ${modeloCoche} hoy. Esperamos que lo disfrutes muchísimo. `;
-            
-            // Si pusiste un enlace de vídeo, lo añadimos al texto
-            if (linkVideo) {
-                mensaje += `Aquí tienes el vídeo resumen de tu experiencia con nosotros: ${linkVideo} `;
+        
+        // 2. Buscamos la cita en la agenda para extraer nombre y teléfono de forma segura
+        let citaAsociada = window.datosAgenda.find(cita => 
+            (cita.matricula && coche.B && String(cita.matricula).replace(/\s/g, '') === String(coche.B).replace(/\s/g, '')) || 
+            (cita.bastidor && coche.A && String(cita.bastidor) === String(coche.A))
+        );
+
+        // Extraemos y forzamos a texto para que no haya fallos ocultos
+        let nombreCompleto = (citaAsociada && citaAsociada.cliente) ? String(citaAsociada.cliente) : (coche.cliente ? String(coche.cliente) : "Familia");
+        let nombreCliente = nombreCompleto.split(" ")[0]; 
+        let modeloCoche = coche.C || "tu nuevo vehículo";
+        
+        let telefonoRaw = (citaAsociada && citaAsociada.telefono) ? String(citaAsociada.telefono) : "";
+        let telefonoLimpio = telefonoRaw.replace(/\s/g, '').replace(/^\+?34/, '');
+        let urlWhatsAppBase = telefonoLimpio ? `https://wa.me/34${telefonoLimpio}?text=` : `https://wa.me/?text=`;
+
+        // 3. Lanzamos el modal con el campo para adjuntar imagen
+        Swal.fire({
+            title: '¿Completar Entrega?',
+            html: `
+                <p class="mb-4 text-sm text-gray-600">El coche pasará al historial. Opcionalmente, adjunta una fotografía de la entrega:</p>
+                <input type="file" id="fileFotos" accept="image/*" class="swal2-file text-sm w-full" style="padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
+                
+                <div style="margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <input type="checkbox" id="pedirResena" checked style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="pedirResena" style="font-weight: bold; color: #374151; cursor: pointer;">Solicitar reseña en Google</label>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            confirmButtonText: 'Entregar y Avisar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                return {
+                    archivoFoto: document.getElementById('fileFotos').files[0],
+                    pedirResena: document.getElementById('pedirResena').checked
+                };
             }
-            
-            mensaje += `¿Nos ayudarías con una reseña? ¡Gracias!`;
-            
-            // 5. Preparamos y abrimos el enlace de WhatsApp dinámico
-            let urlWa = "https://wa.me/?text=" + encodeURIComponent(mensaje);
-            window.open(urlWa, "_blank");
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                let { archivoFoto, pedirResena } = result.value;
+                
+                const finalizarYEnviar = async (linkSubido) => {
+                    await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
+                        entregado: true, 
+                        fechaEntrega: new Date().toLocaleDateString('es-ES') 
+                    });
+                    
+                    let nombreFinal = nombreCliente.charAt(0).toUpperCase() + nombreCliente.slice(1).toLowerCase();
+                    let mensaje = `¡Hola, ${nombreFinal}! Ha sido un verdadero placer entregarte tu ${modeloCoche} hoy. Esperamos que lo disfrutes muchísimo. `;
+                    
+                    if (linkSubido) {
+                        mensaje += `Aquí tienes un enlace con la fotografía de este momento tan especial: ${linkSubido} `;
+                    }
+                    
+                    if (pedirResena) {
+                        mensaje += `¿Nos ayudarías con una reseña? Nos haría mucha ilusión: https://search.google.com/local/writereview?placeid=ChIJc6vL3fIvQg0RGT8iQzPAenc ¡Gracias!`;
+                    }
+                    
+                    let urlWa = urlWhatsAppBase + encodeURIComponent(mensaje);
+                    window.open(urlWa, "_blank");
 
-            Swal.fire('¡Entregado!', 'El vehículo está en el historial y el mensaje preparado.', 'success');
-        }
-    });
-};
+                    Swal.fire('¡Entregado!', 'El vehículo está en el historial y el mensaje preparado.', 'success');
+                };
+
+                if (archivoFoto) {
+                    Swal.fire({title: 'Subiendo fotografía...', didOpen: () => Swal.showLoading(), allowOutsideClick: false});
+                    
+                    const reader = new FileReader();
+                    reader.readAsDataURL(archivoFoto);
+                    reader.onload = async () => {
+                        const urlDrive = 'https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec'; 
+                        try {
+                            const res = await fetch(urlDrive, { 
+                                method: 'POST', 
+                                body: JSON.stringify({ base64: reader.result, fileName: archivoFoto.name, mimeType: archivoFoto.type }) 
+                            });
+                            const data = await res.json();
+                            await finalizarYEnviar(data.url); 
+                        } catch (e) {
+                            console.error("Error al subir foto:", e);
+                            Swal.fire('Error', 'No se pudo subir la foto a Drive. Inténtalo sin adjuntar archivo.', 'error');
+                        }
+                    };
+                } else {
+                    await finalizarYEnviar(null);
+                }
+            }
+        });
+    };
     window.pasarAInventario = async function(id) {
         Swal.fire({
             title: '¿Mover a Inventario?', text: "Dejará Logística Previa y pasará a Concesionario.", icon: 'question',
@@ -1082,16 +1130,26 @@
     window.preguntarSiEntregado = function(idFirebase, modelo, matricula, dia, hora) {
         Swal.fire({
             title: '¿ENTREGA COMPLETADA?',
-            text: `¿El vehículo (${modelo} - ${matricula}) ha sido entregado?`,
-            icon: 'question', showCancelButton: true, showDenyButton: true,
-            confirmButtonColor: '#10b981', denyButtonColor: '#f59e0b', cancelButtonColor: '#6b7280',
-            confirmButtonText: 'SÍ, ENTREGADO', denyButtonText: 'NO, REAGENDAR', cancelButtonText: 'Cerrar'
+            text: `¿El vehículo (${modelo} - ${matricula}) de la cita del ${dia} a las ${hora} ha sido entregado?`,
+            icon: 'question', 
+            showCancelButton: true, 
+            showDenyButton: true,
+            confirmButtonColor: '#10b981', 
+            denyButtonColor: '#f59e0b', 
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'SÍ, INICIAR ENTREGA', 
+            denyButtonText: 'NO, REAGENDAR', 
+            cancelButtonText: 'Cerrar'
         }).then((result) => {
             if (result.isConfirmed) {
                 if (idFirebase !== 'no_db') {
-                    window.updateDoc(window.doc(window.db, "vehiculos", idFirebase), { entregado: true, fechaEntrega: new Date().toLocaleDateString() });
-                    Swal.fire('¡Perfecto!', 'Movido al Historial.', 'success');
-                } else { Swal.fire('Aviso', 'Coche no está en Inventario.', 'info'); }
+                    // 🔥 Un micro-retraso para que las ventanas no choquen
+                    setTimeout(() => {
+                        window.marcarComoEntregado(idFirebase);
+                    }, 150);
+                } else { 
+                    Swal.fire('Aviso', 'El coche no está en la base de datos de Inventario.', 'info'); 
+                }
             } else if (result.isDenied) {
                 window.open("https://outlook.office.com/bookings/calendar?b=EntregasVWMadrid@porscheholding.onmicrosoft.com", "_blank");
             }
@@ -1179,6 +1237,7 @@
            contenedor.innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center border border-red-200"><p class="font-bold text-sm">No hay entregas para ${criterioTexto}</p></div>`;
            return;
        }
+       
        contenedor.innerHTML = `<p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Resultados (${resultados.length}):</p>` + 
        resultados.map(c => `
            <div class="bg-white rounded-xl border-l-8 border-emerald-500 p-5 shadow-sm mb-3 relative overflow-hidden">
@@ -1186,14 +1245,17 @@
                <h3 class="font-black text-base text-[#001e50] uppercase">${c.C}</h3>
                <p class="text-[10px] font-bold text-gray-400 tracking-widest mb-2">VIN: ${c.A} | MAT: ${c.B}</p>
                <p class="font-black text-emerald-600 text-sm mb-2"><i class="ph-bold ph-calendar-check"></i> ${c.fechaEntrega || 'Completado'}</p>
-               <div class="flex gap-2 text-[9px] font-bold text-gray-400 uppercase">
+               <div class="flex gap-2 text-[9px] font-bold text-gray-400 uppercase mb-4">
                    <span class="bg-gray-100 px-2 py-1 rounded border">${c.entregador || c.agente || 'N/A'}</span>
                    <span class="bg-gray-100 px-2 py-1 rounded border">${c.renting || '-'}</span>
                </div>
+               
+               <button onclick="window.deshacerEntrega('${c.fila}', '${c.C}')" class="absolute bottom-3 right-3 text-xs bg-amber-50 text-amber-600 font-bold px-3 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-100 transition-colors shadow-sm flex items-center gap-1">
+                   <i class="ph-bold ph-arrow-u-up-left"></i> Revertir a Activo
+               </button>
            </div>
        `).join('');
-    }
-
+    };
     window.descargarExcelHistorialRango = function() {
        let fInicioRaw = document.getElementById('hist-fecha-inicio').value;
        let fFinRaw = document.getElementById('hist-fecha-fin').value;
@@ -1617,6 +1679,37 @@
       btn.onclick = function() { modal.style.display = "block"; }
       span.onclick = function() { modal.style.display = "none"; }
       window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
+      window.deshacerEntrega = async function(id, modelo) {
+        Swal.fire({
+            title: '¿Deshacer entrega?',
+            text: `El vehículo ${modelo} volverá a la lista de activos (No Entregados).`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b', // Color ámbar
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, restaurar',
+            cancelButtonText: 'Cancelar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                Swal.fire({title: 'Restaurando...', didOpen: () => Swal.showLoading()});
+                
+                // Le quitamos el estado de entregado en Firebase
+                await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
+                    entregado: false, 
+                    fechaEntrega: "" 
+                });
+                
+                Swal.fire('¡Restaurado!', 'El vehículo vuelve a estar en curso.', 'success');
+                
+                // Refrescamos la búsqueda del historial para que desaparezca de esta pantalla
+                if (document.getElementById('inputBusquedaHistorial').value) {
+                    window.buscarEnHistorial();
+                } else if (document.getElementById('hist-fecha-inicio').value) {
+                    window.buscarPorDiaManual();
+                }
+            }
+        });
+    };
   </script>
 </body>
 </html>
