@@ -723,6 +723,36 @@
       let infoExtra = tipo === 'Taller' ? c.instruccionTaller : c.instruccionRecambios;
       let fEntrada = tipo === 'Taller' ? c.fechaEntradaTaller : c.fechaEntradaRecambios;
 
+      // 🔥 NUEVO: Comunicación bidireccional entre Taller y Recambios 🔥
+      let btnInterDepto = '';
+      
+      if (tipo === 'Taller') {
+          // El Taller ve el estado de Recambios
+          // Añadimos 'animate-pulse' y un borde más oscuro para que resalte cuando Recambios termina
+          let btnR = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800 w-full animate-pulse border border-emerald-500 shadow-md"><i class="ph-bold ph-check"></i> Recambios Listos</span>` 
+                   : c.enRecambios  ? `<span class="status-btn bg-teal-100 text-teal-800 w-full"><i class="ph-bold ph-package"></i> Pedido en Curso</span>` 
+                                    : `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm w-full"><i class="ph-bold ph-plus"></i> Solicitar Recambios</button>`;
+          
+          btnInterDepto = `
+          <div class="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between gap-2">
+              <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-1/2">Estado Recambios:</span> 
+              <div class="w-1/2">${btnR}</div>
+          </div>`;
+          
+      } else if (tipo === 'Recambios') {
+          // Recambios ve el estado del Taller
+          // Añadimos 'animate-pulse' y un borde más oscuro para que resalte cuando Taller termina
+          let btnT = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800 w-full animate-pulse border border-emerald-500 shadow-md"><i class="ph-bold ph-check"></i> Taller Listo</span>` 
+                   : c.enTaller  ? `<span class="status-btn bg-amber-100 text-amber-800 w-full"><i class="ph-bold ph-wrench"></i> Taller en Curso</span>` 
+                                 : `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm w-full"><i class="ph-bold ph-plus"></i> Enviar a Taller</button>`;
+          
+          btnInterDepto = `
+          <div class="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between gap-2">
+              <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest w-1/2">Estado Taller:</span> 
+              <div class="w-1/2">${btnT}</div>
+          </div>`;
+      }
+
       return `
       <div class="card-mini ${bClass} p-5 flex flex-col fila-coche">
         <div class="flex justify-between items-start mb-3">
@@ -742,6 +772,8 @@
           <p class="text-[10px] uppercase font-bold text-gray-400 mb-1">Motivo / Instrucciones</p>
           <p class="text-sm font-bold text-gray-800 line-clamp-3">${infoExtra || 'Sin motivo especificado.'}</p>
           ${c.urlParte ? `<a href="${c.urlParte}" target="_blank" class="text-xs text-red-600 font-bold mt-2 inline-flex items-center gap-1 hover:underline"><i class="ph-bold ph-file-pdf"></i> Abrir PDF adjunto</a>` : ''}
+          
+          ${btnInterDepto}
         </div>
 
         <div class="space-y-3">
@@ -762,7 +794,6 @@
         </div>
       </div>`;
     }
-
     // ==========================================
     // 🛠️ FUNCIONES DE BOTONES Y TARJETAS
     // ==========================================
@@ -1324,47 +1355,62 @@
        Swal.close();
     };
 
-    window.abrirGestorVacaciones = async function() {
-        const { value: formValues } = await Swal.fire({
-            title: 'Bloquear Fechas / Horas',
+    window.abrirGestorVacaciones = function() {
+        Swal.fire({
+            title: 'Gestión de Vacaciones',
             html: `
-                <select id="vac-agente" class="swal2-input !w-full !m-0 !mb-4 text-center font-bold">
-                    <option value="MANUEL">Manuel</option><option value="ANTONIO">Antonio</option>
-                </select>
-                <div class="flex gap-4 w-full mb-4">
-                    <input type="date" id="vac-inicio" class="swal2-input !w-1/2 !m-0">
-                    <input type="time" id="vac-hora-inicio" class="swal2-input !w-1/2 !m-0" value="10:00">
+                <div class="text-left bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p class="text-sm text-[#001e50] mb-3">Debido a las estrictas políticas de seguridad de la empresa, no podemos bloquear la agenda automáticamente desde aquí.</p>
+                    <p class="text-sm text-[#001e50] font-bold">Instrucciones para bloquear:</p>
+                    <ol class="list-decimal pl-5 mt-2 text-xs text-gray-700 space-y-1">
+                        <li>Haz clic en el botón de abajo para abrir Outlook.</li>
+                        <li>Crea un "Nuevo Evento" en los días que necesites.</li>
+                        <li><strong>IMPORTANTE:</strong> Asegúrate de marcar "Mostrar como: Ocupado".</li>
+                    </ol>
                 </div>
-                <div class="flex gap-4 w-full mb-4">
-                    <input type="date" id="vac-fin" class="swal2-input !w-1/2 !m-0">
-                    <input type="time" id="vac-hora-fin" class="swal2-input !w-1/2 !m-0" value="19:00">
-                </div>
-                <input type="text" id="vac-motivo" class="swal2-input !w-full !m-0 uppercase" value="AUSENCIA">
             `,
-            showCancelButton: true, confirmButtonColor: '#4f46e5', confirmButtonText: 'Enviar Bloqueo',
-            preConfirm: () => {
-                const i = document.getElementById('vac-inicio').value;
-                const hi = document.getElementById('vac-hora-inicio').value;
-                if (!i || !hi) { Swal.showValidationMessage('Rellena fecha y hora de inicio'); return false; }
-                return { 
-                    agente: document.getElementById('vac-agente').value, fechaInicio: i, horaInicio: hi,
-                    fechaFin: document.getElementById('vac-fin').value || i, horaFin: document.getElementById('vac-hora-fin').value || "19:00",
-                    motivo: document.getElementById('vac-motivo').value
-                };
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#001e50',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Abrir Calendario Outlook',
+            cancelButtonText: 'Entendido'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Abre el calendario corporativo directamente en una pestaña nueva
+                window.open("https://outlook.office.com/calendar/", "_blank");
             }
         });
-        if (formValues) window.enviarBloqueoWebhook(formValues);
     };
-
     window.enviarBloqueoWebhook = async function(datos) {
-        Swal.fire({ title: 'Enviando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+        // 🔥 ATENCIÓN: Aquí debes pegar la URL que te dé Zapier, Make o Power Automate
+        const webhookUrl = "AQUI_PONDRAS_TU_URL_DE_ZAPIER_O_MAKE";
+
+        if (webhookUrl === "AQUI_PONDRAS_TU_URL_DE_ZAPIER_O_MAKE") {
+            Swal.fire('Falta Configurar', 'El botón está listo, pero necesitas crear el flujo en Zapier/Make y pegar la URL en el código.', 'warning');
+            return;
+        }
+
+        Swal.fire({ title: 'Bloqueando en Bookings...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+        
         try {
-            await fetch("AQUI_PONDRAS_TU_URL_DE_ZAPIER_O_MAKE", {
-                method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ agente: datos.agente, asunto: datos.motivo + " " + datos.agente, fechaInicio: datos.fechaInicio, horaInicio: datos.horaInicio, fechaFin: datos.fechaFin, horaFin: datos.horaFin })
+            await fetch(webhookUrl, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    agente: datos.agente, 
+                    asunto: datos.motivo + " " + datos.agente, 
+                    fechaInicio: datos.fechaInicio, 
+                    horaInicio: datos.horaInicio, 
+                    fechaFin: datos.fechaFin, 
+                    horaFin: datos.horaFin 
+                })
             });
-            Swal.fire('¡Enviado!', `Bloqueo enviado.`, 'success');
-        } catch (e) { Swal.fire('Error', 'Fallo conexión con Webhook.', 'error'); }
+            
+            Swal.fire('¡Enviado!', `El bloqueo se ha enviado a Outlook/Bookings correctamente. Aparecerá aquí en la próxima sincronización.`, 'success');
+        } catch (e) { 
+            Swal.fire('Error', 'Fallo conexión con Webhook.', 'error'); 
+        }
     }
 
     // Variables globales blindadas para los gráficos
@@ -1563,8 +1609,38 @@
     }
 
     window.editarRentingAgencia = async function(id, rActual, aActual) {
-        const { value: formValues } = await Swal.fire({ title: 'Renting/Agencia', html: `<input id="r" class="swal2-input uppercase" value="${rActual||''}"><input id="a" class="swal2-input uppercase" value="${aActual||''}">`, preConfirm: () => { return { r: document.getElementById('r').value, a: document.getElementById('a').value }; } });
-        if (formValues) await window.updateDoc(window.doc(window.db, "vehiculos", id), { renting: formValues.r.toUpperCase(), agencia: formValues.a.toUpperCase() });
+        const { value: formValues } = await Swal.fire({ 
+            title: 'Renting y Agencia', 
+            html: `
+                <div class="text-left mb-1 ml-1 text-xs font-bold text-gray-500 uppercase">Empresa de Renting</div>
+                <input id="r" class="swal2-input !w-full !m-0 !mb-4 text-center uppercase font-bold text-gray-700" placeholder="Ej: ALD, Arval, Alphabet..." value="${rActual || ''}">
+                
+                <div class="text-left mb-1 ml-1 text-xs font-bold text-gray-500 uppercase">Agencia de Transporte</div>
+                <input id="a" class="swal2-input !w-full !m-0 text-center uppercase font-bold text-gray-700" placeholder="Ej: Tradisa, Sintax, CAT..." value="${aActual || ''}">
+            `, 
+            showCancelButton: true,
+            confirmButtonColor: '#001e50',
+            confirmButtonText: 'Guardar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => { 
+                return { 
+                    r: document.getElementById('r').value.trim(), 
+                    a: document.getElementById('a').value.trim() 
+                }; 
+            } 
+        });
+        
+        if (formValues) {
+            Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
+            
+            await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
+                renting: formValues.r.toUpperCase(), 
+                agencia: formValues.a.toUpperCase() 
+            });
+            
+            // Un pequeño aviso discreto para confirmar que se ha guardado
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Datos actualizados', showConfirmButton: false, timer: 1500 });
+        }
     }
 
   window.pedirInst = function(btn, id, depto) {
@@ -1608,23 +1684,50 @@
       Swal.fire('Éxito', 'Petición enviada (sin adjuntos)', 'success');
     }
 
-    window.abrirChat = async function(id, mod, mat, jsonStr) {
+   window.abrirChat = async function(id, mod, mat, jsonStr) {
       document.getElementById('chatFilaActiva').value = id;
       
       document.getElementById('chatTituloCoche').innerText = decodeURIComponent(mod);
       document.getElementById('chatSubtitulo').innerText = "Matrícula: " + decodeURIComponent(mat);
       
-      let chatObj = { history: [] }; 
+      let chatObj = { history: [], lastOpened: {} }; 
       try { if (jsonStr) chatObj = JSON.parse(decodeURIComponent(jsonStr)); } catch(e) {}
+      
       window.dibujarMsj(chatObj.history); 
       document.getElementById('chatModal').classList.remove('hidden');
+
+      // 🔥 CORRECCIÓN 1: Borrar la notificación actualizando la última vez leído en Firebase
+      let timestamp = new Date().getTime();
+      let updateData = {};
+      // Usamos la sintaxis de punto de Firebase para actualizar solo a este departamento sin borrar a los demás
+      updateData[`chatInfo.lastOpened.${userRole.toUpperCase()}`] = timestamp;
+      
+      try {
+         await window.updateDoc(window.doc(window.db, "vehiculos", id), updateData);
+      } catch(e) { console.log("Aviso: No se pudo resetear la notificación", e); }
     }
+
     window.cerrarChat = function() { document.getElementById('chatModal').classList.add('hidden'); }
 
     window.dibujarMsj = function(hist) {
       const cont = document.getElementById('chatMessages');
-      if (!hist || hist.length===0) { cont.innerHTML = `<p class="text-center text-xs font-bold mt-4">Vacío</p>`; return; }
-      cont.innerHTML = hist.map(m => `<div class="wa-bubble ${m.rol.toUpperCase() === userRole.toUpperCase() ? 'wa-me' : 'wa-other'}"><div>${m.texto}</div></div>`).join('');
+      if (!hist || hist.length === 0) { 
+          cont.innerHTML = `<p class="text-center text-xs font-bold mt-4 text-gray-500">No hay mensajes. ¡Escribe el primero!</p>`; 
+          return; 
+      }
+      
+      cont.innerHTML = hist.map(m => {
+          let isMe = m.rol.toUpperCase() === userRole.toUpperCase();
+          let bubbleClass = isMe ? 'wa-me' : 'wa-other';
+          
+          // 🔥 CORRECCIÓN 2: Si no soy yo, pongo el nombre del departamento en pequeñito arriba del mensaje
+          let etiquetaRemitente = isMe ? '' : `<span style="display:block; font-size:9px; font-weight:900; color:#128c7e; margin-bottom:3px; text-transform:uppercase;">${m.rol}</span>`;
+          
+          return `<div class="wa-bubble ${bubbleClass}"><div>${etiquetaRemitente}${m.texto}</div></div>`;
+      }).join('');
+      
+      // Hacemos scroll automático hacia abajo para ver el último mensaje
+      setTimeout(() => { cont.scrollTop = cont.scrollHeight; }, 50);
     }
 
     window.enviarMensajeChat = async function() {
