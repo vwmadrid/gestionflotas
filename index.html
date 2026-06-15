@@ -1007,7 +1007,7 @@
        }
     }
 
-    window.dibujarCuadranteMes = function() {
+window.dibujarCuadranteMes = function() {
         let div = document.getElementById('contenedorAgenda');
         let agendaEstructurada = {};
         const horasLaborales = ['10', '11', '12', '13', '16', '17', '18', '19'];
@@ -1039,7 +1039,10 @@
 
         const nombresMeses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
         let tituloMes = `${nombresMeses[mes]} ${anio}`;
-        let hoyKey = new Date().toISOString().split('T')[0];
+        
+        // Corrección de huso horario para calcular "Hoy" exactamente en hora local
+        let hoyObj = new Date();
+        let hoyKeyLimpio = hoyObj.getFullYear() + "-" + String(hoyObj.getMonth()+1).padStart(2,'0') + "-" + String(hoyObj.getDate()).padStart(2,'0');
 
         let html = `
         <div class="bg-white rounded-xl shadow-xl border border-[#001e50] flex flex-col h-[calc(100vh-140px)] w-full relative">
@@ -1056,7 +1059,7 @@
                </div>
             </div>
             
-            <div class="overflow-auto flex-1 custom-scrollbar relative">
+            <div id="scrollContainerAgenda" class="overflow-auto flex-1 custom-scrollbar relative scroll-smooth">
               <table class="w-full text-left border-collapse min-w-max">
                 <thead class="sticky top-0 z-20 shadow-md">
                   <tr>
@@ -1066,9 +1069,13 @@
                         let fObj = new Date(parts[0], parts[1]-1, parts[2]);
                         let diaSemana = fObj.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
                         let diaNum = String(fObj.getDate()).padStart(2, '0');
-                        let isToday = (dateKey === hoyKey);
+                        let isToday = (dateKey === hoyKeyLimpio);
+                        
+                        // Añadimos un identificador (ID) único a la columna de hoy para que el código la encuentre
+                        let idHover = isToday ? 'id="colDiaHoy"' : '';
                         let bgClass = isToday ? 'bg-blue-100 text-[#001e50]' : 'bg-white text-[#001e50]';
-                        return `<th class="p-2 border-b-2 border-r border-gray-200 ${bgClass} text-center min-w-[240px]">
+                        
+                        return `<th ${idHover} class="p-2 border-b-2 border-r border-gray-200 ${bgClass} text-center min-w-[240px]">
                                   <div class="font-black text-sm">${diaSemana}</div><div class="text-3xl font-black">${diaNum}</div>
                                 </th>`;
                     }).join('')}
@@ -1079,7 +1086,7 @@
         horasLaborales.forEach(hora => {
             html += `<tr><td class="p-3 border-b border-r-2 border-gray-200 bg-gray-50 text-center font-black text-gray-500 text-xl align-top pt-4 sticky left-0 z-10">${hora}:00</td>`;
             diasArrayKeys.forEach(dateKey => {
-                let bgTd = (dateKey === hoyKey) ? 'bg-blue-50/20' : 'bg-white';
+                let bgTd = (dateKey === hoyKeyLimpio) ? 'bg-blue-50/20' : 'bg-white';
                 html += `<td class="p-2.5 border-b border-r border-gray-100 align-top ${bgTd} hover:bg-gray-50"><div class="flex flex-col gap-2 h-full">`;
                 
                 let cM = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].MANUEL : null;
@@ -1105,6 +1112,17 @@
         });
         html += `</tbody></table></div></div>`;
         div.innerHTML = html;
+
+        // 🔥 EL TRUCO DE MAGIA: Scroll automático hacia el día de hoy
+        setTimeout(() => {
+            let contenedor = document.getElementById('scrollContainerAgenda');
+            let columnaHoy = document.getElementById('colDiaHoy');
+            
+            if (contenedor && columnaHoy) {
+                // Centramos la columna dejándole un pequeño margen a la izquierda
+                contenedor.scrollLeft = columnaHoy.offsetLeft - 100;
+            }
+        }, 150);
     }
 
     window.cambiarMesAgenda = function(delta) {
@@ -1683,30 +1701,28 @@
       await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
       Swal.fire('Éxito', 'Petición enviada (sin adjuntos)', 'success');
     }
-
-   window.abrirChat = async function(id, mod, mat, jsonStr) {
+window.abrirChat = async function(id, mod, mat, jsonStr) {
       document.getElementById('chatFilaActiva').value = id;
-      
       document.getElementById('chatTituloCoche').innerText = decodeURIComponent(mod);
       document.getElementById('chatSubtitulo').innerText = "Matrícula: " + decodeURIComponent(mat);
       
       let chatObj = { history: [], lastOpened: {} }; 
       try { if (jsonStr) chatObj = JSON.parse(decodeURIComponent(jsonStr)); } catch(e) {}
       
-      window.dibujarMsj(chatObj.history); 
+      // Aseguramos que siempre pasamos un array válido al dibujar
+      window.dibujarMsj(chatObj.history || []); 
       document.getElementById('chatModal').classList.remove('hidden');
 
-      // 🔥 CORRECCIÓN 1: Borrar la notificación actualizando la última vez leído en Firebase
+      // 🔥 CORRECCIÓN: Reseteamos la notificación de forma 100% segura sin romper la estructura
       let timestamp = new Date().getTime();
-      let updateData = {};
-      // Usamos la sintaxis de punto de Firebase para actualizar solo a este departamento sin borrar a los demás
-      updateData[`chatInfo.lastOpened.${userRole.toUpperCase()}`] = timestamp;
+      let updateData = { chatInfo: { lastOpened: {} } };
+      updateData.chatInfo.lastOpened[userRole.toUpperCase()] = timestamp;
       
       try {
-         await window.updateDoc(window.doc(window.db, "vehiculos", id), updateData);
+         // Usamos setDoc con { merge: true } para que respete lo que ya existe y solo añada la hora
+         await window.setDoc(window.doc(window.db, "vehiculos", id), updateData, { merge: true });
       } catch(e) { console.log("Aviso: No se pudo resetear la notificación", e); }
     }
-
     window.cerrarChat = function() { document.getElementById('chatModal').classList.add('hidden'); }
 
     window.dibujarMsj = function(hist) {
@@ -1731,12 +1747,34 @@
     }
 
     window.enviarMensajeChat = async function() {
-      const id = document.getElementById('chatFilaActiva').value; const txt = document.getElementById('chatInput').value.trim();
-      if (!id || !txt) return; document.getElementById('chatInput').value = "";
+      const id = document.getElementById('chatFilaActiva').value; 
+      const txt = document.getElementById('chatInput').value.trim();
+      if (!id || !txt) return; 
+      
+      // Borramos la caja de texto
+      document.getElementById('chatInput').value = ""; 
+      
       const nM = { rol: userRole.toUpperCase(), fecha: new Date().getTime(), texto: txt };
       let c = todosLosCoches.find(x => x.fila === id);
-      if (c) { if(!c.chatData) c.chatData={history:[]}; c.chatData.history.push(nM); window.dibujarMsj(c.chatData.history); }
-      await window.updateDoc(window.doc(window.db, "vehiculos", id), { "chatInfo.history": window.arrayUnion(nM) });
+      
+      if (c) { 
+          // 🔥 PROTECCIÓN: Si no existe la carpeta chatData o el historial, los creamos sobre la marcha
+          if (!c.chatData) c.chatData = {}; 
+          if (!c.chatData.history) c.chatData.history = [];
+          
+          // Empujamos el mensaje y lo dibujamos
+          c.chatData.history.push(nM); 
+          window.dibujarMsj(c.chatData.history); 
+      }
+      
+      // 🔥 PROTECCIÓN FIRBEASE: Enviamos el mensaje de forma que si el historial no existía, lo cree solo
+      try {
+          await window.setDoc(window.doc(window.db, "vehiculos", id), { 
+              chatInfo: { history: window.arrayUnion(nM) } 
+          }, { merge: true });
+      } catch (e) {
+          console.error("Error de conexión al enviar el mensaje:", e);
+      }
     };
 
     window.sincronizarCitasSilencioso = async function() {
