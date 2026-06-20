@@ -912,11 +912,13 @@
                 let { archivoFoto, pedirResena } = result.value;
                 
                 const finalizarYEnviar = async (linkSubido) => {
+                    // 1. Guardamos los datos en Firebase
                     await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
                         entregado: true, 
                         fechaEntrega: new Date().toLocaleDateString('es-ES') 
                     });
                     
+                    // 2. Construimos el mensaje
                     let nombreFinal = nombreCliente.charAt(0).toUpperCase() + nombreCliente.slice(1).toLowerCase();
                     let mensaje = `¡Hola, ${nombreFinal}! Ha sido un verdadero placer entregarte tu ${modeloCoche} hoy. Esperamos que lo disfrutes muchísimo. `;
                     
@@ -929,9 +931,26 @@
                     }
                     
                     let urlWa = urlWhatsAppBase + encodeURIComponent(mensaje);
+                    
+                    // 3. Intentamos abrir WhatsApp automáticamente
                     window.open(urlWa, "_blank");
 
-                    Swal.fire('¡Entregado!', 'El vehículo está en el historial y el mensaje preparado.', 'success');
+                    // 4. Mostramos el mensaje de éxito con el "Plan B" (Botón manual)
+                    Swal.fire({
+                        title: '¡Entrega Registrada!',
+                        html: `
+                            <p class="mb-4 text-sm text-gray-600">El vehículo ha pasado al historial de entregados.</p>
+                            <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
+                                <p class="text-xs text-[#001e50] font-bold">Si el navegador ha bloqueado la apertura automática de WhatsApp, haz clic en este botón para enviarlo ahora:</p>
+                            </div>
+                            <a href="${urlWa}" target="_blank" class="inline-flex items-center gap-2 bg-[#25D366] text-white font-black py-3 px-6 rounded-lg shadow-md hover:bg-[#128C7E] transition-colors no-underline uppercase tracking-widest text-xs">
+                                <i class="ph-fill ph-whatsapp-logo text-xl"></i> Enviar WhatsApp
+                            </a>
+                        `,
+                        icon: 'success',
+                        showConfirmButton: false, // Quitamos el botón "OK" estándar para forzar a que vean el verde
+                        showCloseButton: true     // Añadimos la "X" arriba para cerrar si no quieren enviar nada
+                    });
                 };
 
                 if (archivoFoto) {
@@ -1310,33 +1329,195 @@ window.dibujarCuadranteMes = function() {
        </div>`;
     }
 
+    // Variable global para controlar que solo avise 1 vez por sesión
+    window.alertaAtrasosMostrada = false;
+
     window.comprobarAtrasosGenerales = function() {
         let atrasados = [];
-        let ahora = new Date();
+        let hoyLimpio = new Date();
+        hoyLimpio.setHours(0, 0, 0, 0); // Para comparar solo días enteros, ignorando la hora actual
+        
         window.datosAgenda.forEach(cita => {
             if (!cita.fechaHora || cita.matricula === "---") return;
-            let fechaCita = new Date(cita.fechaHora);
+            
+            // Extraer solo la fecha de la cita (YYYY-MM-DD)
+            let fechaCitaPartes = cita.fechaHora.split('T')[0].split('-');
+            let fechaCitaLimpia = new Date(fechaCitaPartes[0], fechaCitaPartes[1] - 1, fechaCitaPartes[2]);
+            fechaCitaLimpia.setHours(0, 0, 0, 0);
+            
             let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '') : '';
             let basCita = cita.bastidor ? String(cita.bastidor).toUpperCase() : '';
             let cocheEnBaseDatos = todosLosCoches.find(c => (c.B && c.B.replace(/\s/g, '') === matCita) || (c.A && c.A === basCita));
+            
             let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
-            if (fechaCita < ahora && !yaEntregado) {
-                atrasados.push(`<b>${cita.matricula || "S/M"}</b> - ${cita.modelo || "Vehículo"}`);
+            
+            // Si el día de la cita es estrictamente ANTERIOR a hoy, y el coche no está entregado
+            if (fechaCitaLimpia < hoyLimpio && !yaEntregado) {
+                atrasados.push(`<b>${cita.matricula || "S/M"}</b> - ${cita.modelo || "Vehículo"} (${fechaCitaPartes[2]}/${fechaCitaPartes[1]})`);
             }
         });
 
-        if (atrasados.length > 0) {
-            let listaUnica = [...new Set(atrasados)];
-            Swal.fire({
-                title: 'Entregas Pendientes',
-                html: `<p class="mb-3 text-gray-600">Tienes <b>${listaUnica.length}</b> entrega(s) con fecha pasada por confirmar:</p>
-                       <div class="text-sm text-left bg-blue-50 p-3 rounded-lg border border-blue-200 max-h-40 overflow-y-auto">
-                         <ul class="list-disc pl-5 space-y-1 text-[#001e50]"><li>${listaUnica.join('</li><li>')}</li></ul>
-                       </div>`,
-                icon: 'info', confirmButtonColor: '#001e50'
-            });
-        }
+        // Guardamos la lista en una variable global para poder usarla al hacer clic
+        window.listaCitasAtrasadas = [...new Set(atrasados)];
+        return window.listaCitasAtrasadas;
     };
+
+    window.mostrarPopupAtrasados = function() {
+        if (!window.listaCitasAtrasadas || window.listaCitasAtrasadas.length === 0) return;
+        
+        Swal.fire({
+            title: '⚠️ Entregas Pasadas',
+            html: `<p class="mb-3 text-gray-600">Tienes <b>${window.listaCitasAtrasadas.length}</b> entrega(s) de días anteriores sin marcar como completadas:</p>
+                   <div class="text-sm text-left bg-red-50 p-3 rounded-lg border border-red-200 max-h-40 overflow-y-auto custom-scrollbar">
+                     <ul class="list-disc pl-5 space-y-1 text-red-900"><li>${window.listaCitasAtrasadas.join('</li><li>')}</li></ul>
+                   </div>
+                   <p class="mt-3 text-xs text-gray-500">Búscalas en el calendario y haz clic en ellas para marcarlas como entregadas o reagendarlas.</p>`,
+            icon: 'warning', 
+            confirmButtonColor: '#001e50',
+            confirmButtonText: 'Entendido'
+        });
+    };
+
+    window.dibujarCuadranteMes = function() {
+        let div = document.getElementById('contenedorAgenda');
+        let agendaEstructurada = {};
+        const horasLaborales = ['10', '11', '12', '13', '16', '17', '18', '19'];
+
+        window.datosAgenda.forEach(cita => {
+            if (!cita.fechaHora) return;
+            let fecha = new Date(cita.fechaHora);
+            if (isNaN(fecha.getTime())) return;
+            let dateKey = fecha.getFullYear() + "-" + String(fecha.getMonth()+1).padStart(2,'0') + "-" + String(fecha.getDate()).padStart(2,'0');
+            let horaStr = fecha.getHours().toString().padStart(2, '0');
+            if (!agendaEstructurada[dateKey]) agendaEstructurada[dateKey] = {};
+            if (!agendaEstructurada[dateKey][horaStr]) agendaEstructurada[dateKey][horaStr] = { MANUEL: null, ANTONIO: null };
+            let nombreAgente = (cita.entregador || cita.agente || "MANUEL").toUpperCase();
+            agendaEstructurada[dateKey][horaStr][nombreAgente] = cita;
+        });
+
+        let anio = window.mesVistaActual.getFullYear();
+        let mes = window.mesVistaActual.getMonth();
+        let numDiasMes = new Date(anio, mes + 1, 0).getDate();
+        let diasArrayKeys = [];
+        
+        for(let d = 1; d <= numDiasMes; d++) {
+            let cur = new Date(anio, mes, d);
+            if (cur.getDay() !== 0 && cur.getDay() !== 6) { 
+                let key = cur.getFullYear() + "-" + String(cur.getMonth()+1).padStart(2,'0') + "-" + String(cur.getDate()).padStart(2,'0');
+                diasArrayKeys.push(key);
+            }
+        }
+
+        const nombresMeses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+        let tituloMes = `${nombresMeses[mes]} ${anio}`;
+        
+        let hoyObj = new Date();
+        let hoyKeyLimpio = hoyObj.getFullYear() + "-" + String(hoyObj.getMonth()+1).padStart(2,'0') + "-" + String(hoyObj.getDate()).padStart(2,'0');
+
+        let claveColumnaEnfoque = diasArrayKeys.find(k => k === hoyKeyLimpio);
+        if (!claveColumnaEnfoque) {
+            claveColumnaEnfoque = diasArrayKeys.find(k => k > hoyKeyLimpio) || diasArrayKeys[0];
+        }
+
+        // 🔥 NUEVO: Evaluamos si hay atrasos y creamos el banner rojo
+        let atrasados = window.comprobarAtrasosGenerales();
+        let bannerAtrasados = '';
+        if (atrasados.length > 0) {
+            bannerAtrasados = `<div onclick="mostrarPopupAtrasados()" class="bg-red-500 text-white text-[11px] font-black p-2.5 text-center cursor-pointer hover:bg-red-600 uppercase tracking-widest flex items-center justify-center gap-2 shadow-inner z-20"><i class="ph-bold ph-warning text-base animate-pulse"></i> ¡Atención! Tienes ${atrasados.length} entrega(s) pasada(s) sin confirmar. Haz clic para revisarlas.</div>`;
+        }
+
+        let html = `
+        <div class="bg-white rounded-xl shadow-xl border border-[#001e50] flex flex-col h-[calc(100vh-140px)] w-full relative">
+            <div class="bg-[#001e50] text-white p-3 px-6 flex justify-between items-center shrink-0 z-30">
+               <h2 class="text-base font-black tracking-widest uppercase flex items-center gap-2"><i class="ph-bold ph-calendar-grid-week text-xl text-[#00b0f0]"></i> Cuadrante</h2>
+               <div class="flex items-center gap-4 bg-white/10 rounded-lg p-1.5 px-3 border border-white/20 shadow-sm backdrop-blur-sm">
+                   <button onclick="cambiarMesAgenda(-1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white"><i class="ph-bold ph-caret-left text-xl"></i></button>
+                   <span class="font-black text-sm w-36 text-center tracking-widest">${tituloMes}</span>
+                   <button onclick="cambiarMesAgenda(1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white"><i class="ph-bold ph-caret-right text-xl"></i></button>
+               </div>
+               <div class="flex gap-4 text-xs font-bold">
+                  <span class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-[#c9daf8] rounded-full border border-blue-300"></div> MANUEL</span>
+                  <span class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-[#f9cb9c] rounded-full border border-orange-300"></div> ANTONIO</span>
+               </div>
+            </div>
+            
+            ${bannerAtrasados} <div id="scrollContainerAgenda" class="overflow-auto flex-1 custom-scrollbar relative scroll-smooth">
+              <table class="w-full text-left border-collapse min-w-max">
+                <thead class="sticky top-0 z-20 shadow-md">
+                  <tr>
+                    <th class="p-3 border-b-2 border-r-2 border-gray-200 bg-gray-100 text-center w-24 sticky left-0 z-30"><i class="ph-bold ph-clock text-2xl text-gray-400"></i></th>
+                    ${diasArrayKeys.map(dateKey => {
+                        let parts = dateKey.split('-');
+                        let fObj = new Date(parts[0], parts[1]-1, parts[2]);
+                        let diaSemana = fObj.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
+                        let diaNum = String(fObj.getDate()).padStart(2, '0');
+                        let isToday = (dateKey === hoyKeyLimpio);
+                        let esDiaEnfoque = (dateKey === claveColumnaEnfoque);
+                        
+                        let idHover = esDiaEnfoque ? 'id="colDiaHoy"' : '';
+                        let bgClass = isToday ? 'bg-blue-100 text-[#001e50]' : (esDiaEnfoque ? 'bg-blue-50/40 text-[#001e50]' : 'bg-white text-[#001e50]');
+                        
+                        return `<th ${idHover} class="p-2 border-b-2 border-r border-gray-200 ${bgClass} text-center min-w-[240px]">
+                                  <div class="font-black text-sm">${diaSemana}</div><div class="text-3xl font-black">${diaNum}</div>
+                                </th>`;
+                    }).join('')}
+                  </tr>
+                </thead>
+                <tbody>`;
+
+        horasLaborales.forEach(hora => {
+            html += `<tr><td class="p-3 border-b border-r-2 border-gray-200 bg-gray-50 text-center font-black text-gray-500 text-xl align-top pt-4 sticky left-0 z-10">${hora}:00</td>`;
+            diasArrayKeys.forEach(dateKey => {
+                let bgTd = (dateKey === hoyKeyLimpio) ? 'bg-blue-50/20' : 'bg-white';
+                html += `<td class="p-2.5 border-b border-r border-gray-100 align-top ${bgTd} hover:bg-gray-50"><div class="flex flex-col gap-2 h-full">`;
+                
+                let cM = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].MANUEL : null;
+                let cA = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].ANTONIO : null;
+
+                function obtenerBloqueo(agenteAbuscar) {
+                    if (!window.datosVacaciones) return null;
+                    return window.datosVacaciones.find(b => {
+                        if(b.agente !== agenteAbuscar && b.agente !== 'AMBOS') return false;
+                        if(b.tipo === 'dia_completo') return dateKey >= b.fechaInicio && dateKey <= b.fechaFin;
+                        if(b.tipo === 'hora_suelta') return b.fecha === dateKey && b.hora === (hora + ':00');
+                        return false;
+                    });
+                }
+
+                let bloqueoM = obtenerBloqueo('MANUEL');
+                let bloqueoA = obtenerBloqueo('ANTONIO');
+
+                if (bloqueoM) cM = { isBlock: true, idBloqueo: bloqueoM.id, modelo: bloqueoM.motivo.toUpperCase(), cliente: "AGENDA CERRADA", matricula: "---", bastidor: "", renting: "" };
+                if (bloqueoA) cA = { isBlock: true, idBloqueo: bloqueoA.id, modelo: bloqueoA.motivo.toUpperCase(), cliente: "AGENDA CERRADA", matricula: "---", bastidor: "", renting: "" };
+
+                let isVacM = !!bloqueoM; 
+                let isVacA = !!bloqueoA;
+
+                if (hora === '19') {
+                    if (cM) html += window.renderizarCeldaCita(cM, 'MANUEL', isVacM ? '#e5e7eb' : '#c9daf8', isVacM ? 'text-gray-500' : 'text-blue-900', isVacM ? 'border-gray-300' : 'border-blue-200', true);
+                    else if (cA) html += window.renderizarCeldaCita(cA, 'ANTONIO', isVacA ? '#e5e7eb' : '#f9cb9c', isVacA ? 'text-gray-500' : 'text-orange-900', isVacA ? 'border-gray-300' : 'border-orange-300', true);
+                    else html += window.renderizarCeldaCita(null, 'ÚNICA ENTREGA', '#f3f4f6', 'text-gray-400', 'border-gray-300', true);
+                } else {
+                    html += window.renderizarCeldaCita(cM, 'MANUEL', isVacM ? '#e5e7eb' : '#c9daf8', isVacM ? 'text-gray-500' : 'text-blue-900', isVacM ? 'border-gray-300' : 'border-blue-200', false);
+                    html += window.renderizarCeldaCita(cA, 'ANTONIO', isVacA ? '#e5e7eb' : '#f9cb9c', isVacA ? 'text-gray-500' : 'text-orange-900', isVacA ? 'border-gray-300' : 'border-orange-300', false);
+                }
+                html += `</div></td>`;
+            });
+            html += `</tr>`;
+        });
+        html += `</tbody></table></div></div>`;
+        div.innerHTML = html;
+
+        setTimeout(() => {
+            let contenedor = document.getElementById('scrollContainerAgenda');
+            let columnaHoy = document.getElementById('colDiaHoy');
+            if (contenedor && columnaHoy) {
+                contenedor.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                // Si scrollIntoView no funcionase en tu navegador, aplicamos el respaldo matemático:
+                contenedor.scrollLeft = columnaHoy.offsetLeft - 150;
+            }
+        }, 300);
+    }
 
     window.preguntarSiEntregado = function(idFirebase, modelo, matricula, dia, hora) {
         Swal.fire({
