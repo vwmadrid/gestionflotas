@@ -28,7 +28,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
    import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
     
-    // ... unas líneas más abajo ...
     window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; window.arrayUnion = arrayUnion; window.deleteDoc = deleteDoc; window.getDocs = getDocs;
     
     const firebaseConfig = {
@@ -152,7 +151,6 @@
             </div>
 
             <div id="botonesAgenda" class="hidden flex items-center gap-2">
-                <!-- 🔥 NUEVO BOTÓN PARA CITAS MANUALES 🔥 -->
                 <button onclick="crearCitaManual()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-800 transition-colors shadow-sm">
                     <i class="ph-bold ph-plus-circle text-base"></i> Nueva Cita
                 </button>
@@ -184,18 +182,15 @@
     </header>
     
 <div class="flex-1 overflow-y-auto p-6 bg-gray-100 w-full relative">
-      <!-- Mantenemos todos tus contenedores originales intactos -->
       <div id="contenedorLogistica" class="hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 w-full"></div>
       <div id="contenedorTarjetas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 w-full"></div>
       <div id="contenedorTabla" class="hidden w-full bg-white rounded-lg shadow-sm border border-gray-300 overflow-auto" style="max-height: calc(100vh - 190px);"></div>
       <div id="contenedorAgenda" class="hidden max-w-full mx-auto w-full"></div>
       <div id="contenedorEntregados" class="hidden max-w-full mx-auto w-full"></div>
       
-      <!-- ACTUALIZAMOS SOLO EL CONTENEDOR DEL DASHBOARD -->
       <div id="contenedorDashboard" class="hidden max-w-6xl mx-auto w-full space-y-6">
         <h2 class="text-2xl font-black text-[#001e50] uppercase flex items-center gap-2"><i class="ph-bold ph-trend-up text-[#00b0f0]"></i> Rendimiento de la Flota</h2>
         
-        <!-- Tarjetas de Cifras (KPIs) con iconos de coches -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
                 <i class="ph-fill ph-car-profile text-3xl text-emerald-500 mb-2"></i>
@@ -219,14 +214,11 @@
             </div>
         </div>
 
-        <!-- Gráficos Visuales -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Gráfico de Donut -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative h-80 flex flex-col items-center">
                 <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Estado del Inventario Activo</h3>
                 <div class="w-full h-full relative"><canvas id="graficoDonut"></canvas></div>
             </div>
-            <!-- Gráfico Evolución Mensual -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative h-80 flex flex-col items-center">
                 <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Comparativa de Entregas Mensuales</h3>
                 <div class="w-full h-full relative"><canvas id="graficoMeses"></canvas></div>
@@ -1126,9 +1118,15 @@ window.dibujarCuadranteMes = function() {
         const nombresMeses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
         let tituloMes = `${nombresMeses[mes]} ${anio}`;
         
-        // Corrección de huso horario para calcular "Hoy" exactamente en hora local
         let hoyObj = new Date();
         let hoyKeyLimpio = hoyObj.getFullYear() + "-" + String(hoyObj.getMonth()+1).padStart(2,'0') + "-" + String(hoyObj.getDate()).padStart(2,'0');
+
+        // 🔥 PROTECCIÓN FIN DE SEMANA: Buscamos el día de enfoque seguro 🔥
+        let claveColumnaEnfoque = diasArrayKeys.find(k => k === hoyKeyLimpio);
+        if (!claveColumnaEnfoque) {
+            // Si hoy es sábado o domingo, el punto de mira viaja al lunes siguiente (o primer día hábil posterior)
+            claveColumnaEnfoque = diasArrayKeys.find(k => k > hoyKeyLimpio) || diasArrayKeys[0];
+        }
 
         let html = `
         <div class="bg-white rounded-xl shadow-xl border border-[#001e50] flex flex-col h-[calc(100vh-140px)] w-full relative">
@@ -1156,10 +1154,11 @@ window.dibujarCuadranteMes = function() {
                         let diaSemana = fObj.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
                         let diaNum = String(fObj.getDate()).padStart(2, '0');
                         let isToday = (dateKey === hoyKeyLimpio);
+                        let esDiaEnfoque = (dateKey === claveColumnaEnfoque);
                         
-                        // Añadimos un identificador (ID) único a la columna de hoy para que el código la encuentre
-                        let idHover = isToday ? 'id="colDiaHoy"' : '';
-                        let bgClass = isToday ? 'bg-blue-100 text-[#001e50]' : 'bg-white text-[#001e50]';
+                        // El ID "colDiaHoy" se lo lleva el día hábil de enfoque para que el scroll nunca falle
+                        let idHover = esDiaEnfoque ? 'id="colDiaHoy"' : '';
+                        let bgClass = isToday ? 'bg-blue-100 text-[#001e50]' : (esDiaEnfoque ? 'bg-blue-50/40 text-[#001e50]' : 'bg-white text-[#001e50]');
                         
                         return `<th ${idHover} class="p-2 border-b-2 border-r border-gray-200 ${bgClass} text-center min-w-[240px]">
                                   <div class="font-black text-sm">${diaSemana}</div><div class="text-3xl font-black">${diaNum}</div>
@@ -1178,7 +1177,6 @@ window.dibujarCuadranteMes = function() {
                 let cM = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].MANUEL : null;
                 let cA = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].ANTONIO : null;
 
-               // Inteligencia para detectar bloqueos por día o por hora
                 function obtenerBloqueo(agenteAbuscar) {
                     if (!window.datosVacaciones) return null;
                     return window.datosVacaciones.find(b => {
@@ -1192,11 +1190,10 @@ window.dibujarCuadranteMes = function() {
                 let bloqueoM = obtenerBloqueo('MANUEL');
                 let bloqueoA = obtenerBloqueo('ANTONIO');
 
-                // Si hay un bloqueo, sobrescribimos los datos de la celda para que se pinte en gris
-                if (bloqueoM) cM = { modelo: bloqueoM.motivo.toUpperCase(), cliente: "AGENDA CERRADA", matricula: "---", bastidor: "", renting: "" };
-                if (bloqueoA) cA = { modelo: bloqueoA.motivo.toUpperCase(), cliente: "AGENDA CERRADA", matricula: "---", bastidor: "", renting: "" };
+                if (bloqueoM) cM = { isBlock: true, idBloqueo: bloqueoM.id, modelo: bloqueoM.motivo.toUpperCase(), cliente: "AGENDA CERRADA", matricula: "---", bastidor: "", renting: "" };
+                if (bloqueoA) cA = { isBlock: true, idBloqueo: bloqueoA.id, modelo: bloqueoA.motivo.toUpperCase(), cliente: "AGENDA CERRADA", matricula: "---", bastidor: "", renting: "" };
 
-                let isVacM = !!bloqueoM; // Convierte en verdadero/falso para los colores
+                let isVacM = !!bloqueoM; 
                 let isVacA = !!bloqueoA;
 
                 if (hora === '19') {
@@ -1214,27 +1211,24 @@ window.dibujarCuadranteMes = function() {
         html += `</tbody></table></div></div>`;
         div.innerHTML = html;
 
-        // 🔥 EL TRUCO DE MAGIA: Scroll automático hacia el día de hoy
+        // Desplazamiento seguro y centrado automático
         setTimeout(() => {
             let contenedor = document.getElementById('scrollContainerAgenda');
             let columnaHoy = document.getElementById('colDiaHoy');
-            
             if (contenedor && columnaHoy) {
-                // Centramos la columna dejándole un pequeño margen a la izquierda
-                contenedor.scrollLeft = columnaHoy.offsetLeft - 100;
+                contenedor.scrollLeft = columnaHoy.offsetLeft - 150;
             }
-        }, 150);
+        }, 300);
     }
-
     window.cambiarMesAgenda = function(delta) {
         window.mesVistaActual.setMonth(window.mesVistaActual.getMonth() + delta);
         window.dibujarCuadranteMes();
     }
 
-    window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
-       let alturaClase = esUnico ? "min-h-[190px]" : "min-h-[110px]";
+   // 🔥 ACTUALIZADA PARA MOSTRAR TODOS LOS DATOS EN LA TARJETA
+   window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
+       let alturaClase = esUnico ? "min-h-[220px]" : "min-h-[140px]"; // Altura ampliada
        
-       // Si el hueco está libre, lo pintamos vacío (eliminado el enlace a Outlook)
        if (!cita) {
            return `<div class="flex-1 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center ${alturaClase} opacity-60">
                       <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">Libre</span>
@@ -1243,44 +1237,54 @@ window.dibujarCuadranteMes = function() {
        
        let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '') : '';
        let basCita = cita.bastidor ? String(cita.bastidor).toUpperCase() : '';
-       let cocheEnBaseDatos = todosLosCoches.find(c => (c.B && c.B.replace(/\s/g, '') === matCita) || (c.A && c.A === basCita));
+       
+       let esCitaManual = cita.renting === "GESTIÓN MANUAL";
+       
+       let cocheEnBaseDatos = todosLosCoches.find(c => 
+           (matCita !== 'S/M' && c.B && c.B.replace(/\s/g, '') === matCita) || 
+           (basCita !== '' && basCita !== 'N/A' && c.A && c.A === basCita)
+       );
        
        let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
        let estaRetenido = cocheEnBaseDatos && !yaEntregado && ((cocheEnBaseDatos.enTaller && !cocheEnBaseDatos.finTaller) || (cocheEnBaseDatos.enRecambios && !cocheEnBaseDatos.finRecambios));
        
        let ahora = new Date();
-       let fechaCitaObj = new Date(cita.fechaHora);
+       let fechaCitaObj = cita.fechaHora ? new Date(cita.fechaHora) : ahora;
        let esPasada = fechaCitaObj < ahora;
        let alertaVisual = '';
        
-       if (esPasada && !yaEntregado && cita.matricula !== "---") {
+       if (esPasada && !yaEntregado && cita.matricula !== "---" && !cita.isBlock) {
            let diaStr = fechaCitaObj.toLocaleDateString('es-ES');
            let horaStr = fechaCitaObj.getHours() + ":00h";
            let idFb = cocheEnBaseDatos ? cocheEnBaseDatos.fila : 'no_db';
            let modeloSeguro = cita.modelo ? String(cita.modelo).replace(/['"]/g, "") : "Coche";
            let matriculaSegura = cita.matricula ? String(cita.matricula).replace(/['"]/g, "") : "S/M";
-           // Importante: event.stopPropagation() evita que se abra la edición si pulsamos en la alerta
            alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="event.stopPropagation(); preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}')"><i class="ph-bold ph-question text-lg"></i></div>`;
            borderColor = "border-[#00b0f0] border-2"; 
-       } else if (estaRetenido && cita.matricula !== "---") {
+       } else if (estaRetenido && cita.matricula !== "---" && !cita.isBlock) {
            alertaVisual = `<div class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse cursor-pointer z-10" onclick="event.stopPropagation(); comprobarAlertaEntrega('${cita.matricula}', '${cita.modelo}')"><i class="ph-bold ph-warning"></i></div>`;
        }
 
        let textoVO = (cita.entregaVO) ? String(cita.entregaVO).toUpperCase().trim() : '';
        let tagVO = (textoVO === 'SÍ' || textoVO === 'SI') ? `<span class="bg-purple-200 text-purple-900 border border-purple-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest"><i class="ph-bold ph-car-profile"></i> VO</span>` : '';
-       let opacidad = yaEntregado ? "opacity-50" : "opacity-100";
-
-       // 🔥 LÓGICA DEL ONCLICK PARA EDITAR 🔥
+       
+       let opacidad = (yaEntregado && !esCitaManual) ? "opacity-50" : "opacity-100";
        let onclickCode = "";
        let cursorClass = "";
        
-       // Si es una cita real (no vacaciones) y el coche no está ya entregado, activamos el click para editar
-       if (cita.id && cita.matricula !== "---" && !yaEntregado) {
+       if (cita.isBlock) {
+           onclickCode = `onclick="borrarBloqueo('${cita.idBloqueo}')"`;
+           cursorClass = "cursor-pointer hover:ring-2 hover:ring-red-500 hover:scale-[1.02] shadow-sm";
+       } 
+       else if (cita.id && cita.matricula !== "---" && (!yaEntregado || esCitaManual)) {
            let d = fechaCitaObj.getFullYear() + "-" + String(fechaCitaObj.getMonth()+1).padStart(2,'0') + "-" + String(fechaCitaObj.getDate()).padStart(2,'0');
            let h = String(fechaCitaObj.getHours()).padStart(2,'0') + ":00";
-           let clienteLimpio = cita.cliente ? cita.cliente.replace(/'/g, "") : "Cliente"; // Limpiamos comillas simples por seguridad
+           let clienteLimpio = cita.cliente ? cita.cliente.replace(/['"]/g, "") : "Cliente"; 
+           let tlfLimpio = cita.telefono ? cita.telefono.replace(/['"]/g, "") : "";
+           let emailLimpio = cita.email ? cita.email.replace(/['"]/g, "") : "";
+           let voLimpio = cita.entregaVO ? cita.entregaVO.replace(/['"]/g, "") : "NO";
            
-           onclickCode = `onclick="abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${clienteLimpio}', '${cita.matricula}')"`;
+           onclickCode = `onclick="abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${clienteLimpio}', '${cita.matricula}', '${tlfLimpio}', '${emailLimpio}', '${voLimpio}')"`;
            cursorClass = "cursor-pointer hover:ring-2 hover:ring-[#00b0f0] hover:scale-[1.02] shadow-sm";
        }
 
@@ -1298,8 +1302,10 @@ window.dibujarCuadranteMes = function() {
             </div>
           </div>
           <div class="mt-1 text-[9px] font-bold ${textColor} leading-tight border-t border-black/10 pt-1.5 space-y-1">
-             <p class="truncate uppercase flex items-center gap-1"><i class="ph-fill ph-user text-xs"></i> ${cita.cliente}</p>
-             <p class="truncate uppercase flex items-center gap-1"><i class="ph-fill ph-buildings text-xs"></i> ${cita.renting}</p>
+             <p class="truncate uppercase flex items-center gap-1" title="${cita.cliente}"><i class="ph-fill ph-user text-xs"></i> ${cita.cliente}</p>
+             ${cita.telefono ? `<p class="truncate flex items-center gap-1" title="${cita.telefono}"><i class="ph-fill ph-phone text-xs"></i> ${cita.telefono}</p>` : ''}
+             ${cita.email ? `<p class="truncate flex items-center gap-1" title="${cita.email}"><i class="ph-fill ph-envelope text-xs"></i> ${cita.email}</p>` : ''}
+             ${cita.renting ? `<p class="truncate uppercase flex items-center gap-1" title="${cita.renting}"><i class="ph-fill ph-buildings text-xs"></i> ${cita.renting}</p>` : ''}
           </div>
        </div>`;
     }
@@ -1590,15 +1596,34 @@ window.dibujarCuadranteMes = function() {
                 Swal.fire('Error', 'No se pudo guardar.', 'error');
             }
         }
-    };// Función para modificar una cita existente en la base de datos
-    window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agenteActual, cliente, matricula) {
-        const { value: formValues } = await Swal.fire({
-            title: 'Modificar Cita',
+    };
+    
+    // 1. ELIMINAR BLOQUEOS GRISES
+    window.borrarBloqueo = async function(idBloqueo) {
+        Swal.fire({
+            title: '¿Desbloquear fecha?',
+            text: "Esto eliminará el bloqueo y dejará el hueco libre en la agenda.",
+            icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sí, liberar hueco'
+        }).then(async (res) => {
+            if(res.isConfirmed) {
+                await window.deleteDoc(window.doc(window.db, "bloqueos_agenda", idBloqueo));
+                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Hueco liberado', showConfirmButton: false, timer: 1500});
+            }
+        });
+    }
+
+    // 🔥 2. EDICIÓN DE CITAS AMPLIADA 🔥
+    window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agenteActual, cliente, matricula, telefono, email, vo) {
+        const { value: formValues, isDenied } = await Swal.fire({
+            title: 'Gestionar Cita',
             html: `
-                <div class="text-sm mb-4 text-gray-600 font-bold bg-gray-50 p-2 rounded">
-                    ${cliente} - ${matricula}
+                <div class="text-sm mb-4 text-gray-700 font-bold bg-white border border-gray-200 shadow-sm p-3 rounded-xl text-left">
+                    <div class="text-[#001e50] text-base mb-1 uppercase"><i class="ph-fill ph-user"></i> ${cliente}</div>
+                    <div class="text-xs mb-1"><i class="ph-bold ph-car"></i> Matrícula: <span class="bg-gray-100 px-1 rounded">${matricula}</span></div>
+                    <div class="text-xs mb-1"><i class="ph-fill ph-phone text-emerald-600"></i> ${telefono || 'Sin teléfono'}</div>
+                    <div class="text-xs mb-1"><i class="ph-fill ph-envelope text-blue-500"></i> ${email || 'Sin correo electrónico'}</div>
+                    <div class="text-xs mt-2"><i class="ph-fill ph-car-profile text-purple-600"></i> Entrega Vehículo de Ocasión (VO): <span class="${vo === 'SI' || vo === 'SÍ' ? 'text-purple-600 font-black' : 'text-gray-500'}">${vo || 'NO'}</span></div>
                 </div>
-                
                 <div class="flex gap-2 mb-3">
                     <div class="flex-1 text-left">
                         <label class="text-[10px] uppercase font-bold text-gray-500">Nueva Fecha</label>
@@ -1607,18 +1632,13 @@ window.dibujarCuadranteMes = function() {
                     <div class="flex-1 text-left">
                         <label class="text-[10px] uppercase font-bold text-gray-500">Nueva Hora</label>
                         <select id="e-hora" class="swal2-select !w-full !m-0 text-sm font-bold">
-                            <option value="10:00" ${horaActual === '10:00' ? 'selected' : ''}>10:00</option>
-                            <option value="11:00" ${horaActual === '11:00' ? 'selected' : ''}>11:00</option>
-                            <option value="12:00" ${horaActual === '12:00' ? 'selected' : ''}>12:00</option>
-                            <option value="13:00" ${horaActual === '13:00' ? 'selected' : ''}>13:00</option>
-                            <option value="16:00" ${horaActual === '16:00' ? 'selected' : ''}>16:00</option>
-                            <option value="17:00" ${horaActual === '17:00' ? 'selected' : ''}>17:00</option>
-                            <option value="18:00" ${horaActual === '18:00' ? 'selected' : ''}>18:00</option>
-                            <option value="19:00" ${horaActual === '19:00' ? 'selected' : ''}>19:00</option>
+                            <option value="10:00" ${horaActual === '10:00' ? 'selected' : ''}>10:00</option><option value="11:00" ${horaActual === '11:00' ? 'selected' : ''}>11:00</option>
+                            <option value="12:00" ${horaActual === '12:00' ? 'selected' : ''}>12:00</option><option value="13:00" ${horaActual === '13:00' ? 'selected' : ''}>13:00</option>
+                            <option value="16:00" ${horaActual === '16:00' ? 'selected' : ''}>16:00</option><option value="17:00" ${horaActual === '17:00' ? 'selected' : ''}>17:00</option>
+                            <option value="18:00" ${horaActual === '18:00' ? 'selected' : ''}>18:00</option><option value="19:00" ${horaActual === '19:00' ? 'selected' : ''}>19:00</option>
                         </select>
                     </div>
                 </div>
-
                 <div class="text-left">
                     <label class="text-[10px] uppercase font-bold text-gray-500">Agente Asignado</label>
                     <select id="e-agente" class="swal2-select !w-full !m-0 text-sm font-bold">
@@ -1627,144 +1647,142 @@ window.dibujarCuadranteMes = function() {
                     </select>
                 </div>
             `,
-            focusConfirm: false,
             showCancelButton: true,
+            showDenyButton: true,
             confirmButtonColor: '#001e50',
-            confirmButtonText: 'Guardar Cambios',
+            denyButtonColor: '#ef4444',
+            confirmButtonText: 'Guardar',
+            denyButtonText: '🗑️ Eliminar',
             cancelButtonText: 'Cancelar',
             preConfirm: () => {
-                const nuevaFecha = document.getElementById('e-fecha').value;
-                const nuevaHora = document.getElementById('e-hora').value;
-                const nuevoAgente = document.getElementById('e-agente').value;
-
-                if (!nuevaFecha) {
-                    Swal.showValidationMessage('La fecha es obligatoria');
-                    return false;
-                }
-
-                return { fecha: nuevaFecha, hora: nuevaHora, agente: nuevoAgente };
+                const f = document.getElementById('e-fecha').value;
+                const h = document.getElementById('e-hora').value;
+                const a = document.getElementById('e-agente').value;
+                if (!f) return Swal.showValidationMessage('La fecha es obligatoria');
+                return { fecha: f, hora: h, agente: a };
             }
         });
 
-        // Si el usuario presiona "Guardar Cambios" y los datos son válidos
-        if (formValues) {
+        if (isDenied) {
+            Swal.fire({
+                title: '¿Seguro?', text: "La cita se borrará de la agenda permanentemente.", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sí, Borrar'
+            }).then(async (res) => {
+                if (res.isConfirmed) {
+                    await window.deleteDoc(window.doc(window.db, "citas_agenda", idCita));
+                    // Quitamos la alerta del coche en inventario
+                    let coche = todosLosCoches.find(c => c.B && c.B.replace(/\s/g,'') === matricula.replace(/\s/g,''));
+                    if (coche) await window.updateDoc(window.doc(window.db, "vehiculos", coche.fila), { fechaCita: null });
+                    Swal.fire('Eliminada', 'La cita ha sido borrada', 'success');
+                }
+            });
+        } else if (formValues) {
             Swal.fire({title: 'Actualizando...', didOpen: () => Swal.showLoading()});
-            try {
-                // Referencia al documento exacto en la colección 'citas_agenda'
-                const citaRef = window.doc(window.db, "citas_agenda", idCita);
-                
-                // updateDoc solo sobreescribe los campos especificados, manteniendo el resto
-                await window.updateDoc(citaRef, {
-                    fecha: formValues.fecha,
-                    hora: formValues.hora,
-                    agente: formValues.agente
-                });
-
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Cita Modificada!',
-                    text: 'La agenda se ha actualizado correctamente.',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            } catch(e) {
-                console.error("Error al actualizar la cita: ", e);
-                Swal.fire('Error', 'Hubo un problema de conexión al modificar la cita.', 'error');
+            await window.updateDoc(window.doc(window.db, "citas_agenda", idCita), formValues);
+            
+            let tlf = telefono ? telefono.replace(/\s/g, '').replace(/^\+?34/, '') : '';
+            if (tlf) {
+                let msg = `¡Hola ${cliente}! Te confirmamos que tu cita para la entrega de tu vehículo (${matricula}) ha sido modificada. Te esperamos el ${formValues.fecha.split('-').reverse().join('/')} a las ${formValues.hora}h. Saludos, Castellana Wagen.`;
+                window.open(`https://wa.me/34${tlf}?text=${encodeURIComponent(msg)}`, '_blank');
             }
+            Swal.fire('¡Modificada!', 'La agenda se ha actualizado.', 'success');
         }
     };
-    // Función para crear una cita manualmente desde el panel
+
+    // 3. WHATSAPP AL CREAR CITA MANUAL
     window.crearCitaManual = async function() {
         const { value: formValues } = await Swal.fire({
             title: 'Nueva Cita Manual',
             html: `
-                <div class="text-left mb-1 ml-1 text-xs font-bold text-gray-500 uppercase">Nombre del Cliente</div>
-                <input id="m-cliente" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold text-gray-700" placeholder="Ej: Juan Pérez">
-                
-                <div class="text-left mb-1 ml-1 text-xs font-bold text-gray-500 uppercase">Motivo / Modelo</div>
-                <input id="m-modelo" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold text-gray-700" placeholder="Ej: Solo Entrega VO" value="Solo Entrega VO">
-
-                <div class="text-left mb-1 ml-1 text-xs font-bold text-gray-500 uppercase">Matrícula (Opcional)</div>
-                <input id="m-matricula" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold uppercase text-gray-700" placeholder="Ej: 1234ABC o S/M">
-                
+                <input id="m-cliente" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold" placeholder="Nombre (Ej: Juan Pérez)">
+                <input id="m-telefono" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold" placeholder="Teléfono (Para avisos WhatsApp)">
+                <input id="m-modelo" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold" placeholder="Motivo" value="Solo Entrega VO">
+                <input id="m-matricula" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold uppercase" placeholder="Matrícula (Opcional)">
                 <div class="flex gap-2 mb-3">
-                    <div class="flex-1 text-left">
-                        <label class="text-[10px] uppercase font-bold text-gray-500 ml-1">Fecha</label>
-                        <input type="date" id="m-fecha" class="swal2-input !w-full !m-0 text-sm font-bold">
-                    </div>
-                    <div class="flex-1 text-left">
-                        <label class="text-[10px] uppercase font-bold text-gray-500 ml-1">Hora</label>
-                        <select id="m-hora" class="swal2-select !w-full !m-0 text-sm font-bold">
-                            <option value="10:00">10:00</option><option value="11:00">11:00</option>
-                            <option value="12:00">12:00</option><option value="13:00">13:00</option>
-                            <option value="16:00">16:00</option><option value="17:00">17:00</option>
-                            <option value="18:00">18:00</option><option value="19:00">19:00</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="text-left">
-                    <label class="text-[10px] uppercase font-bold text-gray-500 ml-1">Agente Asignado</label>
-                    <select id="m-agente" class="swal2-select !w-full !m-0 text-sm font-bold">
-                        <option value="MANUEL">MANUEL</option>
-                        <option value="ANTONIO">ANTONIO</option>
+                    <input type="date" id="m-fecha" class="swal2-input !w-full !m-0 text-sm font-bold flex-1">
+                    <select id="m-hora" class="swal2-select !w-full !m-0 text-sm font-bold flex-1">
+                        <option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option>
+                        <option value="13:00">13:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option>
+                        <option value="18:00">18:00</option><option value="19:00">19:00</option>
                     </select>
                 </div>
+                <select id="m-agente" class="swal2-select !w-full !m-0 text-sm font-bold">
+                    <option value="MANUEL">MANUEL</option><option value="ANTONIO">ANTONIO</option>
+                </select>
             `,
-            focusConfirm: false,
-            showCancelButton: true,
-            confirmButtonColor: '#10b981', // Verde para indicar creación
-            confirmButtonText: 'Agendar Cita',
-            cancelButtonText: 'Cancelar',
+            showCancelButton: true, confirmButtonColor: '#10b981', confirmButtonText: 'Agendar',
             preConfirm: () => {
-                const cliente = document.getElementById('m-cliente').value.trim();
-                const modelo = document.getElementById('m-modelo').value.trim();
-                const matricula = document.getElementById('m-matricula').value.trim() || 'S/M';
-                const fecha = document.getElementById('m-fecha').value;
-                const hora = document.getElementById('m-hora').value;
-                const agente = document.getElementById('m-agente').value;
-
-                if (!cliente || !fecha) {
-                    Swal.showValidationMessage('El cliente y la fecha son obligatorios');
-                    return false;
-                }
-
-                return { cliente, modelo, matricula, fecha, hora, agente };
+                const c = document.getElementById('m-cliente').value.trim();
+                const t = document.getElementById('m-telefono').value.trim();
+                const mo = document.getElementById('m-modelo').value.trim();
+                const ma = document.getElementById('m-matricula').value.trim() || 'S/M';
+                const f = document.getElementById('m-fecha').value;
+                const h = document.getElementById('m-hora').value;
+                const a = document.getElementById('m-agente').value;
+                if (!c || !f) return Swal.showValidationMessage('Falta cliente o fecha');
+                return { cliente: c, telefono: t, modelo: mo, matricula: ma, fecha: f, hora: h, agente: a };
             }
         });
 
-        // Guardamos en Firebase si todo está correcto
         if (formValues) {
             Swal.fire({title: 'Agendando...', didOpen: () => Swal.showLoading()});
-            try {
-                let idCitaNueva = new Date().getTime().toString();
-                
-                await window.setDoc(window.doc(window.db, "citas_agenda", idCitaNueva), {
-                    cliente: formValues.cliente,
-                    modelo: formValues.modelo,
-                    matricula: formValues.matricula.replace(/\s/g, ''), // Limpiamos espacios
-                    fecha: formValues.fecha,
-                    hora: formValues.hora,
-                    agente: formValues.agente,
-                    bastidor: "N/A",
-                    renting: "GESTIÓN MANUAL",
-                    entregaVO: "NO", 
-                    creadoEn: new Date().toISOString()
-                });
+            let idCitaNueva = new Date().getTime().toString();
+            await window.setDoc(window.doc(window.db, "citas_agenda", idCitaNueva), {
+                ...formValues, bastidor: "N/A", renting: "GESTIÓN MANUAL", entregaVO: "NO", creadoEn: new Date().toISOString()
+            });
 
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Cita Creada!',
-                    text: 'Aparecerá en el cuadrante de inmediato.',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            } catch(e) {
-                console.error("Error al crear cita manual: ", e);
-                Swal.fire('Error', 'Hubo un problema al crear la cita.', 'error');
+            let tlf = formValues.telefono ? formValues.telefono.replace(/\s/g, '').replace(/^\+?34/, '') : '';
+            if (tlf) {
+                let msg = `¡Hola ${formValues.cliente}! Te confirmamos tu reserva para el día ${formValues.fecha.split('-').reverse().join('/')} a las ${formValues.hora}h en Castellana Wagen. ¡Te esperamos!`;
+                window.open(`https://wa.me/34${tlf}?text=${encodeURIComponent(msg)}`, '_blank');
             }
+            Swal.fire({ icon: 'success', title: '¡Cita Creada!', showConfirmButton: false, timer: 1500 });
         }
     };
+
+    // 4. SISTEMA DE RECORDATORIOS (BOTÓN VERDE)
+    window.panelRecordatorios = function() {
+        // Calculamos qué día es mañana
+        let manana = new Date();
+        manana.setDate(manana.getDate() + 1);
+        let diaManana = manana.getFullYear() + "-" + String(manana.getMonth()+1).padStart(2,'0') + "-" + String(manana.getDate()).padStart(2,'0');
+        let diaVisual = String(manana.getDate()).padStart(2,'0') + "/" + String(manana.getMonth()+1).padStart(2,'0');
+
+        // Filtramos las citas de mañana (ignorando bloqueos)
+        let citasMañana = window.datosAgenda.filter(c => c.fechaHora && c.fechaHora.startsWith(diaManana) && c.matricula !== "---");
+        
+        if(citasMañana.length === 0) {
+            return Swal.fire('Agenda Libre', 'No hay ninguna entrega programada para mañana.', 'info');
+        }
+        
+        // Creamos los botones de WhatsApp
+        let htmlBotones = citasMañana.map(c => {
+            let tlf = c.telefono ? c.telefono.replace(/\s/g, '').replace(/^\+?34/, '') : '';
+            let horaVisual = c.fechaHora.split('T')[1].substring(0,5);
+            let msg = `¡Hola ${c.cliente}! Te recordamos que mañana (${diaVisual}) a las ${horaVisual}h tienes tu cita de entrega en Castellana Wagen. ¡Estamos deseando entregarte tu vehículo!`;
+            
+            let link = tlf ? `https://wa.me/34${tlf}?text=${encodeURIComponent(msg)}` : '#';
+            let cursor = tlf ? 'cursor-pointer hover:bg-[#128C7E]' : 'opacity-50 cursor-not-allowed';
+            
+            return `
+            <a href="${link}" target="${tlf ? '_blank' : '_self'}" class="block w-full bg-[#25D366] text-white font-bold p-3 rounded-lg mb-2 no-underline text-xs shadow-sm ${cursor}">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-whatsapp-logo text-lg"></i> 
+                    <div class="text-left leading-tight">
+                        <div>${horaVisual}h - ${c.cliente}</div>
+                        <div class="text-[9px] font-medium text-white/80">${tlf ? 'Enviar WhatsApp' : '⚠️ Sin teléfono guardado'}</div>
+                    </div>
+                </div>
+            </a>`;
+        }).join('');
+        
+        Swal.fire({
+            title: 'Recordatorios: ' + diaVisual,
+            html: `<p class="text-xs text-gray-500 mb-4">Haz clic para enviar el recordatorio 1 a 1:</p><div class="max-h-64 overflow-y-auto pr-2 custom-scrollbar">${htmlBotones}</div>`,
+            showConfirmButton: false,
+            showCloseButton: true
+        });
+    }
     window.enviarBloqueoWebhook = async function(datos) {
         // 🔥 ATENCIÓN: Aquí debes pegar la URL que te dé Zapier, Make o Power Automate
         const webhookUrl = "AQUI_PONDRAS_TU_URL_DE_ZAPIER_O_MAKE";
@@ -1797,10 +1815,6 @@ window.dibujarCuadranteMes = function() {
     }
 
     // Variables globales blindadas para los gráficos
-    window.chartObjDonut = null;
-    window.chartObjMeses = null;
-
-   // Variables globales blindadas para los gráficos
     window.chartObjDonut = null;
     window.chartObjMeses = null;
 
