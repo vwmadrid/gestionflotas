@@ -443,6 +443,8 @@
         snapshot.forEach(doc => { 
             let c = doc.data(); 
             c.fila = doc.id; 
+            if (c.fechaCita && !c.citasEnlazadas) {
+                }
             c.A = c.bastidor || "Sin Bastidor"; 
             c.B = c.matricula || c.Matricula || "S/M"; 
             c.C = c.modelo || "VW"; 
@@ -695,6 +697,7 @@
              <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${obtenerBurbujaChat(c.chatData)}</button>
              <button onclick="editarVehiculoBasico('${c.fila}', '${c.A}', '${c.B}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info"><i class="ph-bold ph-pencil-simple text-lg"></i></button>
              <button onclick="marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors"><i class="ph-bold ph-key text-lg"></i></button>
+            <button onclick="gestionarTraslado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white shadow-sm transition-colors" title="Traslado a Concesionario"><i class="ph-bold ph-airplane-takeoff text-lg"></i></button>
              <button onclick="borrarVehiculo('${c.fila}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>   
           </div>
         </div>
@@ -964,6 +967,54 @@
             }
         });
     };
+    window.gestionarTraslado = async function(id) {
+    const { value: formValues } = await Swal.fire({
+        title: 'Traslado a Concesionario',
+        html: `
+            <input id="concesionario-destino" class="swal2-input !w-full !m-0 !mb-3" placeholder="Nombre del Concesionario Destino">
+            <input type="file" id="acta-traslado" accept=".pdf,image/*" class="swal2-file text-sm w-full">
+        `,
+        confirmButtonText: 'Finalizar Traslado',
+        confirmButtonColor: '#f97316',
+        preConfirm: () => {
+            const dest = document.getElementById('concesionario-destino').value;
+            const file = document.getElementById('acta-traslado').files[0];
+            if (!dest) { Swal.showValidationMessage('Indica el concesionario'); return false; }
+            return { dest, file };
+        }
+    });
+
+    if (formValues) {
+        Swal.fire({title: 'Subiendo...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+        
+        let urlActa = null;
+        if (formValues.file) {
+            // Reutilizamos tu lógica de subida a Drive
+            const reader = new FileReader();
+            reader.readAsDataURL(formValues.file);
+            urlActa = await new Promise((resolve) => {
+                reader.onload = async () => {
+                    const res = await fetch('URL_DE_TU_GOOGLE_SCRIPT_AQUI', { 
+                        method: 'POST', 
+                        body: JSON.stringify({ base64: reader.result, fileName: formValues.file.name, mimeType: formValues.file.type }) 
+                    });
+                    const data = await res.json();
+                    resolve(data.url);
+                };
+            });
+        }
+
+        await window.updateDoc(window.doc(window.db, "vehiculos", id), {
+            entregado: true, // Lo marcamos como finalizado para que entre en estadísticas
+            fechaEntrega: new Date().toLocaleDateString('es-ES'),
+            tipoFinalizacion: 'TRASLADO',
+            concesionarioDestino: formValues.dest,
+            urlActaTraslado: urlActa
+        });
+
+        Swal.fire('¡Traslado Registrado!', 'El vehículo ya consta en el historial.', 'success');
+    }
+};
     window.pasarAInventario = async function(id) {
         Swal.fire({
             title: '¿Mover a Inventario?', text: "Dejará Logística Previa y pasará a Concesionario.", icon: 'question',
@@ -1383,29 +1434,46 @@ window.dibujarCuadranteMes = function() {
        window.inyectarResultadosHistorial(resultados, contenedor, `el día: ${parts[2]}/${parts[1]}/${parts[0]}`);
     };
 
-    window.inyectarResultadosHistorial = function(resultados, contenedor, criterioTexto) {
-       if (resultados.length === 0) {
-           contenedor.innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center border border-red-200"><p class="font-bold text-sm">No hay entregas para ${criterioTexto}</p></div>`;
-           return;
-       }
-       
-       contenedor.innerHTML = `<p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Resultados (${resultados.length}):</p>` + 
-       resultados.map(c => `
-           <div class="bg-white rounded-xl border-l-8 border-emerald-500 p-5 shadow-sm mb-3 relative overflow-hidden">
-               <div class="absolute top-0 right-0 bg-emerald-500 text-white text-[9px] font-black px-3 py-1 rounded-bl-lg uppercase">Entregado</div>
-               <h3 class="font-black text-base text-[#001e50] uppercase">${c.C}</h3>
-               <p class="text-[10px] font-bold text-gray-400 tracking-widest mb-2">VIN: ${c.A} | MAT: ${c.B}</p>
-               <p class="font-black text-emerald-600 text-sm mb-2"><i class="ph-bold ph-calendar-check"></i> ${c.fechaEntrega || 'Completado'}</p>
-               <div class="flex gap-2 text-[9px] font-bold text-gray-400 uppercase mb-4">
-                   <span class="bg-gray-100 px-2 py-1 rounded border">${c.entregador || c.agente || 'N/A'}</span>
-                   <span class="bg-gray-100 px-2 py-1 rounded border">${c.renting || '-'}</span>
-               </div>
-               
-               <button onclick="window.deshacerEntrega('${c.fila}', '${c.C}')" class="absolute bottom-3 right-3 text-xs bg-amber-50 text-amber-600 font-bold px-3 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-100 transition-colors shadow-sm flex items-center gap-1">
-                   <i class="ph-bold ph-arrow-u-up-left"></i> Revertir a Activo
-               </button>
-           </div>
-       `).join('');
+   window.inyectarResultadosHistorial = function(resultados, contenedor, criterioTexto) {
+        if (resultados.length === 0) {
+            contenedor.innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center border border-red-200"><p class="font-bold text-sm">No hay entregas para ${criterioTexto}</p></div>`;
+            return;
+        }
+        
+        contenedor.innerHTML = `<p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Resultados (${resultados.length}):</p>` + 
+        resultados.map(c => {
+            // Lógica de colores y etiquetas
+            let esTraslado = c.tipoFinalizacion === 'TRASLADO';
+            let bgTag = esTraslado ? 'bg-orange-500' : 'bg-emerald-500';
+            let textoTag = esTraslado ? 'Traslado' : 'Entregado';
+            let borderTag = esTraslado ? 'border-orange-500' : 'border-emerald-500';
+            
+            // Si es traslado, mostramos el destino y el link al acta
+            let infoTraslado = esTraslado ? `
+                <p class="text-[10px] font-bold text-orange-600 mb-1"><i class="ph-bold ph-map-pin"></i> Destino: ${c.concesionarioDestino || 'N/A'}</p>
+                ${c.urlActaTraslado ? `<a href="${c.urlActaTraslado}" target="_blank" class="text-[10px] text-blue-600 font-bold hover:underline mb-2 block"><i class="ph-bold ph-file-pdf"></i> Ver Acta de Traslado</a>` : ''}
+            ` : '';
+
+            return `
+            <div class="bg-white rounded-xl ${esTraslado ? 'border-l-8 border-orange-500' : 'border-l-8 border-emerald-500'} p-5 shadow-sm mb-3 relative overflow-hidden">
+                <div class="absolute top-0 right-0 ${bgTag} text-white text-[9px] font-black px-3 py-1 rounded-bl-lg uppercase">${textoTag}</div>
+                <h3 class="font-black text-base text-[#001e50] uppercase">${c.C}</h3>
+                <p class="text-[10px] font-bold text-gray-400 tracking-widest mb-2">VIN: ${c.A} | MAT: ${c.B}</p>
+                
+                ${infoTraslado}
+                
+                <p class="font-black ${esTraslado ? 'text-orange-600' : 'text-emerald-600'} text-sm mb-2"><i class="ph-bold ph-calendar-check"></i> ${c.fechaEntrega || 'Completado'}</p>
+                <div class="flex gap-2 text-[9px] font-bold text-gray-400 uppercase mb-4">
+                    <span class="bg-gray-100 px-2 py-1 rounded border">${c.entregador || c.agente || 'N/A'}</span>
+                    <span class="bg-gray-100 px-2 py-1 rounded border">${c.renting || '-'}</span>
+                </div>
+                
+                <button onclick="window.deshacerEntrega('${c.fila}', '${c.C}')" class="absolute bottom-3 right-3 text-xs bg-amber-50 text-amber-600 font-bold px-3 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-100 transition-colors shadow-sm flex items-center gap-1">
+                    <i class="ph-bold ph-arrow-u-up-left"></i> Revertir a Activo
+                </button>
+            </div>
+            `;
+        }).join('');
     };
     window.descargarExcelHistorialRango = function() {
        let fInicioRaw = document.getElementById('hist-fecha-inicio').value;
