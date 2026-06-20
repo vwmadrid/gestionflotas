@@ -152,6 +152,11 @@
             </div>
 
             <div id="botonesAgenda" class="hidden flex items-center gap-2">
+                <!-- 🔥 NUEVO BOTÓN PARA CITAS MANUALES 🔥 -->
+                <button onclick="crearCitaManual()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-800 transition-colors shadow-sm">
+                    <i class="ph-bold ph-plus-circle text-base"></i> Nueva Cita
+                </button>
+
                 <button onclick="abrirGestorVacaciones()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-indigo-800 transition-colors shadow-sm">
                     <i class="ph-bold ph-calendar-slash text-base"></i> Bloquear Fechas
                 </button>
@@ -1177,11 +1182,11 @@ window.dibujarCuadranteMes = function() {
 
     window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
        let alturaClase = esUnico ? "min-h-[190px]" : "min-h-[110px]";
+       
+       // Si el hueco está libre, lo pintamos vacío (eliminado el enlace a Outlook)
        if (!cita) {
-           return `<div onclick="window.open('https://outlook.office.com/book/EntregasVWMadrid@porscheholding.onmicrosoft.com/?ismsaljsauthenabled', '_blank')" 
-                        class="flex-1 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center ${alturaClase} opacity-60 hover:opacity-100 transition-all cursor-pointer group hover:bg-[#00b0f0]/10 hover:border-[#00b0f0]" 
-                        title="Hueco Libre - ${nombreAgente} - Clic para agendar en Bookings">
-                      <span class="text-[11px] font-black text-gray-400 group-hover:text-[#001e50] uppercase tracking-widest flex items-center gap-1.5"><i class="ph-bold ph-plus-circle text-sm"></i> Agendar</span>
+           return `<div class="flex-1 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center ${alturaClase} opacity-60">
+                      <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">Libre</span>
                    </div>`;
        }
        
@@ -1203,18 +1208,33 @@ window.dibujarCuadranteMes = function() {
            let idFb = cocheEnBaseDatos ? cocheEnBaseDatos.fila : 'no_db';
            let modeloSeguro = cita.modelo ? String(cita.modelo).replace(/['"]/g, "") : "Coche";
            let matriculaSegura = cita.matricula ? String(cita.matricula).replace(/['"]/g, "") : "S/M";
-           alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}')"><i class="ph-bold ph-question text-lg"></i></div>`;
+           // Importante: event.stopPropagation() evita que se abra la edición si pulsamos en la alerta
+           alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="event.stopPropagation(); preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}')"><i class="ph-bold ph-question text-lg"></i></div>`;
            borderColor = "border-[#00b0f0] border-2"; 
        } else if (estaRetenido && cita.matricula !== "---") {
-           alertaVisual = `<div class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse cursor-pointer z-10" onclick="comprobarAlertaEntrega('${cita.matricula}', '${cita.modelo}')"><i class="ph-bold ph-warning"></i></div>`;
+           alertaVisual = `<div class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse cursor-pointer z-10" onclick="event.stopPropagation(); comprobarAlertaEntrega('${cita.matricula}', '${cita.modelo}')"><i class="ph-bold ph-warning"></i></div>`;
        }
 
        let textoVO = (cita.entregaVO) ? String(cita.entregaVO).toUpperCase().trim() : '';
        let tagVO = (textoVO === 'SÍ' || textoVO === 'SI') ? `<span class="bg-purple-200 text-purple-900 border border-purple-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest"><i class="ph-bold ph-car-profile"></i> VO</span>` : '';
        let opacidad = yaEntregado ? "opacity-50" : "opacity-100";
 
+       // 🔥 LÓGICA DEL ONCLICK PARA EDITAR 🔥
+       let onclickCode = "";
+       let cursorClass = "";
+       
+       // Si es una cita real (no vacaciones) y el coche no está ya entregado, activamos el click para editar
+       if (cita.id && cita.matricula !== "---" && !yaEntregado) {
+           let d = fechaCitaObj.getFullYear() + "-" + String(fechaCitaObj.getMonth()+1).padStart(2,'0') + "-" + String(fechaCitaObj.getDate()).padStart(2,'0');
+           let h = String(fechaCitaObj.getHours()).padStart(2,'0') + ":00";
+           let clienteLimpio = cita.cliente ? cita.cliente.replace(/'/g, "") : "Cliente"; // Limpiamos comillas simples por seguridad
+           
+           onclickCode = `onclick="abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${clienteLimpio}', '${cita.matricula}')"`;
+           cursorClass = "cursor-pointer hover:ring-2 hover:ring-[#00b0f0] hover:scale-[1.02] shadow-sm";
+       }
+
        return `
-       <div class="flex-1 rounded-lg p-2.5 relative border shadow-sm ${alturaClase} ${opacidad} flex flex-col justify-between hover:shadow-md transition-all" style="background-color: ${bgColor}; border-color: ${borderColor};">
+       <div ${onclickCode} class="flex-1 rounded-lg p-2.5 relative border ${alturaClase} ${opacidad} flex flex-col justify-between transition-all ${cursorClass}" style="background-color: ${bgColor}; border-color: ${borderColor};">
           ${alertaVisual}
           <div>
             <div class="flex justify-between items-start mb-1">
@@ -1277,7 +1297,6 @@ window.dibujarCuadranteMes = function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 if (idFirebase !== 'no_db') {
-                    // 🔥 Un micro-retraso para que las ventanas no choquen y lanzamos el nuevo sistema
                     setTimeout(() => {
                         window.marcarComoEntregado(idFirebase);
                     }, 150);
@@ -1285,18 +1304,17 @@ window.dibujarCuadranteMes = function() {
                     Swal.fire('Aviso', 'El coche no está en la base de datos de Inventario.', 'info'); 
                 }
             } else if (result.isDenied) {
-                window.open("https://outlook.office.com/bookings/calendar?b=EntregasVWMadrid@porscheholding.onmicrosoft.com", "_blank");
+                Swal.fire('Información', 'Para reagendar esta entrega, haz clic directamente sobre su tarjeta en el cuadrante.', 'info');
             }
         });
     };
-    window.comprobarAlertaEntrega = function(matricula, modelo) {
+   window.comprobarAlertaEntrega = function(matricula, modelo) {
         Swal.fire({
-            title: 'ALERTA',
-            text: `El coche ${modelo} (${matricula}) está bloqueado en Taller/Recambios. ¿Ir a Bookings para reagendar?`,
-            icon: 'warning', showCancelButton: true, confirmButtonColor: '#001e50',
-            confirmButtonText: 'Ir a Bookings'
-        }).then((result) => {
-            if (result.isConfirmed) window.open("https://outlook.office.com/bookings/calendar?b=EntregasVWMadrid@porscheholding.onmicrosoft.com", "_blank");
+            title: 'ALERTA TALLER/RECAMBIOS',
+            text: `El coche ${modelo} (${matricula}) está bloqueado. Si no va a estar listo a tiempo, haz clic en su tarjeta del calendario para asignarle otra fecha.`,
+            icon: 'warning', 
+            confirmButtonColor: '#001e50',
+            confirmButtonText: 'Entendido'
         });
     };
 
@@ -1502,6 +1520,180 @@ window.dibujarCuadranteMes = function() {
                 Swal.fire('Guardado', 'El bloqueo aparecerá en la agenda en unos segundos.', 'success');
             } catch(e) {
                 Swal.fire('Error', 'No se pudo guardar.', 'error');
+            }
+        }
+    };// Función para modificar una cita existente en la base de datos
+    window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agenteActual, cliente, matricula) {
+        const { value: formValues } = await Swal.fire({
+            title: 'Modificar Cita',
+            html: `
+                <div class="text-sm mb-4 text-gray-600 font-bold bg-gray-50 p-2 rounded">
+                    ${cliente} - ${matricula}
+                </div>
+                
+                <div class="flex gap-2 mb-3">
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-500">Nueva Fecha</label>
+                        <input type="date" id="e-fecha" class="swal2-input !w-full !m-0 text-sm font-bold" value="${fechaActual}">
+                    </div>
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-500">Nueva Hora</label>
+                        <select id="e-hora" class="swal2-select !w-full !m-0 text-sm font-bold">
+                            <option value="10:00" ${horaActual === '10:00' ? 'selected' : ''}>10:00</option>
+                            <option value="11:00" ${horaActual === '11:00' ? 'selected' : ''}>11:00</option>
+                            <option value="12:00" ${horaActual === '12:00' ? 'selected' : ''}>12:00</option>
+                            <option value="13:00" ${horaActual === '13:00' ? 'selected' : ''}>13:00</option>
+                            <option value="16:00" ${horaActual === '16:00' ? 'selected' : ''}>16:00</option>
+                            <option value="17:00" ${horaActual === '17:00' ? 'selected' : ''}>17:00</option>
+                            <option value="18:00" ${horaActual === '18:00' ? 'selected' : ''}>18:00</option>
+                            <option value="19:00" ${horaActual === '19:00' ? 'selected' : ''}>19:00</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-left">
+                    <label class="text-[10px] uppercase font-bold text-gray-500">Agente Asignado</label>
+                    <select id="e-agente" class="swal2-select !w-full !m-0 text-sm font-bold">
+                        <option value="MANUEL" ${agenteActual === 'MANUEL' ? 'selected' : ''}>MANUEL</option>
+                        <option value="ANTONIO" ${agenteActual === 'ANTONIO' ? 'selected' : ''}>ANTONIO</option>
+                    </select>
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonColor: '#001e50',
+            confirmButtonText: 'Guardar Cambios',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const nuevaFecha = document.getElementById('e-fecha').value;
+                const nuevaHora = document.getElementById('e-hora').value;
+                const nuevoAgente = document.getElementById('e-agente').value;
+
+                if (!nuevaFecha) {
+                    Swal.showValidationMessage('La fecha es obligatoria');
+                    return false;
+                }
+
+                return { fecha: nuevaFecha, hora: nuevaHora, agente: nuevoAgente };
+            }
+        });
+
+        // Si el usuario presiona "Guardar Cambios" y los datos son válidos
+        if (formValues) {
+            Swal.fire({title: 'Actualizando...', didOpen: () => Swal.showLoading()});
+            try {
+                // Referencia al documento exacto en la colección 'citas_agenda'
+                const citaRef = window.doc(window.db, "citas_agenda", idCita);
+                
+                // updateDoc solo sobreescribe los campos especificados, manteniendo el resto
+                await window.updateDoc(citaRef, {
+                    fecha: formValues.fecha,
+                    hora: formValues.hora,
+                    agente: formValues.agente
+                });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Cita Modificada!',
+                    text: 'La agenda se ha actualizado correctamente.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } catch(e) {
+                console.error("Error al actualizar la cita: ", e);
+                Swal.fire('Error', 'Hubo un problema de conexión al modificar la cita.', 'error');
+            }
+        }
+    };
+    // Función para crear una cita manualmente desde el panel
+    window.crearCitaManual = async function() {
+        const { value: formValues } = await Swal.fire({
+            title: 'Nueva Cita Manual',
+            html: `
+                <div class="text-left mb-1 ml-1 text-xs font-bold text-gray-500 uppercase">Nombre del Cliente</div>
+                <input id="m-cliente" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold text-gray-700" placeholder="Ej: Juan Pérez">
+                
+                <div class="text-left mb-1 ml-1 text-xs font-bold text-gray-500 uppercase">Motivo / Modelo</div>
+                <input id="m-modelo" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold text-gray-700" placeholder="Ej: Solo Entrega VO" value="Solo Entrega VO">
+
+                <div class="text-left mb-1 ml-1 text-xs font-bold text-gray-500 uppercase">Matrícula (Opcional)</div>
+                <input id="m-matricula" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold uppercase text-gray-700" placeholder="Ej: 1234ABC o S/M">
+                
+                <div class="flex gap-2 mb-3">
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-500 ml-1">Fecha</label>
+                        <input type="date" id="m-fecha" class="swal2-input !w-full !m-0 text-sm font-bold">
+                    </div>
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-500 ml-1">Hora</label>
+                        <select id="m-hora" class="swal2-select !w-full !m-0 text-sm font-bold">
+                            <option value="10:00">10:00</option><option value="11:00">11:00</option>
+                            <option value="12:00">12:00</option><option value="13:00">13:00</option>
+                            <option value="16:00">16:00</option><option value="17:00">17:00</option>
+                            <option value="18:00">18:00</option><option value="19:00">19:00</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-left">
+                    <label class="text-[10px] uppercase font-bold text-gray-500 ml-1">Agente Asignado</label>
+                    <select id="m-agente" class="swal2-select !w-full !m-0 text-sm font-bold">
+                        <option value="MANUEL">MANUEL</option>
+                        <option value="ANTONIO">ANTONIO</option>
+                    </select>
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonColor: '#10b981', // Verde para indicar creación
+            confirmButtonText: 'Agendar Cita',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const cliente = document.getElementById('m-cliente').value.trim();
+                const modelo = document.getElementById('m-modelo').value.trim();
+                const matricula = document.getElementById('m-matricula').value.trim() || 'S/M';
+                const fecha = document.getElementById('m-fecha').value;
+                const hora = document.getElementById('m-hora').value;
+                const agente = document.getElementById('m-agente').value;
+
+                if (!cliente || !fecha) {
+                    Swal.showValidationMessage('El cliente y la fecha son obligatorios');
+                    return false;
+                }
+
+                return { cliente, modelo, matricula, fecha, hora, agente };
+            }
+        });
+
+        // Guardamos en Firebase si todo está correcto
+        if (formValues) {
+            Swal.fire({title: 'Agendando...', didOpen: () => Swal.showLoading()});
+            try {
+                let idCitaNueva = new Date().getTime().toString();
+                
+                await window.setDoc(window.doc(window.db, "citas_agenda", idCitaNueva), {
+                    cliente: formValues.cliente,
+                    modelo: formValues.modelo,
+                    matricula: formValues.matricula.replace(/\s/g, ''), // Limpiamos espacios
+                    fecha: formValues.fecha,
+                    hora: formValues.hora,
+                    agente: formValues.agente,
+                    bastidor: "N/A",
+                    renting: "GESTIÓN MANUAL",
+                    entregaVO: "NO", 
+                    creadoEn: new Date().toISOString()
+                });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Cita Creada!',
+                    text: 'Aparecerá en el cuadrante de inmediato.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } catch(e) {
+                console.error("Error al crear cita manual: ", e);
+                Swal.fire('Error', 'Hubo un problema al crear la cita.', 'error');
             }
         }
     };
