@@ -26,7 +26,10 @@
          * o uso comercial sin autorización expresa por escrito.
          */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion, deleteDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+   import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    
+    // ... unas líneas más abajo ...
+    window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; window.arrayUnion = arrayUnion; window.deleteDoc = deleteDoc; window.getDocs = getDocs;
     
     const firebaseConfig = {
       apiKey: "AIzaSyCRfERugbIVfAXtKa7mGdLLTm6xwxb5wlE",
@@ -151,9 +154,6 @@
             <div id="botonesAgenda" class="hidden flex items-center gap-2">
                 <button onclick="abrirGestorVacaciones()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-indigo-800 transition-colors shadow-sm">
                     <i class="ph-bold ph-calendar-slash text-base"></i> Bloquear Fechas
-                </button>
-                <button id="btnSyncCitas" onclick="sincronizarCitasSilencioso()" class="bg-[#00b0f0] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0090c0] transition-colors shadow-sm">
-                    <i class="ph-bold ph-arrows-clockwise text-base"></i> Sincronizar Outlook
                 </button>
             </div>
             
@@ -998,36 +998,45 @@
     window.mesVistaActual = new Date();
     window.mesVistaActual.setDate(1);
 
-    window.renderAgenda = async function() {
+    
+window.renderAgenda = function() { 
        let div = document.getElementById('contenedorAgenda');
-       div.innerHTML = `<div class="bg-white p-16 rounded-xl shadow-sm border border-gray-200 text-center flex flex-col items-center"><i class="ph-bold ph-spinner animate-spin text-5xl text-[#001e50] mb-4"></i><p class="font-black text-gray-500 tracking-widest uppercase">Sincronizando con Outlook y Excel...</p></div>`;
+       div.innerHTML = `<div class="bg-white p-16 rounded-xl shadow-sm border border-gray-200 text-center flex flex-col items-center"><i class="ph-bold ph-spinner animate-spin text-5xl text-[#001e50] mb-4"></i><p class="font-black text-gray-500 tracking-widest uppercase">Conectando Radares en Vivo...</p></div>`;
 
        try {
-           const timestamp = new Date().getTime();
-           const [resM, resA, resV] = await Promise.all([
-               fetch(`${SCRIPT_URL}?action=getAgenda&agente=MANUEL&t=${timestamp}`),
-               fetch(`${SCRIPT_URL}?action=getAgenda&agente=ANTONIO&t=${timestamp}`),
-               fetch(`${SCRIPT_URL}?action=getVacaciones&t=${timestamp}`) 
-           ]);
+           if (!window.mesVistaActual) {
+               window.mesVistaActual = new Date(); window.mesVistaActual.setDate(1);
+           }
 
-           const citasM = await resM.json();
-           const citasA = await resA.json();
-           
-           window.datosVacaciones = await resV.json(); 
-           window.datosAgenda = [...citasM, ...citasA];
+           // RADAR 1: Escucha Citas Normales
+           window.onSnapshot(window.collection(window.db, "citas_agenda"), (querySnapshot) => {
+               window.datosAgenda = []; 
+               querySnapshot.forEach((doc) => {
+                   const data = doc.data();
+                   window.datosAgenda.push({
+                       id: doc.id, fechaHora: `${data.fecha}T${data.hora}:00`, 
+                       cliente: data.cliente || "Cliente", telefono: data.telefono || "", email: data.email || "",
+                       matricula: data.matricula || "S/M", modelo: data.modelo || "Vehículo", bastidor: data.bastidor || "",
+                       renting: data.renting || "", entregaVO: data.entregaVO || "NO", agente: data.agente || "MANUEL"
+                   });
+               });
+               window.dibujarCuadranteMes();
+               window.comprobarAtrasosGenerales();
+           });
 
-           window.mesVistaActual = new Date();
-           window.mesVistaActual.setDate(1);
-
-           window.dibujarCuadranteMes();
-           window.comprobarAtrasosGenerales();
+           // RADAR 2: Escucha Ausencias y Bloqueos
+           window.onSnapshot(window.collection(window.db, "bloqueos_agenda"), (querySnapshot) => {
+               window.datosVacaciones = [];
+               querySnapshot.forEach((doc) => {
+                   window.datosVacaciones.push({ id: doc.id, ...doc.data() });
+               });
+               window.dibujarCuadranteMes(); // Redibuja el calendario para pintar los grises
+           });
 
        } catch (error) {
-           console.error("Error:", error);
-           div.innerHTML = `<div class="bg-red-50 p-10 rounded-xl shadow-sm border border-red-200 text-center"><p class="font-bold text-red-600 text-lg">Error de conexión</p></div>`;
+           div.innerHTML = `<div class="bg-red-50 p-10 rounded-xl shadow-sm border border-red-200 text-center"><p class="font-bold text-red-600 text-lg">Error de conexión en vivo</p></div>`;
        }
     }
-
 window.dibujarCuadranteMes = function() {
         let div = document.getElementById('contenedorAgenda');
         let agendaEstructurada = {};
@@ -1113,11 +1122,26 @@ window.dibujarCuadranteMes = function() {
                 let cM = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].MANUEL : null;
                 let cA = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].ANTONIO : null;
 
-                let isVacM = window.datosVacaciones && window.datosVacaciones.some(v => v.agente === 'MANUEL' && v.fecha === dateKey);
-                let isVacA = window.datosVacaciones && window.datosVacaciones.some(v => v.agente === 'ANTONIO' && v.fecha === dateKey);
+               // Inteligencia para detectar bloqueos por día o por hora
+                function obtenerBloqueo(agenteAbuscar) {
+                    if (!window.datosVacaciones) return null;
+                    return window.datosVacaciones.find(b => {
+                        if(b.agente !== agenteAbuscar && b.agente !== 'AMBOS') return false;
+                        if(b.tipo === 'dia_completo') return dateKey >= b.fechaInicio && dateKey <= b.fechaFin;
+                        if(b.tipo === 'hora_suelta') return b.fecha === dateKey && b.hora === (hora + ':00');
+                        return false;
+                    });
+                }
 
-                if (isVacM) cM = { modelo: "VACACIONES", cliente: "DÍA LIBRE", matricula: "---", bastidor: "", renting: "" };
-                if (isVacA) cA = { modelo: "VACACIONES", cliente: "DÍA LIBRE", matricula: "---", bastidor: "", renting: "" };
+                let bloqueoM = obtenerBloqueo('MANUEL');
+                let bloqueoA = obtenerBloqueo('ANTONIO');
+
+                // Si hay un bloqueo, sobrescribimos los datos de la celda para que se pinte en gris
+                if (bloqueoM) cM = { modelo: bloqueoM.motivo.toUpperCase(), cliente: "AGENDA CERRADA", matricula: "---", bastidor: "", renting: "" };
+                if (bloqueoA) cA = { modelo: bloqueoA.motivo.toUpperCase(), cliente: "AGENDA CERRADA", matricula: "---", bastidor: "", renting: "" };
+
+                let isVacM = !!bloqueoM; // Convierte en verdadero/falso para los colores
+                let isVacA = !!bloqueoA;
 
                 if (hora === '19') {
                     if (cM) html += window.renderizarCeldaCita(cM, 'MANUEL', isVacM ? '#e5e7eb' : '#c9daf8', isVacM ? 'text-gray-500' : 'text-blue-900', isVacM ? 'border-gray-300' : 'border-blue-200', true);
@@ -1394,32 +1418,92 @@ window.dibujarCuadranteMes = function() {
        Swal.close();
     };
 
-    window.abrirGestorVacaciones = function() {
-        Swal.fire({
-            title: 'Gestión de Vacaciones',
+   window.abrirGestorVacaciones = async function() {
+        const { value: formValues } = await Swal.fire({
+            title: 'Bloquear Agenda',
             html: `
-                <div class="text-left bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <p class="text-sm text-[#001e50] mb-3">Debido a las estrictas políticas de seguridad de la empresa, no podemos bloquear la agenda automáticamente desde aquí.</p>
-                    <p class="text-sm text-[#001e50] font-bold">Instrucciones para bloquear:</p>
-                    <ol class="list-decimal pl-5 mt-2 text-xs text-gray-700 space-y-1">
-                        <li>Haz clic en el botón de abajo para abrir Outlook.</li>
-                        <li>Crea un "Nuevo Evento" en los días que necesites.</li>
-                        <li><strong>IMPORTANTE:</strong> Asegúrate de marcar "Mostrar como: Ocupado".</li>
-                    </ol>
+                <select id="b-tipo" class="swal2-select !w-full !m-0 !mb-3 text-sm" style="font-weight:bold;">
+                    <option value="hora_suelta">⏱️ Hora Suelta (Médico, Formación, etc.)</option>
+                    <option value="dia_completo">📅 Día Completo (Vacaciones, Baja, Cierre)</option>
+                </select>
+                
+                <select id="b-agente" class="swal2-select !w-full !m-0 !mb-3 text-sm" style="font-weight:bold;">
+                    <option value="MANUEL">Solo Manuel</option>
+                    <option value="ANTONIO">Solo Antonio</option>
+                    <option value="AMBOS">Ambos (Cierre de Concesionario)</option>
+                </select>
+
+                <input id="b-motivo" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold" placeholder="Motivo (Ej: Médico, Formación...)">
+
+                <div id="ui-dia-completo" class="hidden gap-2 mb-3">
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-500">Desde</label>
+                        <input type="date" id="b-fecha-inicio" class="swal2-input !w-full !m-0 text-sm font-bold">
+                    </div>
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-500">Hasta</label>
+                        <input type="date" id="b-fecha-fin" class="swal2-input !w-full !m-0 text-sm font-bold">
+                    </div>
+                </div>
+
+                <div id="ui-hora-suelta" class="flex gap-2 mb-3">
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-500">Día</label>
+                        <input type="date" id="b-fecha-unica" class="swal2-input !w-full !m-0 text-sm font-bold">
+                    </div>
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-500">Hora</label>
+                        <select id="b-hora" class="swal2-select !w-full !m-0 text-sm font-bold">
+                            <option value="10:00">10:00</option><option value="11:00">11:00</option>
+                            <option value="12:00">12:00</option><option value="13:00">13:00</option>
+                            <option value="16:00">16:00</option><option value="17:00">17:00</option>
+                            <option value="18:00">18:00</option><option value="19:00">19:00</option>
+                        </select>
+                    </div>
                 </div>
             `,
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonColor: '#001e50',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Abrir Calendario Outlook',
-            cancelButtonText: 'Entendido'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Abre el calendario corporativo directamente en una pestaña nueva
-                window.open("https://outlook.office.com/calendar/", "_blank");
-            }
+            didOpen: () => {
+                document.getElementById('b-tipo').addEventListener('change', (e) => {
+                    if(e.target.value === 'dia_completo') {
+                        document.getElementById('ui-dia-completo').style.display = 'flex';
+                        document.getElementById('ui-hora-suelta').style.display = 'none';
+                    } else {
+                        document.getElementById('ui-dia-completo').style.display = 'none';
+                        document.getElementById('ui-hora-suelta').style.display = 'flex';
+                    }
+                });
+            },
+            preConfirm: () => {
+                const tipo = document.getElementById('b-tipo').value;
+                const agente = document.getElementById('b-agente').value;
+                const motivo = document.getElementById('b-motivo').value.trim() || 'BLOQUEADO';
+                
+                if (tipo === 'dia_completo') {
+                    const fInicio = document.getElementById('b-fecha-inicio').value;
+                    const fFin = document.getElementById('b-fecha-fin').value;
+                    if (!fInicio || !fFin) return Swal.showValidationMessage('Rellena las fechas');
+                    if (fInicio > fFin) return Swal.showValidationMessage('La fecha de inicio debe ser anterior a la de fin');
+                    return { tipo, agente, motivo, fechaInicio: fInicio, fechaFin: fFin };
+                } else {
+                    const fecha = document.getElementById('b-fecha-unica').value;
+                    const hora = document.getElementById('b-hora').value;
+                    if (!fecha) return Swal.showValidationMessage('Selecciona el día');
+                    return { tipo, agente, motivo, fecha, hora };
+                }
+            },
+            showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Guardar Bloqueo', cancelButtonText: 'Cancelar'
         });
+
+        if (formValues) {
+            Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
+            try {
+                let idBloqueo = new Date().getTime().toString();
+                await window.setDoc(window.doc(window.db, "bloqueos_agenda", idBloqueo), formValues);
+                Swal.fire('Guardado', 'El bloqueo aparecerá en la agenda en unos segundos.', 'success');
+            } catch(e) {
+                Swal.fire('Error', 'No se pudo guardar.', 'error');
+            }
+        }
     };
     window.enviarBloqueoWebhook = async function(datos) {
         // 🔥 ATENCIÓN: Aquí debes pegar la URL que te dé Zapier, Make o Power Automate
@@ -1798,31 +1882,22 @@ window.abrirChat = async function(id, mod, mat, jsonStr) {
       }
     };
 
-    window.sincronizarCitasSilencioso = async function() {
+   window.sincronizarCitasSilencioso = async function() {
         const btnSync = document.getElementById('btnSyncCitas');
-        if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Sincronizando...';
+        if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Actualizando...';
+        
         try {
-            const t = new Date().getTime();
-            const [resM, resA, resV] = await Promise.all([ fetch(`${SCRIPT_URL}?action=getAgenda&agente=MANUEL&t=${t}`), fetch(`${SCRIPT_URL}?action=getAgenda&agente=ANTONIO&t=${t}`), fetch(`${SCRIPT_URL}?action=getVacaciones&t=${t}`) ]);
-            window.datosVacaciones = await resV.json(); window.datosAgenda = [...await resM.json(), ...await resA.json()];
-            let act = 0;
-            for (let cita of window.datosAgenda) {
-                if(!cita.fechaHora) continue;
-                let cFb = todosLosCoches.find(c => (c.entregado !== true && c.entregado !== "true") && ((c.B && c.B.replace(/\s/g, '') === cita.matricula.replace(/\s/g, '')) || (c.A && c.A === cita.bastidor)));
-                if (cFb) {
-                    let f = new Date(cita.fechaHora); let fG = `${f.toLocaleDateString('es-ES')} - ${f.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'})}h`;
-                    if (cFb.fechaCita !== fG) { await window.updateDoc(window.doc(window.db, "vehiculos", cFb.fila), { fechaCita: fG }); act++; }
-                }
-            }
-            if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-arrows-clockwise"></i> Sincronizar Outlook';
-            if (activeTab === 'agenda') window.dibujarCuadranteMes();
-            if (act > 0) Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `${act} citas enlazadas`, showConfirmButton: false, timer: 3000 });
-        } catch (e) { if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-warning text-red-500"></i> Error Sync'; }
+            // Simplemente volvemos a cargar la agenda desde Firebase
+            await window.renderAgenda();
+            
+            // Refrescamos también el botón para que diga "Actualizar Agenda" en vez de Outlook
+            if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-arrows-clockwise text-base"></i> Actualizar Agenda';
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Agenda actualizada`, showConfirmButton: false, timer: 2000 });
+            
+        } catch (e) { 
+            if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-warning text-red-500"></i> Error Sync'; 
+        }
     };
-    // ==========================================
-    // MOTOR DE ALERTAS Y LLEGADAS (ROBUSTO)
-    // ==========================================
-    window.unsubscribeAlertas = null;
 
     window.iniciarMotorAlertas = function() {
         console.log("🟢 [RADAR LLEGADAS] Encendiendo motor de escucha...");
