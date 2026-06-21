@@ -179,31 +179,56 @@
       <div id="contenedorEntregados" class="hidden max-w-full mx-auto w-full"></div>
       
       <div id="contenedorDashboard" class="hidden max-w-6xl mx-auto w-full space-y-6">
-        <h2 class="text-2xl font-black text-[#001e50] uppercase flex items-center gap-2"><i class="ph-bold ph-trend-up text-[#00b0f0]"></i> Rendimiento de la Flota</h2>
+        
+        <!-- CABECERA CON SELECTOR DE MES -->
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-gray-200 pb-4">
+            <h2 class="text-2xl font-black text-[#001e50] uppercase flex items-center gap-2">
+                <i class="ph-bold ph-trend-up text-[#00b0f0]"></i> Rendimiento de la Flota
+            </h2>
+            <div class="flex items-center gap-3 bg-white p-2 rounded-lg shadow-sm border border-gray-200">
+                <label for="mesDashboard" class="text-xs font-bold text-gray-500 uppercase tracking-widest"><i class="ph-bold ph-calendar-blank"></i> Mes de Análisis:</label>
+                <input type="month" id="mesDashboard" onchange="window.renderizarDashboard()" class="border-none bg-gray-50 px-3 py-1.5 rounded text-sm font-bold text-[#001e50] outline-none cursor-pointer focus:ring-2 focus:ring-[#00b0f0]">
+            </div>
+        </div>
+        
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
-                <i class="ph-fill ph-car-profile text-3xl text-emerald-500 mb-2"></i>
-                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Entregas Hoy</h3>
-                <p id="kpi-hoy" class="text-4xl font-black text-[#001e50]">0</p>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-emerald-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105 relative overflow-hidden">
+                <div class="absolute top-0 w-full h-1 bg-emerald-500"></div>
+                <i class="ph-fill ph-keys text-3xl text-emerald-500 mb-2 mt-2"></i>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Entregas a Clientes</h3>
+                <p id="kpi-entregas" class="text-4xl font-black text-[#001e50]">0</p>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
-                <i class="ph-fill ph-flag-checkered text-3xl text-blue-500 mb-2"></i>
-                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Entregas</h3>
-                <p id="kpi-total" class="text-4xl font-black text-[#001e50]">0</p>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-orange-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105 relative overflow-hidden">
+                <div class="absolute top-0 w-full h-1 bg-orange-500"></div>
+                <i class="ph-fill ph-truck text-3xl text-orange-500 mb-2 mt-2"></i>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Traslados (Grúa)</h3>
+                <p id="kpi-gruas" class="text-4xl font-black text-[#001e50]">0</p>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
-                <i class="ph-fill ph-wrench text-3xl text-amber-500 mb-2"></i>
-                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Paso Taller/Recambios</h3>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-blue-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105 relative overflow-hidden">
+                <div class="absolute top-0 w-full h-1 bg-blue-500"></div>
+                <i class="ph-fill ph-wrench text-3xl text-blue-500 mb-2 mt-2"></i>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Pasos Taller/Rec.</h3>
                 <p id="kpi-reparados" class="text-4xl font-black text-[#001e50]">0</p>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
-                <i class="ph-fill ph-car-profile text-3xl text-purple-500 mb-2"></i>
-                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Recogidas VO</h3>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-purple-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105 relative overflow-hidden">
+                <div class="absolute top-0 w-full h-1 bg-purple-500"></div>
+                <i class="ph-fill ph-car-profile text-3xl text-purple-500 mb-2 mt-2"></i>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Recogidas V.O.</h3>
                 <p id="kpi-devueltos" class="text-4xl font-black text-[#001e50]">0</p>
             </div>
         </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative h-80 flex flex-col items-center md:col-span-1">
+                <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Inventario Activo (Hoy)</h3>
+                <div class="w-full h-full relative"><canvas id="graficoDonut"></canvas></div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative h-80 flex flex-col items-center md:col-span-2">
+                <h3 id="tituloGraficoAnual" class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Comparativa Mensual</h3>
+                <div class="w-full h-full relative"><canvas id="graficoMeses"></canvas></div>
+            </div>
+        </div>
       </div>
-    </div>
   </main>
 
   <input type="file" id="inputUploadPDF" accept=".pdf" multiple class="hidden" onchange="window.procesarPDFs(event)">
@@ -803,94 +828,111 @@
     // ==========================================
     // 📊 FUNCIONES DE DASHBOARD
     // ==========================================
- window.renderizarDashboard = function() {
-        // 1. Cálculos de listas generales
-        let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
-        // Cogemos ABSOLUTAMENTE TODOS los que no están entregados (tanto logística como concesionario)
+window.renderizarDashboard = function() {
+        // 1. Establecer y obtener el mes seleccionado
+        let inputMes = document.getElementById('mesDashboard');
+        if (!inputMes.value) {
+            let hoy = new Date();
+            let mesActualStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+            inputMes.value = mesActualStr;
+        }
+        let [yearSel, monthSel] = inputMes.value.split('-');
+
+        const esDelMes = (fechaStr) => {
+            if (!fechaStr) return false;
+            let p = fechaStr.split('/'); 
+            if (p.length !== 3) return false;
+            let m = String(parseInt(p[1], 10)).padStart(2, '0');
+            return p[2] === yearSel && m === monthSel;
+        };
+
+        const esVODelMes = (fechaHoraStr) => {
+            if (!fechaHoraStr) return false;
+            let p = fechaHoraStr.split('T')[0].split('-'); 
+            if (p.length !== 3) return false;
+            return p[0] === yearSel && p[1] === monthSel;
+        };
+
+        // 2. Filtrado de datos
+        let todosEntregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
         let noEntregados = todosLosCoches.filter(c => c.entregado !== true && c.entregado !== "true");
         
-        // 2. Cálculos para las Tarjetas (Cifras)
-        let hoyStr = new Date().toLocaleDateString('es-ES');
-        let entregasHoy = entregados.filter(c => c.fechaEntrega === hoyStr).length;
-        let reparados = todosLosCoches.filter(c => c.fechaEntradaTaller || c.fechaEntradaRecambios).length;
+        let entregasClientesTotal = todosEntregados.filter(c => c.tipoFinalizacion !== 'TRASLADO');
+        let trasladosGruaTotal = todosEntregados.filter(c => c.tipoFinalizacion === 'TRASLADO');
+
+        // 3. Cálculos EXCLUSIVOS para el MES SELECCIONADO (Cifras de arriba)
+        let entregasMes = entregasClientesTotal.filter(c => esDelMes(c.fechaEntrega)).length;
+        let gruasMes = trasladosGruaTotal.filter(c => esDelMes(c.fechaEntrega)).length;
         
-        let devueltos = 0;
-        if (window.datosAgenda && window.datosAgenda.length > 0) {
-            devueltos = window.datosAgenda.filter(cita => {
-                let textoVO = String(cita.entregaVO || '').toUpperCase().trim();
-                return textoVO === 'SÍ' || textoVO === 'SI';
-            }).length;
-        }
+        let pasosTallerRecambiosMes = todosLosCoches.filter(c => 
+            esDelMes(c.fechaEntradaTaller) || esDelMes(c.fechaFinTaller) || 
+            esDelMes(c.fechaEntradaRecambios) || esDelMes(c.fechaFinRecambios)
+        ).length;
 
-        // Inyectamos los números en el HTML
-        document.getElementById('kpi-hoy').innerText = entregasHoy;
-        document.getElementById('kpi-total').innerText = entregados.length;
-        document.getElementById('kpi-reparados').innerText = reparados;
-        document.getElementById('kpi-devueltos').innerText = devueltos;
+        let citasVOMes = (window.datosAgenda || []).filter(cita => {
+            let vo = String(cita.entregaVO || '').toUpperCase().trim();
+            return (vo === 'SÍ' || vo === 'SI') && esVODelMes(cita.fechaHora);
+        }).length;
 
-        // 3. Cálculos para el Gráfico Donut (GLOBALES y sin duplicados)
+        document.getElementById('kpi-entregas').innerText = entregasMes;
+        document.getElementById('kpi-gruas').innerText = gruasMes;
+        document.getElementById('kpi-reparados').innerText = pasosTallerRecambiosMes;
+        document.getElementById('kpi-devueltos').innerText = citasVOMes;
+
+        // 4. Cálculos para el Gráfico Donut (INVENTARIO ACTIVO - No depende del mes)
         let enTaller = noEntregados.filter(c => c.enTaller && !c.finTaller).length;
         let enRecambios = noEntregados.filter(c => c.enRecambios && !c.finRecambios).length;
-        
-        // Para que el Donut sume un 100% perfecto, si un coche está en Taller/Recambios, 
-        // lo restamos de Logística Ptea o Listos para que no cuente doble.
-        let pteLogistica = noEntregados.filter(c => 
-            c.pasoAInventario === false && 
-            !(c.enTaller && !c.finTaller) && 
-            !(c.enRecambios && !c.finRecambios)
-        ).length;
-        
-        let listos = noEntregados.filter(c => 
-            c.pasoAInventario !== false && 
-            !(c.enTaller && !c.finTaller) && 
-            !(c.enRecambios && !c.finRecambios)
-        ).length;
+        let pteLogistica = noEntregados.filter(c => c.pasoAInventario === false && !(c.enTaller && !c.finTaller) && !(c.enRecambios && !c.finRecambios)).length;
+        let listos = noEntregados.filter(c => c.pasoAInventario !== false && !(c.enTaller && !c.finTaller) && !(c.enRecambios && !c.finRecambios)).length;
 
-        // 4. Cálculos para la gráfica mensual
+        // 5. Cálculos para el Gráfico de Barras Comparativo (Todo el Año)
+        document.getElementById('tituloGraficoAnual').innerText = `Comparativa Mensual del Año ${yearSel}`;
         let mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        let conteoMeses = new Array(12).fill(0);
+        let entregasPorMes = new Array(12).fill(0);
+        let recogidasPorMes = new Array(12).fill(0);
 
-        entregados.forEach(c => {
+        entregasClientesTotal.forEach(c => {
             if (c.fechaEntrega) {
                 let partes = c.fechaEntrega.split('/');
-                if (partes.length === 3) {
-                    let mesIndex = parseInt(partes[1], 10) - 1; 
-                    if (mesIndex >= 0 && mesIndex <= 11) {
-                        conteoMeses[mesIndex]++; 
-                    }
+                if (partes.length === 3 && partes[2] === yearSel) {
+                    let mesIndex = parseInt(partes[1], 10) - 1;
+                    if (mesIndex >= 0 && mesIndex <= 11) entregasPorMes[mesIndex]++;
                 }
             }
         });
 
-        // 5. Destruimos gráficos anteriores de forma segura para redibujar limpios
+        (window.datosAgenda || []).forEach(cita => {
+            let vo = String(cita.entregaVO || '').toUpperCase().trim();
+            if ((vo === 'SÍ' || vo === 'SI') && cita.fechaHora) {
+                let partes = cita.fechaHora.split('T')[0].split('-');
+                if (partes.length === 3 && partes[0] === yearSel) {
+                    let mesIndex = parseInt(partes[1], 10) - 1;
+                    if (mesIndex >= 0 && mesIndex <= 11) recogidasPorMes[mesIndex]++;
+                }
+            }
+        });
+
+        // 6. Destruir y dibujar gráficos
         if(window.chartObjDonut) window.chartObjDonut.destroy();
         if(window.chartObjMeses) window.chartObjMeses.destroy();
 
-        // 6. Dibujar Gráfico Donut
         const canvasDonut = document.getElementById('graficoDonut');
         if (canvasDonut) {
             const ctxDonut = canvasDonut.getContext('2d');
             window.chartObjDonut = new Chart(ctxDonut, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Listos/Con Cita', 'En Taller', 'En Recambios', 'Logística Ptea.'],
+                    labels: ['Listos/Cita', 'Taller', 'Recambios', 'Logística Ptea.'],
                     datasets: [{
                         data: [listos, enTaller, enRecambios, pteLogistica],
-                        backgroundColor: ['#10b981', '#f59e0b', '#14b8a6', '#94a3b8'],
-                        borderWidth: 0,
-                        hoverOffset: 8
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#94a3b8'],
+                        borderWidth: 0, hoverOffset: 8
                     }]
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { size: 11, family: 'Inter' } } } },
-                    cutout: '65%' 
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 10 } } } }, cutout: '65%' }
             });
         }
 
-        // 7. Dibujar Gráfico Mensual
         const canvasMeses = document.getElementById('graficoMeses');
         if (canvasMeses) {
             const ctxMeses = canvasMeses.getContext('2d');
@@ -898,24 +940,15 @@
                 type: 'bar',
                 data: {
                     labels: mesesNombres,
-                    datasets: [{
-                        label: 'Vehículos Entregados',
-                        data: conteoMeses,
-                        backgroundColor: 'rgba(0, 176, 240, 0.2)', 
-                        borderColor: '#00b0f0', 
-                        borderWidth: 2,
-                        borderRadius: 4, 
-                        hoverBackgroundColor: '#00b0f0'
-                    }]
+                    datasets: [
+                        { label: 'Entregas Clientes', data: entregasPorMes, backgroundColor: 'rgba(16, 185, 129, 0.85)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
+                        { label: 'Recogidas V.O.', data: recogidasPorMes, backgroundColor: 'rgba(168, 85, 247, 0.85)', borderColor: '#a855f7', borderWidth: 1, borderRadius: 4 }
+                    ]
                 },
                 options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    scales: { 
-                        y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
-                        x: { grid: { display: false } }
-                    },
-                    plugins: { legend: { display: false } } 
+                    responsive: true, maintainAspectRatio: false, 
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }, x: { grid: { display: false } } }, 
+                    plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } }, tooltip: { mode: 'index', intersect: false } } 
                 }
             });
         }
@@ -1788,7 +1821,13 @@
            </div>
            <div id="resultadoBusquedaHistorial" class="mt-6"></div>
        </div>`;
-       setTimeout(() => document.getElementById('inputBusquedaHistorial').focus(), 100);
+       setTimeout(() => { 
+           document.getElementById('inputBusquedaHistorial').focus();
+           // Inyectar los últimos 15 movimientos por defecto para que no se vea en blanco
+           let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
+           let ultimos = entregados.slice(0, 15);
+           window.inyectarResultadosHistorial(ultimos, document.getElementById('resultadoBusquedaHistorial'), "Últimos Movimientos Registrados");
+       }, 100);
     }
 
     window.buscarEnHistorial = function() {
@@ -1906,6 +1945,7 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
     };
 
     // 🔥 FUNCIONES DE AGENDA, CREACIÓN Y BLOQUEO DE CITAS 🔥
+    // 🔥 FUNCIÓN RECUPERADA: Editar Citas + Aviso WhatsApp 🔥
     window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agenteActual, cliente, matricula, telefono, email, vo) {
         const { value: formValues, isDenied } = await Swal.fire({
             title: 'Gestionar Cita',
@@ -1956,22 +1996,63 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
             }
         });
 
+        // Preparamos el WhatsApp por si hace falta
+        let tlfLimpio = telefono ? String(telefono).replace(/\s/g, '').replace(/^\+?34/, '') : '';
+        let urlWhatsAppBase = tlfLimpio ? `https://wa.me/34${tlfLimpio}?text=` : null;
+
         if (isDenied) {
             Swal.fire({
                 title: '¿Seguro?', text: "La cita se borrará permanentemente.", icon: 'warning',
                 showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sí, Borrar'
             }).then(async (res) => {
                 if (res.isConfirmed) {
+                    Swal.fire({title: 'Borrando...', didOpen: () => Swal.showLoading()});
                     await window.deleteDoc(window.doc(window.db, "citas_agenda", idCita));
+                    
                     let coche = todosLosCoches.find(c => c.B && c.B.replace(/\s/g,'') === matricula.replace(/\s/g,''));
                     if (coche) await window.updateDoc(window.doc(window.db, "vehiculos", coche.fila), { fechaCita: null });
-                    Swal.fire('Eliminada', 'La cita ha sido borrada', 'success');
+                    
+                    // AVISO WHATSAPP: ANULACIÓN
+                    if (urlWhatsAppBase) {
+                        Swal.fire({
+                            title: 'Cita Eliminada',
+                            text: '¿Quieres avisar al cliente por WhatsApp de la anulación?',
+                            icon: 'info', showCancelButton: true, confirmButtonColor: '#25D366', confirmButtonText: 'Sí, avisar', cancelButtonText: 'No'
+                        }).then((waRes) => {
+                            if (waRes.isConfirmed) {
+                                let fAntigua = fechaActual.split('-').reverse().join('/');
+                                let msj = `Hola ${cliente}, te informamos que por motivos logísticos tu cita de entrega prevista para el ${fAntigua} a las ${horaActual}h ha sido anulada. Contactaremos contigo para agendar una nueva fecha lo antes posible. Disculpa las molestias.`;
+                                window.open(urlWhatsAppBase + encodeURIComponent(msj), '_blank');
+                            }
+                        });
+                    } else {
+                        Swal.fire('Eliminada', 'La cita ha sido borrada.', 'success');
+                    }
                 }
             });
         } else if (formValues) {
             Swal.fire({title: 'Actualizando...', didOpen: () => Swal.showLoading()});
             await window.updateDoc(window.doc(window.db, "citas_agenda", idCita), formValues);
-            Swal.fire('¡Modificada!', 'La agenda se ha actualizado.', 'success');
+            
+            // Comprobamos si realmente ha cambiado la fecha o la hora
+            let cambioFecha = (formValues.fecha !== fechaActual || formValues.hora !== horaActual);
+            
+            // AVISO WHATSAPP: MODIFICACIÓN
+            if (cambioFecha && urlWhatsAppBase) {
+                Swal.fire({
+                    title: '¡Cita Modificada!',
+                    text: 'Has cambiado la fecha/hora. ¿Quieres avisar al cliente por WhatsApp?',
+                    icon: 'success', showCancelButton: true, confirmButtonColor: '#25D366', confirmButtonText: 'Sí, avisar', cancelButtonText: 'No'
+                }).then((waRes) => {
+                    if (waRes.isConfirmed) {
+                        let fNueva = formValues.fecha.split('-').reverse().join('/');
+                        let msj = `Hola ${cliente}, te confirmamos que hemos modificado la cita para la entrega de tu vehículo. La nueva fecha confirmada es el ${fNueva} a las ${formValues.hora}h. ¡Te esperamos!`;
+                        window.open(urlWhatsAppBase + encodeURIComponent(msj), '_blank');
+                    }
+                });
+            } else {
+                Swal.fire('¡Modificada!', 'La agenda se ha actualizado.', 'success');
+            }
         }
     };
 
