@@ -803,17 +803,125 @@
     // ==========================================
     // 📊 FUNCIONES DE DASHBOARD
     // ==========================================
-    window.renderizarDashboard = function() {
-        let kpiHoy = 0; let kpiTotal = 0; let kpiReparados = 0; let kpiDevueltos = 0;
+ window.renderizarDashboard = function() {
+        // 1. Cálculos de listas generales
         let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
-        kpiTotal = entregados.length;
-        let fHoy = new Date().toLocaleDateString('es-ES');
-        entregados.forEach(c => { if(c.fechaEntrega === fHoy) kpiHoy++; });
+        // Cogemos ABSOLUTAMENTE TODOS los que no están entregados (tanto logística como concesionario)
+        let noEntregados = todosLosCoches.filter(c => c.entregado !== true && c.entregado !== "true");
         
-        document.getElementById('kpi-hoy').innerText = kpiHoy;
-        document.getElementById('kpi-total').innerText = kpiTotal;
-        document.getElementById('kpi-reparados').innerText = todosLosCoches.filter(c => c.finTaller || c.finRecambios).length;
+        // 2. Cálculos para las Tarjetas (Cifras)
+        let hoyStr = new Date().toLocaleDateString('es-ES');
+        let entregasHoy = entregados.filter(c => c.fechaEntrega === hoyStr).length;
+        let reparados = todosLosCoches.filter(c => c.fechaEntradaTaller || c.fechaEntradaRecambios).length;
+        
+        let devueltos = 0;
+        if (window.datosAgenda && window.datosAgenda.length > 0) {
+            devueltos = window.datosAgenda.filter(cita => {
+                let textoVO = String(cita.entregaVO || '').toUpperCase().trim();
+                return textoVO === 'SÍ' || textoVO === 'SI';
+            }).length;
+        }
+
+        // Inyectamos los números en el HTML
+        document.getElementById('kpi-hoy').innerText = entregasHoy;
+        document.getElementById('kpi-total').innerText = entregados.length;
+        document.getElementById('kpi-reparados').innerText = reparados;
+        document.getElementById('kpi-devueltos').innerText = devueltos;
+
+        // 3. Cálculos para el Gráfico Donut (GLOBALES y sin duplicados)
+        let enTaller = noEntregados.filter(c => c.enTaller && !c.finTaller).length;
+        let enRecambios = noEntregados.filter(c => c.enRecambios && !c.finRecambios).length;
+        
+        // Para que el Donut sume un 100% perfecto, si un coche está en Taller/Recambios, 
+        // lo restamos de Logística Ptea o Listos para que no cuente doble.
+        let pteLogistica = noEntregados.filter(c => 
+            c.pasoAInventario === false && 
+            !(c.enTaller && !c.finTaller) && 
+            !(c.enRecambios && !c.finRecambios)
+        ).length;
+        
+        let listos = noEntregados.filter(c => 
+            c.pasoAInventario !== false && 
+            !(c.enTaller && !c.finTaller) && 
+            !(c.enRecambios && !c.finRecambios)
+        ).length;
+
+        // 4. Cálculos para la gráfica mensual
+        let mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        let conteoMeses = new Array(12).fill(0);
+
+        entregados.forEach(c => {
+            if (c.fechaEntrega) {
+                let partes = c.fechaEntrega.split('/');
+                if (partes.length === 3) {
+                    let mesIndex = parseInt(partes[1], 10) - 1; 
+                    if (mesIndex >= 0 && mesIndex <= 11) {
+                        conteoMeses[mesIndex]++; 
+                    }
+                }
+            }
+        });
+
+        // 5. Destruimos gráficos anteriores de forma segura para redibujar limpios
+        if(window.chartObjDonut) window.chartObjDonut.destroy();
+        if(window.chartObjMeses) window.chartObjMeses.destroy();
+
+        // 6. Dibujar Gráfico Donut
+        const canvasDonut = document.getElementById('graficoDonut');
+        if (canvasDonut) {
+            const ctxDonut = canvasDonut.getContext('2d');
+            window.chartObjDonut = new Chart(ctxDonut, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Listos/Con Cita', 'En Taller', 'En Recambios', 'Logística Ptea.'],
+                    datasets: [{
+                        data: [listos, enTaller, enRecambios, pteLogistica],
+                        backgroundColor: ['#10b981', '#f59e0b', '#14b8a6', '#94a3b8'],
+                        borderWidth: 0,
+                        hoverOffset: 8
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { size: 11, family: 'Inter' } } } },
+                    cutout: '65%' 
+                }
+            });
+        }
+
+        // 7. Dibujar Gráfico Mensual
+        const canvasMeses = document.getElementById('graficoMeses');
+        if (canvasMeses) {
+            const ctxMeses = canvasMeses.getContext('2d');
+            window.chartObjMeses = new Chart(ctxMeses, {
+                type: 'bar',
+                data: {
+                    labels: mesesNombres,
+                    datasets: [{
+                        label: 'Vehículos Entregados',
+                        data: conteoMeses,
+                        backgroundColor: 'rgba(0, 176, 240, 0.2)', 
+                        borderColor: '#00b0f0', 
+                        borderWidth: 2,
+                        borderRadius: 4, 
+                        hoverBackgroundColor: '#00b0f0'
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } } 
+                }
+            });
+        }
     };
+
+
 
     // ==========================================
     // 🛠️ FUNCIONES DE BOTONES Y TARJETAS
@@ -1026,7 +1134,7 @@
         });
     };
 
-    window.gestionarTraslado = async function(id) {
+   window.gestionarTraslado = async function(id) {
         const { value: formValues } = await Swal.fire({
             title: 'Traslado a Concesionario',
             html: `
@@ -1047,30 +1155,52 @@
             Swal.fire({title: 'Subiendo...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
             
             let urlActa = null;
+            
+            // 1. Intentamos subir el PDF al enlace real de Google Drive
             if (formValues.file) {
-                const reader = new FileReader();
-                reader.readAsDataURL(formValues.file);
-                urlActa = await new Promise((resolve) => {
-                    reader.onload = async () => {
-                        const res = await fetch('URL_DE_TU_GOOGLE_SCRIPT_AQUI', { 
-                            method: 'POST', 
-                            body: JSON.stringify({ base64: reader.result, fileName: formValues.file.name, mimeType: formValues.file.type }) 
-                        });
-                        const data = await res.json();
-                        resolve(data.url);
-                    };
-                });
+                try {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(formValues.file);
+                    urlActa = await new Promise((resolve) => {
+                        reader.onload = async () => {
+                            try {
+                                // Aquí hemos puesto tu enlace real para que no se bloquee
+                                const urlDrive = 'https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec'; 
+                                const res = await fetch(urlDrive, { 
+                                    method: 'POST', 
+                                    body: JSON.stringify({ base64: reader.result, fileName: formValues.file.name, mimeType: formValues.file.type }) 
+                                });
+                                const data = await res.json();
+                                resolve(data.url);
+                            } catch (e) {
+                                console.error("Error al subir archivo a Drive:", e);
+                                resolve(null); // Si falla la subida, continuamos sin bloquear la app
+                            }
+                        };
+                        reader.onerror = () => resolve(null);
+                    });
+                } catch (e) {
+                    console.error("Error leyendo archivo:", e);
+                }
             }
 
-            await window.updateDoc(window.doc(window.db, "vehiculos", id), {
-                entregado: true, 
-                fechaEntrega: new Date().toLocaleDateString('es-ES'),
-                tipoFinalizacion: 'TRASLADO',
-                concesionarioDestino: formValues.dest,
-                urlActaTraslado: urlActa
-            });
+            // 2. Guardamos los datos en Firebase
+            try {
+                await window.updateDoc(window.doc(window.db, "vehiculos", id), {
+                    entregado: true, 
+                    fechaEntrega: new Date().toLocaleDateString('es-ES'),
+                    tipoFinalizacion: 'TRASLADO',
+                    concesionarioDestino: formValues.dest,
+                    urlActaTraslado: urlActa
+                });
 
-            Swal.fire('¡Traslado Registrado!', 'El vehículo ya consta en el historial.', 'success');
+                Swal.fire('¡Traslado Registrado!', 'El vehículo ya consta en el historial.', 'success');
+                
+                // Refrescamos la vista para que el coche desaparezca de la pantalla activa
+                setTimeout(() => { window.renderizarVistas(); }, 500);
+            } catch (error) {
+                Swal.fire('Error', 'No se ha podido guardar el traslado en la base de datos.', 'error');
+            }
         }
     };
     
@@ -1666,7 +1796,8 @@
        let contenedor = document.getElementById('resultadoBusquedaHistorial');
        if (!inputVal) { contenedor.innerHTML = ''; return; }
        
-       let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
+      // Busca esta línea en tu función window.renderEntregados y asegúrate de que esté así:
+let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
        let resultados = entregados.filter(c => (c.B && c.B.replace(/\s/g, '').includes(inputVal)) || (c.A && c.A.includes(inputVal)));
        window.inyectarResultadosHistorial(resultados, contenedor, `el dato: ${inputVal}`);
     };
