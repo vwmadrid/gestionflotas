@@ -16,14 +16,8 @@
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
   <script type="module">
-    /**
-         * 🔥 2. CABECERA DE PROPIEDAD INTELECTUAL 🔥
-         * @project GesCar OS (Incluye App Clientes y Portal de Renting)
-         * @author Manuel Arjona Carrera & Miriam Olmo Fernández (Equipo M2 Code Systems)
-         * @copyright © 2026 Manuel Arjona Carrera & Miriam Olmo Fernández. Todos los derechos reservados.
-         */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-   import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
     
     window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; window.arrayUnion = arrayUnion; window.deleteDoc = deleteDoc; window.getDocs = getDocs;
     
@@ -88,7 +82,7 @@
                 <option value="recambios">Dpto. Recambios</option>
             </select>
             <input type="password" id="userPass" placeholder="Clave de acceso" class="w-full p-4 bg-gray-50 border border-gray-300 rounded-lg text-base outline-none focus:ring-2 focus:ring-[#00b0f0] font-medium">
-            <button onclick="iniciar()" class="w-full bg-[#001e50] text-white font-black py-4 rounded-lg hover:bg-blue-900 transition-all shadow-lg uppercase tracking-widest text-lg">
+            <button onclick="window.iniciar()" class="w-full bg-[#001e50] text-white font-black py-4 rounded-lg hover:bg-blue-900 transition-all shadow-lg uppercase tracking-widest text-lg">
                 Entrar al Sistema
             </button>
         </div>
@@ -102,19 +96,19 @@
     </div>
   <nav id="tabsEntregas" class="hidden flex-col p-4 gap-2 flex-1">
       <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1">Pre-Recepción</p>
-      <button onclick="cambiarPestana('logistica')" class="p-3 text-amber-300 bg-amber-500/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all border border-amber-500/30 mb-4"><i class="ph-bold ph-truck text-lg"></i> Logística Renting</button>
+      <button onclick="window.cambiarPestana('logistica')" class="p-3 text-amber-300 bg-amber-500/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all border border-amber-500/30 mb-4"><i class="ph-bold ph-truck text-lg"></i> Logística Renting</button>
       
       <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1">Concesionario</p>
-      <button onclick="cambiarPestana('todos')" class="p-3 bg-white/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all shadow-sm"><i class="ph-bold ph-car text-lg"></i> Vehículos</button>
-      <button onclick="cambiarPestana('agenda')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-lg"></i> Agenda Citas</button>
+      <button onclick="window.cambiarPestana('todos')" class="p-3 bg-white/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all shadow-sm"><i class="ph-bold ph-car text-lg"></i> Vehículos</button>
+      <button onclick="window.cambiarPestana('agenda')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-lg"></i> Agenda Citas</button>
       
       <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1 mt-2">Monitorización</p>
-      <button onclick="cambiarPestana('global-taller')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-amber-500/20"><i class="ph-bold ph-wrench text-lg text-amber-400"></i> Todo en Taller</button>
-      <button onclick="cambiarPestana('global-recambios')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-teal-500/20"><i class="ph-bold ph-package text-lg text-teal-400"></i> Todo en Recambios</button>
+      <button onclick="window.cambiarPestana('global-taller')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-amber-500/20"><i class="ph-bold ph-wrench text-lg text-amber-400"></i> Todo en Taller</button>
+      <button onclick="window.cambiarPestana('global-recambios')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-teal-500/20"><i class="ph-bold ph-package text-lg text-teal-400"></i> Todo en Recambios</button>
 
       <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1 mt-4">Historial</p>
-      <button onclick="cambiarPestana('entregados')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-white/20"><i class="ph-bold ph-check-square-offset text-lg"></i> Historial Entregados</button>
-      <button onclick="cambiarPestana('dashboard')" class="p-3 text-emerald-400 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-1 border border-emerald-500/30"><i class="ph-bold ph-chart-pie-slice text-lg"></i> Dashboard Análisis</button>
+      <button onclick="window.cambiarPestana('entregados')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-white/20"><i class="ph-bold ph-check-square-offset text-lg"></i> Historial Entregados</button>
+      <button onclick="window.cambiarPestana('dashboard')" class="p-3 text-emerald-400 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-1 border border-emerald-500/30"><i class="ph-bold ph-chart-pie-slice text-lg"></i> Dashboard Análisis</button>
     </nav>
    <div class="p-6 bg-black/20 mt-auto border-t border-white/10">
       <p id="roleBadge" class="font-bold text-sm uppercase text-white"></p>
@@ -123,7 +117,7 @@
         <i class="ph-bold ph-info"></i> Acerca de GesCar OS
       </button>
 
-      <button onclick="cerrarSesion()" class="mt-2 text-xs text-red-400 hover:text-red-300 font-bold flex items-center gap-1 p-2 rounded-lg hover:bg-red-500/10 transition-colors">
+      <button onclick="window.cerrarSesion()" class="mt-2 text-xs text-red-400 hover:text-red-300 font-bold flex items-center gap-1 p-2 rounded-lg hover:bg-red-500/10 transition-colors">
         <i class="ph-bold ph-power"></i> Cerrar Sesión
       </button>
     </div>
@@ -134,47 +128,46 @@
       <div class="flex items-center justify-between">
          <div class="relative w-full max-w-sm">
              <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg"></i>
-             <input type="text" id="buscadorInput" onkeyup="filtrarCoches()" placeholder="Buscar Bastidor o Matrícula..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-[#00b0f0] focus:ring-1 focus:ring-[#00b0f0] transition-all">
+             <input type="text" id="buscadorInput" onkeyup="window.filtrarCoches()" placeholder="Buscar Bastidor o Matrícula..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-[#00b0f0] focus:ring-1 focus:ring-[#00b0f0] transition-all">
          </div>
          
          <div class="flex items-center gap-2">
             <div id="botonesLogistica" class="hidden flex items-center gap-2">
-                <button onclick="abrirLectorPDF()" class="bg-white border border-[#001e50] text-[#001e50] px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-50 transition-colors shadow-sm">
+                <button onclick="window.abrirLectorPDF()" class="bg-white border border-[#001e50] text-[#001e50] px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-50 transition-colors shadow-sm">
                   <i class="ph-bold ph-files text-base"></i> Subir PDFs
                 </button>
-                <button onclick="anadirVehiculoManual()" class="bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-900 transition-colors shadow-sm">
+                <button onclick="window.anadirVehiculoManual()" class="bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-900 transition-colors shadow-sm">
                   <i class="ph-bold ph-keyboard text-base"></i> Añadir Manual
                 </button>
             </div>
 
             <div id="botonesAgenda" class="hidden flex items-center gap-2">
-                <button onclick="crearCitaManual()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-800 transition-colors shadow-sm">
+                <button onclick="window.crearCitaManual()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-800 transition-colors shadow-sm">
                     <i class="ph-bold ph-plus-circle text-base"></i> Nueva Cita
                 </button>
-
-                <button onclick="abrirGestorVacaciones()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-indigo-800 transition-colors shadow-sm">
+                <button onclick="window.abrirGestorVacaciones()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-indigo-800 transition-colors shadow-sm">
                     <i class="ph-bold ph-calendar-slash text-base"></i> Bloquear Fechas
                 </button>
             </div>
             
             <div id="controlesVistaExcel" class="hidden flex items-center gap-2 border-l border-gray-300 pl-3 ml-1">
-                <button onclick="descargarExcelReal()" class="bg-[#107c41] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0c5e31] transition-colors shadow-sm">
+                <button onclick="window.descargarExcelReal()" class="bg-[#107c41] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0c5e31] transition-colors shadow-sm">
                   <i class="ph-bold ph-microsoft-excel-logo text-base"></i> Exportar
                 </button>
                 <div class="bg-gray-100 p-1 rounded-lg flex gap-1 border border-gray-300">
-                   <button id="btnVistaTarjetas" onclick="cambiarModoVisualizacion('tarjetas')" class="bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all"><i class="ph-bold ph-squares-four text-sm"></i> Tarjetas</button>
-                   <button id="btnVistaTabla" onclick="cambiarModoVisualizacion('tabla')" class="text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all"><i class="ph-bold ph-table text-sm"></i> Excel</button>
+                   <button id="btnVistaTarjetas" onclick="window.cambiarModoVisualizacion('tarjetas')" class="bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all"><i class="ph-bold ph-squares-four text-sm"></i> Tarjetas</button>
+                   <button id="btnVistaTabla" onclick="window.cambiarModoVisualizacion('tabla')" class="text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all"><i class="ph-bold ph-table text-sm"></i> Excel</button>
                 </div>
             </div>
          </div>
       </div>
 
       <div id="filtrosVisuales" class="hidden flex gap-2 overflow-x-auto pb-1 mt-1">
-         <button onclick="aplicarFiltroVisual('todos', this)" class="filtro-btn bg-[#001e50] text-white border border-[#001e50] px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-all">Todos (<span id="c-todos">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('pendientes', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-clock text-gray-400 text-sm"></i> Ptes. Cita (<span id="c-pendientes">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('concita', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-calendar-check text-blue-500 text-sm"></i> Con Cita (<span id="c-concita">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('taller', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-wrench text-amber-500 text-sm"></i> Taller (<span id="c-taller">0</span>)</button>
-         <button onclick="aplicarFiltroVisual('recambios', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-package text-teal-500 text-sm"></i> Recambios (<span id="c-recambios">0</span>)</button>
+         <button onclick="window.aplicarFiltroVisual('todos', this)" class="filtro-btn bg-[#001e50] text-white border border-[#001e50] px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-all">Todos (<span id="c-todos">0</span>)</button>
+         <button onclick="window.aplicarFiltroVisual('pendientes', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-clock text-gray-400 text-sm"></i> Ptes. Cita (<span id="c-pendientes">0</span>)</button>
+         <button onclick="window.aplicarFiltroVisual('concita', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-calendar-check text-blue-500 text-sm"></i> Con Cita (<span id="c-concita">0</span>)</button>
+         <button onclick="window.aplicarFiltroVisual('taller', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-wrench text-amber-500 text-sm"></i> Taller (<span id="c-taller">0</span>)</button>
+         <button onclick="window.aplicarFiltroVisual('recambios', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-package text-teal-500 text-sm"></i> Recambios (<span id="c-recambios">0</span>)</button>
       </div>
     </header>
     
@@ -187,7 +180,6 @@
       
       <div id="contenedorDashboard" class="hidden max-w-6xl mx-auto w-full space-y-6">
         <h2 class="text-2xl font-black text-[#001e50] uppercase flex items-center gap-2"><i class="ph-bold ph-trend-up text-[#00b0f0]"></i> Rendimiento de la Flota</h2>
-        
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105">
                 <i class="ph-fill ph-car-profile text-3xl text-emerald-500 mb-2"></i>
@@ -210,22 +202,11 @@
                 <p id="kpi-devueltos" class="text-4xl font-black text-[#001e50]">0</p>
             </div>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative h-80 flex flex-col items-center">
-                <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Estado del Inventario Activo</h3>
-                <div class="w-full h-full relative"><canvas id="graficoDonut"></canvas></div>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 relative h-80 flex flex-col items-center">
-                <h3 class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">Comparativa de Entregas Mensuales</h3>
-                <div class="w-full h-full relative"><canvas id="graficoMeses"></canvas></div>
-            </div>
-        </div>
       </div>
     </div>
   </main>
 
-  <input type="file" id="inputUploadPDF" accept=".pdf" multiple class="hidden" onchange="procesarPDFs(event)">
+  <input type="file" id="inputUploadPDF" accept=".pdf" multiple class="hidden" onchange="window.procesarPDFs(event)">
 
   <div id="chatModal" class="fixed inset-0 z-50 hidden bg-black/60 flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col h-[550px] overflow-hidden border-t-8 border-[#075e54]">
@@ -237,31 +218,48 @@
             <p id="chatSubtitulo" class="text-[11px] text-white/80 font-medium"></p>
           </div>
         </div>
-        <button onclick="cerrarChat()" class="p-2 hover:bg-white/10 rounded-full transition-colors"><i class="ph-bold ph-x"></i></button>
+        <button onclick="window.cerrarChat()" class="p-2 hover:bg-white/10 rounded-full transition-colors"><i class="ph-bold ph-x"></i></button>
       </div>
       <div id="chatMessages" class="p-4 flex-grow overflow-y-auto bg-whatsapp flex flex-col gap-2"></div>
       <div class="p-3 bg-[#f0f0f0] flex gap-2 items-center border-t border-gray-300">
         <input type="hidden" id="chatFilaActiva">
         <input type="text" id="chatInput" placeholder="Escribe un mensaje..." class="flex-grow px-4 py-2.5 bg-white border border-gray-300 rounded-full outline-none text-sm shadow-sm focus:border-[#128c7e]">
-        <button onclick="enviarMensajeChat()" class="w-10 h-10 flex-shrink-0 bg-[#128c7e] text-white rounded-full shadow-sm flex items-center justify-center hover:bg-[#0b5c53]"><i class="ph-fill ph-paper-plane-right text-lg"></i></button>
+        <button onclick="window.enviarMensajeChat()" class="w-10 h-10 flex-shrink-0 bg-[#128c7e] text-white rounded-full shadow-sm flex items-center justify-center hover:bg-[#0b5c53]"><i class="ph-fill ph-paper-plane-right text-lg"></i></button>
       </div>
     </div>
   </div>
 
+  <div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6);">
+    <div style="background-color: #fff; margin: 10% auto; padding: 30px; border: 1px solid #ddd; width: 400px; border-radius: 12px; text-align: center; font-family: 'Inter', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <p style="font-size: 14px; color: #555;">Versión 1.0.0</p>
+        <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Automotive Operations Platform</p>
+        <hr style="margin-bottom: 20px;">
+        <p style="font-size: 13px; font-weight: bold; color: #333;">&copy; 2026 Manuel Arjona Carrera & Miriam Olmo Fernández.</p>
+        <p style="font-size: 11px; color: #666; margin-bottom: 25px;">Todos los derechos reservados.</p>
+        <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Desarrollado por: M2 Code Systems</p>
+        <button id="btnClose" style="background-color: #001e50; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- BLOQUE PRINCIPAL DE JAVASCRIPT (UNIFICADO Y BLINDADO) -->
   <script>
-    /**
-     * 🔥 CABECERA DE PROPIEDAD INTELECTUAL 🔥
-     * @project GesCar OS (Panel Interno)
-     * @author Manuel Arjona Carrera & Miriam Olmo Fernández (Equipo M2 Code Systems)
-     */
+    // 🔥 HERRAMIENTA CLAVE: Escapar variables para que no rompan el HTML
+    window.escapeJS = function(str) {
+        return String(str || '').replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+    };
+
     let userRole = ""; let activeTab = 'logistica'; let modoVistaActual = 'tarjetas'; 
     let primeraCargaDb = true;
     let unsubscribeFirebase = null; let todosLosCoches = []; let filtroActual = 'todos';
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzRBEhgRYyLAFwqw6AP_EAxD1XgftJNDdhYk2eSjmuT4s0ON7A1pv2Z5unNaMpewCaZ/exec";
 
     window.onload = function() {
       const rol = localStorage.getItem('vw_departamento');
-      if (rol) { userRole = rol; document.getElementById('userRole').value = rol; iniciarAppDirectamente(rol); }
+      if (rol) { userRole = rol; document.getElementById('userRole').value = rol; window.iniciarAppDirectamente(rol); }
+      
+      // Controladores del Modal
+      document.getElementById("btnAbout").onclick = function() { document.getElementById("aboutModal").style.display = "block"; }
+      document.getElementById("btnClose").onclick = function() { document.getElementById("aboutModal").style.display = "none"; }
+      window.onclick = function(event) { if (event.target == document.getElementById("aboutModal")) { document.getElementById("aboutModal").style.display = "none"; } }
     };
 
     window.iniciar = function() {
@@ -272,31 +270,30 @@
       if (pass !== pwd[userRole]) { Swal.fire('Error', 'Clave incorrecta', 'error'); return; }
       
       localStorage.setItem('vw_departamento', userRole); 
-      iniciarAppDirectamente(userRole);
+      window.iniciarAppDirectamente(userRole);
     }
 
-   window.iniciarAppDirectamente = function(rol) {
+    window.iniciarAppDirectamente = function(rol) {
         document.getElementById('roleBadge').innerText = "Perfil: " + rol;
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('sidebarApp').style.display = 'flex';
         document.getElementById('mainApp').style.display = 'flex';
         
-        cargar(); 
+        window.cargar(); 
 
         if (rol === 'entregas') {
-            if (typeof window.iniciarMotorAlertas === 'function') {
-                window.iniciarMotorAlertas(); 
-            }
+            if (typeof window.iniciarMotorAlertas === 'function') { window.iniciarMotorAlertas(); }
             document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
             document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
-            cambiarPestana('logistica');
+            window.cambiarPestana('logistica');
         } else { 
             document.getElementById('contenedorTarjetas').style.display = 'grid';
         }
     }
+
     window.cerrarSesion = function() { localStorage.removeItem('vw_departamento'); location.reload(); }
 
-   window.cambiarPestana = function(pestana) {
+    window.cambiarPestana = function(pestana) {
       activeTab = pestana;
       const botones = document.querySelectorAll('#tabsEntregas button');
       
@@ -332,7 +329,7 @@
       } else if (pestana === 'todos') {
         document.getElementById('controlesVistaExcel').style.display = 'flex';
         document.getElementById('filtrosVisuales').style.display = 'flex';
-        cambiarModoVisualizacion(modoVistaActual);
+        window.cambiarModoVisualizacion(modoVistaActual);
       } else if (pestana === 'global-taller' || pestana === 'global-recambios') {
         document.getElementById('contenedorTarjetas').style.display = 'grid';
       } else if (pestana === 'agenda') {
@@ -342,15 +339,16 @@
       } else if (pestana === 'entregados') {
         document.getElementById('contenedorEntregados').style.display = 'block';
         document.getElementById('buscadorInput').style.display = 'none';
-        renderEntregados();
+        window.renderEntregados();
       } else if (pestana === 'dashboard') {
         document.getElementById('contenedorDashboard').style.display = 'block';
         document.getElementById('buscadorInput').style.display = 'none';
-        renderizarDashboard();
+        window.renderizarDashboard();
       }
       
-      if(pestana !== 'dashboard') cargar();
+      if(pestana !== 'dashboard') window.cargar();
     }
+    
     window.cambiarModoVisualizacion = function(modo) {
        modoVistaActual = modo;
        const btnT = document.getElementById('btnVistaTarjetas');
@@ -366,7 +364,7 @@
           document.getElementById('contenedorTarjetas').style.display = 'none';
           document.getElementById('contenedorTabla').style.display = 'block';
        }
-       renderizarVistas();
+       window.renderizarVistas();
     }
 
     window.aplicarFiltroVisual = function(filtro, btnElement) {
@@ -375,7 +373,7 @@
           b.className = "filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all";
        });
        btnElement.className = "filtro-btn bg-[#001e50] text-white border border-[#001e50] px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all";
-       renderizarVistas();
+       window.renderizarVistas();
     }
 
     window.filtrarCoches = function() {
@@ -383,7 +381,7 @@
       document.querySelectorAll('.fila-coche').forEach(el => { el.style.display = el.innerText.toLowerCase().includes(t) ? '' : 'none'; });
     }
 
-    function calcularProgreso(c) {
+    window.calcularProgreso = function(c) {
         let pct = 20; 
         let enInventario = c.pasoAInventario !== false; 
         if (enInventario) pct += 20; 
@@ -401,7 +399,7 @@
         return { pct, color };
     }
 
-    function obtenerBurbujaChat(chatObj) {
+    window.obtenerBurbujaChat = function(chatObj) {
       if (!chatObj || !chatObj.history) return '';
       let hs = chatObj.history;
       let lo = chatObj.lastOpened ? (chatObj.lastOpened[userRole.toUpperCase()] || 0) : 0;
@@ -410,7 +408,7 @@
       return '';
     }
 
-    function cargar() {
+    window.cargar = function() {
       if(unsubscribeFirebase) unsubscribeFirebase();
       unsubscribeFirebase = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
         todosLosCoches = [];
@@ -432,20 +430,20 @@
         todosLosCoches.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
 
         if (userRole === 'taller' || userRole === 'recambios') {
-           renderizarDepartamentos(userRole);
+           window.renderizarDepartamentos(userRole);
         } else if (userRole === 'entregas') {
           if (activeTab === 'logistica') {
-              renderLogistica();
+              window.renderLogistica();
           } else if (activeTab === 'todos') { 
-              actualizarContadores(); 
-              renderizarVistas(); 
+              window.actualizarContadores(); 
+              window.renderizarVistas(); 
           } else if (activeTab === 'global-taller') {
               let cochesEnTaller = todosLosCoches.filter(c => c.enTaller && !c.finTaller && c.entregado !== true && c.entregado !== "true");
               let div = document.getElementById('contenedorTarjetas');
               if (cochesEnTaller.length === 0) {
                   div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay ningún vehículo en Taller actualmente.</p></div>`;
               } else {
-                  div.innerHTML = cochesEnTaller.map(c => renderTarjetaCompacta(c)).join('');
+                  div.innerHTML = cochesEnTaller.map(c => window.renderTarjetaCompacta(c)).join('');
               }
           } else if (activeTab === 'global-recambios') {
               let cochesEnRecambios = todosLosCoches.filter(c => c.enRecambios && !c.finRecambios && c.entregado !== true && c.entregado !== "true");
@@ -453,12 +451,12 @@
               if (cochesEnRecambios.length === 0) {
                   div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay ningún vehículo en Recambios actualmente.</p></div>`;
               } else {
-                  div.innerHTML = cochesEnRecambios.map(c => renderTarjetaCompacta(c)).join('');
+                  div.innerHTML = cochesEnRecambios.map(c => window.renderTarjetaCompacta(c)).join('');
               }
           } else if (activeTab === 'agenda') {
-              renderAgenda();
+              window.renderAgenda();
           } else if (activeTab === 'entregados') {
-              renderEntregados();
+              window.renderEntregados();
           }
           
           if (primeraCargaDb) {
@@ -469,7 +467,7 @@
       });
     }
 
-    function actualizarContadores() {
+    window.actualizarContadores = function() {
        let pendientes = 0, concita = 0, taller = 0, recambios = 0, total = 0;
        todosLosCoches.forEach(c => {
           let enInventario = c.pasoAInventario !== false; 
@@ -492,7 +490,7 @@
        document.getElementById('c-recambios').innerText = recambios;
     }
 
-    function renderLogistica() {
+    window.renderLogistica = function() {
        let logistica = todosLosCoches.filter(c => c.pasoAInventario === false && c.entregado !== true && c.entregado !== "true");
        let div = document.getElementById('contenedorLogistica');
        
@@ -500,16 +498,19 @@
            div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay vehículos en fase de logística previa.</p></div>`;
        } else {
            div.innerHTML = logistica.map(c => {
-               let btnDoc = c.fechaDoc ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Doc: ${c.fechaDoc}</div>` : `<button onclick="marcarPaso('${c.fila}', 'fechaDoc')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">Documentación</button>`;
-               let btnTrans = c.fechaTransporte ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Trans: ${c.fechaTransporte}</div>` : `<button onclick="marcarPaso('${c.fila}', 'fechaTransporte')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Transporte</button>`;
-               let btnPrep = c.fechaPreparacion ? `<div class="bg-amber-100 text-amber-800 text-[9px] font-bold py-1.5 px-2 rounded border border-amber-300 text-center">⚠️ Prep: ${c.fechaPreparacion}</div>` : `<button onclick="marcarPaso('${c.fila}', 'fechaPreparacion')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Preparación</button>`;
+               let btnDoc = c.fechaDoc ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Doc: ${c.fechaDoc}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaDoc')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">Documentación</button>`;
+               let btnTrans = c.fechaTransporte ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Trans: ${c.fechaTransporte}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaTransporte')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Transporte</button>`;
+               let btnPrep = c.fechaPreparacion ? `<div class="bg-amber-100 text-amber-800 text-[9px] font-bold py-1.5 px-2 rounded border border-amber-300 text-center">⚠️ Prep: ${c.fechaPreparacion}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaPreparacion')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Preparación</button>`;
 
-               let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})); 
-               let mS = encodeURIComponent(c.C || ''); 
-               let maS = encodeURIComponent(c.B || '');
+               let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27"); 
+               let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
+               let maS = encodeURIComponent(c.B || '').replace(/'/g, "%27");
+               
+               let escA = window.escapeJS(c.A); let escB = window.escapeJS(c.B); let escC = window.escapeJS(c.C);
+               let escRen = window.escapeJS(c.renting); let escAge = window.escapeJS(c.agencia);
 
-               let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<span class="status-btn bg-amber-100 text-amber-800"><i class="ph-bold ph-wrench"></i> Tall. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
-               let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<span class="status-btn bg-teal-100 text-teal-800"><i class="ph-bold ph-package"></i> Rec. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
+               let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<span class="status-btn bg-amber-100 text-amber-800"><i class="ph-bold ph-wrench"></i> Tall. Curso</span>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
+               let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<span class="status-btn bg-teal-100 text-teal-800"><i class="ph-bold ph-package"></i> Rec. Curso</span>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
 
                let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
                let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
@@ -522,15 +523,15 @@
                         <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
                     </div>
                     <div class="flex gap-1 flex-shrink-0">
-                        <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${obtenerBurbujaChat(c.chatData)}</button>
-                        <button onclick="editarVehiculoBasico('${c.fila}', '${c.A}', '${c.B}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info del vehículo"><i class="ph-bold ph-pencil-simple text-lg"></i></button> 
-                        <button onclick="borrarVehiculo('${c.fila}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>            
+                        <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${window.obtenerBurbujaChat(c.chatData)}</button>
+                        <button onclick="window.editarVehiculoBasico('${c.fila}', '${escA}', '${escB}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info del vehículo"><i class="ph-bold ph-pencil-simple text-lg"></i></button> 
+                        <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>            
                     </div>
                  </div>
 
                  <div class="flex gap-2 mb-3">
-                    <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
-                    <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
+                    <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
+                    <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
                  </div>
 
                  <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
@@ -544,7 +545,7 @@
                    </div>
                  </div>
 
-                 <button onclick="pasarAInventario('${c.fila}')" class="w-full mt-auto bg-[#001e50] text-white font-bold py-3 rounded-lg text-xs hover:bg-blue-900 shadow-sm flex items-center justify-center gap-2">
+                 <button onclick="window.pasarAInventario('${c.fila}')" class="w-full mt-auto bg-[#001e50] text-white font-bold py-3 rounded-lg text-xs hover:bg-blue-900 shadow-sm flex items-center justify-center gap-2">
                     <i class="ph-bold ph-check"></i> Marcar como "Listo para Entrega"
                  </button>
                </div>`;
@@ -552,7 +553,7 @@
        }
     }
 
-    function renderizarVistas() {
+    window.renderizarVistas = function() {
        let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
        let filtrados = activos.filter(c => {
           let enT = c.enTaller && !c.finTaller; 
@@ -572,14 +573,14 @@
            if (filtrados.length === 0) {
                div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay vehículos en esta categoría.</p></div>`;
            } else {
-               div.innerHTML = filtrados.map(c => renderTarjetaCompacta(c)).join('');
+               div.innerHTML = filtrados.map(c => window.renderTarjetaCompacta(c)).join('');
            }
        } else {
-           renderTablaModoExcel(filtrados);
+           window.renderTablaModoExcel(filtrados);
        }
     }
 
-    function renderTablaModoExcel(datosFiltrados) {
+    window.renderTablaModoExcel = function(datosFiltrados) {
        let contenedor = document.getElementById('contenedorTabla');
        if(datosFiltrados.length === 0){ contenedor.innerHTML = "<p class='text-center p-10 font-bold text-gray-500'>Sin resultados en esta categoría.</p>"; return; }
        
@@ -595,11 +596,15 @@
          </thead><tbody id="filasTablaExcel">`;
 
        datosFiltrados.forEach(c => {
-          let mS = encodeURIComponent(c.C || ''); let maS = encodeURIComponent(c.B || ''); 
-          let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]}));
+          let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
+          let maS = encodeURIComponent(c.B || '').replace(/'/g, "%27"); 
+          let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27");
           let checkTaller = c.finTaller ? `<div class="excel-check check-fin">✓</div> FIN` : (c.enTaller ? `<div class="excel-check check-curso">X</div> CURSO` : `<div class="excel-check"></div> SOLICITAR`);
           let checkRecambios = c.finRecambios ? `<div class="excel-check check-fin">✓</div> FIN` : (c.enRecambios ? `<div class="excel-check check-curso">X</div> CURSO` : `<div class="excel-check"></div> SOLICITAR`);
-          let prog = calcularProgreso(c);
+          let prog = window.calcularProgreso(c);
+          
+          let escC = window.escapeJS(c.C);
+          let escRen = window.escapeJS(c.renting); let escAge = window.escapeJS(c.agencia);
 
           html += `
           <tr class="fila-coche hover:bg-[#e0f2fe]">
@@ -607,17 +612,17 @@
              <td class="font-bold text-gray-900">${c.C}</td>
              <td class="font-bold bg-gray-50 text-center border-l border-r border-gray-200">${c.B}</td>
              <td class="font-mono text-gray-500 text-[10px]">${c.A}</td>
-             <td class="cursor-pointer text-blue-600 hover:underline" onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')">${c.renting || '-'}</td>
-             <td class="cursor-pointer text-blue-600 hover:underline border-r border-gray-200" onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')">${c.agencia || '-'}</td>
+             <td class="cursor-pointer text-blue-600 hover:underline" onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')">${c.renting || '-'}</td>
+             <td class="cursor-pointer text-blue-600 hover:underline border-r border-gray-200" onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')">${c.agencia || '-'}</td>
 
-             <td class="cursor-pointer hover:bg-gray-100" onclick="pedirInst(this, '${c.fila}', 'taller')">${checkTaller}</td>
+             <td class="cursor-pointer hover:bg-gray-100" onclick="window.pedirInst(this, '${c.fila}', 'taller')">${checkTaller}</td>
              <td class="text-gray-500 truncate max-w-[120px]" title="${c.instruccionTaller||''}">${c.instruccionTaller || '-'}</td>
              <td class="text-center font-bold text-gray-600">${c.ordenTaller || '-'}</td>
              <td class="text-center text-gray-400">${c.fechaEntradaTaller || '-'}</td>
              <td class="text-center text-gray-500">${c.fechaTaller || '-'}</td>
              <td class="text-center text-emerald-600 font-bold border-r border-gray-200">${c.fechaFinTaller || '-'}</td>
              
-             <td class="cursor-pointer hover:bg-gray-100" onclick="pedirInst(this, '${c.fila}', 'recambios')">${checkRecambios}</td>
+             <td class="cursor-pointer hover:bg-gray-100" onclick="window.pedirInst(this, '${c.fila}', 'recambios')">${checkRecambios}</td>
              <td class="text-gray-500 truncate max-w-[120px]" title="${c.instruccionRecambios||''}">${c.instruccionRecambios || '-'}</td>
              <td class="text-center font-bold text-gray-600">${c.ordenRecambios || '-'}</td>
              <td class="text-center text-gray-400">${c.fechaEntradaRecambios || '-'}</td>
@@ -626,29 +631,33 @@
              
              <td class="font-bold text-[#001e50] text-center bg-blue-50">${c.fechaCita || '-'}</td>
              <td class="text-center flex items-center justify-center gap-3 pt-2 pb-2 px-2">
-                <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="text-[#25D366] hover:scale-110 relative"><i class="ph-fill ph-whatsapp-logo text-xl"></i>${obtenerBurbujaChat(c.chatData)}</button>
-                <button onclick="marcarComoEntregado('${c.fila}')" class="text-gray-400 hover:text-emerald-600" title="Entregar"><i class="ph-bold ph-key text-xl"></i></button>
-                <button onclick="borrarVehiculo('${c.fila}', '${c.C}')" class="text-red-400 hover:text-red-600" title="Eliminar vehículo"><i class="ph-bold ph-trash text-xl"></i></button>
+                <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="text-[#25D366] hover:scale-110 relative"><i class="ph-fill ph-whatsapp-logo text-xl"></i>${window.obtenerBurbujaChat(c.chatData)}</button>
+                <button onclick="window.marcarComoEntregado('${c.fila}')" class="text-gray-400 hover:text-emerald-600" title="Entregar"><i class="ph-bold ph-key text-xl"></i></button>
+                <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="text-red-400 hover:text-red-600" title="Eliminar vehículo"><i class="ph-bold ph-trash text-xl"></i></button>
              </td>
           </tr>`;
        });
        html += `</tbody></table>`; contenedor.innerHTML = html;
     }
 
-    function renderTarjetaCompacta(c) {
-      let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})); 
-      let mS = encodeURIComponent(c.C || ''); let maS = encodeURIComponent(c.B || '');
+    window.renderTarjetaCompacta = function(c) {
+      let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27"); 
+      let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
+      let maS = encodeURIComponent(c.B || '').replace(/'/g, "%27");
       
+      let escA = window.escapeJS(c.A); let escB = window.escapeJS(c.B); let escC = window.escapeJS(c.C);
+      let escRen = window.escapeJS(c.renting); let escAge = window.escapeJS(c.agencia);
+
       let enT = c.enTaller && !c.finTaller;
       let enR = c.enRecambios && !c.finRecambios;
       let tieneCita = !!c.fechaCita;
 
       let isAlerta = tieneCita && (enT || enR);
       let borderAlerta = isAlerta ? 'border-l-8 border-red-600 bg-red-50/50' : 'border-l-8 border-[#001e50]';
-      let prog = calcularProgreso(c);
+      let prog = window.calcularProgreso(c);
 
-      let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<span class="status-btn bg-amber-100 text-amber-800"><i class="ph-bold ph-wrench"></i> Tall. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
-      let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<span class="status-btn bg-teal-100 text-teal-800"><i class="ph-bold ph-package"></i> Rec. Curso</span>` : `<button onclick="pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
+      let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<span class="status-btn bg-amber-100 text-amber-800"><i class="ph-bold ph-wrench"></i> Tall. Curso</span>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
+      let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<span class="status-btn bg-teal-100 text-teal-800"><i class="ph-bold ph-package"></i> Rec. Curso</span>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
 
       let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
       let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
@@ -664,17 +673,17 @@
             <p class="text-[10px] font-bold text-gray-400 mt-0.5 tracking-widest truncate">VIN: ${c.A}</p>
           </div>
           <div class="flex gap-1 flex-shrink-0">
-             <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${obtenerBurbujaChat(c.chatData)}</button>
-             <button onclick="editarVehiculoBasico('${c.fila}', '${c.A}', '${c.B}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info"><i class="ph-bold ph-pencil-simple text-lg"></i></button>
-             <button onclick="marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors"><i class="ph-bold ph-key text-lg"></i></button>
-            <button onclick="gestionarTraslado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white shadow-sm transition-colors" title="Traslado a Concesionario"><i class="ph-bold ph-airplane-takeoff text-lg"></i></button>
-             <button onclick="borrarVehiculo('${c.fila}', '${c.C}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>   
+             <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${window.obtenerBurbujaChat(c.chatData)}</button>
+             <button onclick="window.editarVehiculoBasico('${c.fila}', '${escA}', '${escB}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info"><i class="ph-bold ph-pencil-simple text-lg"></i></button>
+             <button onclick="window.marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors"><i class="ph-bold ph-key text-lg"></i></button>
+             <button onclick="window.gestionarTraslado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white shadow-sm transition-colors" title="Traslado a Concesionario"><i class="ph-bold ph-airplane-takeoff text-lg"></i></button>
+             <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>   
           </div>
         </div>
         
         <div class="flex gap-2 mb-3">
-            <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
-            <button onclick="editarRentingAgencia('${c.fila}', '${c.renting||''}', '${c.agencia||''}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
+            <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
+            <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
         </div>
 
         <div class="flex items-center justify-between mb-3">
@@ -696,7 +705,7 @@
       </div>`;
     }
 
-    function renderizarDepartamentos(depto) {
+    window.renderizarDepartamentos = function(depto) {
        let divP = document.getElementById('contenedorTarjetas');
        let activos = todosLosCoches.filter(c => (c.entregado !== true && c.entregado !== "true") && (depto === 'taller' ? (c.enTaller && !c.finTaller) : (c.enRecambios && !c.finRecambios)));
        let p = depto === 'taller' ? 'p' : 'r';
@@ -708,16 +717,18 @@
 
        divP.innerHTML = `
          <div class="col-span-full mb-1"><h3 class="text-xl font-black flex items-center gap-2 text-[#001e50]"><i class="ph-fill ph-tray-arrow-down"></i> Bandeja Entrada (Nuevas Peticiones)</h3></div>
-         ${nuevos.length ? nuevos.map(c => renderActivaDpto(c, p, c, Tipo)).join('') : '<p class="text-gray-400 font-bold col-span-full mb-6 bg-white p-4 rounded-xl border border-gray-200 text-center">Ninguna petición pendiente.</p>'}
+         ${nuevos.length ? nuevos.map(c => window.renderActivaDpto(c, p, c, Tipo)).join('') : '<p class="text-gray-400 font-bold col-span-full mb-6 bg-white p-4 rounded-xl border border-gray-200 text-center">Ninguna petición pendiente.</p>'}
          
          <div class="col-span-full mb-1 mt-6 border-t border-gray-200 pt-6"><h3 class="text-xl font-black flex items-center gap-2 text-[#001e50]"><i class="ph-fill ${depto==='taller'?'ph-wrench':'ph-package'}"></i> Gestión en Curso</h3></div>
-         ${enRep.length ? enRep.map(c => renderActivaDpto(c, p, c, Tipo)).join('') : '<p class="text-gray-400 font-bold col-span-full bg-white p-4 rounded-xl border border-gray-200 text-center">Sin vehículos en curso.</p>'}
+         ${enRep.length ? enRep.map(c => window.renderActivaDpto(c, p, c, Tipo)).join('') : '<p class="text-gray-400 font-bold col-span-full bg-white p-4 rounded-xl border border-gray-200 text-center">Sin vehículos en curso.</p>'}
        `;
     }
 
-    function renderActivaDpto(c, pre, obj, tipo) {
-      let chatJson = encodeURIComponent(JSON.stringify(c.chatData));
-      let mS = encodeURIComponent(c.C || ''); let maS = encodeURIComponent(c.B || '');
+    window.renderActivaDpto = function(c, pre, obj, tipo) {
+      let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27");
+      let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
+      let maS = encodeURIComponent(c.B || '').replace(/'/g, "%27");
+      
       let bClass = tipo === 'Taller' ? 'border-t-4 border-amber-400' : 'border-t-4 border-teal-500';
       let infoExtra = tipo === 'Taller' ? c.instruccionTaller : c.instruccionRecambios;
       let fEntrada = tipo === 'Taller' ? c.fechaEntradaTaller : c.fechaEntradaRecambios;
@@ -754,7 +765,7 @@
              <h3 class="font-black text-lg text-[#001e50] uppercase truncate">${c.C}</h3>
              <p class="text-[11px] font-bold text-gray-400 mt-1 tracking-widest truncate">VIN: ${c.A}</p>
            </div>
-           <button onclick="abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-10 h-10 flex-shrink-0 bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm relative transition-transform hover:scale-105"><i class="ph-fill ph-whatsapp-logo text-xl"></i>${obtenerBurbujaChat(c.chatData)}</button>
+           <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-10 h-10 flex-shrink-0 bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm relative transition-transform hover:scale-105"><i class="ph-fill ph-whatsapp-logo text-xl"></i>${window.obtenerBurbujaChat(c.chatData)}</button>
         </div>
         
         <div class="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
@@ -782,16 +793,95 @@
              </div>
           </div>
           <div class="flex gap-2">
-            <button onclick="ejecutarDpto('${tipo}', '${c.fila}', false)" class="flex-1 bg-gray-200 text-gray-800 font-bold py-2.5 rounded-lg text-[11px] hover:bg-gray-300 transition-colors uppercase shadow-sm"><i class="ph-bold ph-floppy-disk"></i> Guardar</button>
-            <button onclick="ejecutarDpto('${tipo}', '${c.fila}', true)" class="flex-[1.5] bg-[#001e50] text-white font-bold py-2.5 rounded-lg text-[11px] hover:bg-blue-900 transition-colors uppercase flex items-center justify-center gap-1 shadow-sm"><i class="ph-bold ph-check-circle text-sm"></i> Finalizar Trabajo</button>
+            <button onclick="window.ejecutarDpto('${tipo}', '${c.fila}', false)" class="flex-1 bg-gray-200 text-gray-800 font-bold py-2.5 rounded-lg text-[11px] hover:bg-gray-300 transition-colors uppercase shadow-sm"><i class="ph-bold ph-floppy-disk"></i> Guardar</button>
+            <button onclick="window.ejecutarDpto('${tipo}', '${c.fila}', true)" class="flex-[1.5] bg-[#001e50] text-white font-bold py-2.5 rounded-lg text-[11px] hover:bg-blue-900 transition-colors uppercase flex items-center justify-center gap-1 shadow-sm"><i class="ph-bold ph-check-circle text-sm"></i> Finalizar Trabajo</button>
           </div>
         </div>
       </div>`;
     }
-    
+
+    // ==========================================
+    // 📊 FUNCIONES DE DASHBOARD
+    // ==========================================
+    window.renderizarDashboard = function() {
+        let kpiHoy = 0; let kpiTotal = 0; let kpiReparados = 0; let kpiDevueltos = 0;
+        let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
+        kpiTotal = entregados.length;
+        let fHoy = new Date().toLocaleDateString('es-ES');
+        entregados.forEach(c => { if(c.fechaEntrega === fHoy) kpiHoy++; });
+        
+        document.getElementById('kpi-hoy').innerText = kpiHoy;
+        document.getElementById('kpi-total').innerText = kpiTotal;
+        document.getElementById('kpi-reparados').innerText = todosLosCoches.filter(c => c.finTaller || c.finRecambios).length;
+    };
+
     // ==========================================
     // 🛠️ FUNCIONES DE BOTONES Y TARJETAS
     // ==========================================
+    
+    // Función Recuperada: Lector PDFs
+    window.abrirLectorPDF = function() {
+        document.getElementById('inputUploadPDF').click();
+    };
+
+    window.procesarPDFs = function(event) {
+        Swal.fire('Función en desarrollo', 'La subida múltiple de PDFs para logística estará disponible próximamente.', 'info');
+    };
+
+    // Función Recuperada: Editar Renting y Agencia
+    window.editarRentingAgencia = async function(id, rentingActual, agenciaActual) {
+        const { value: formValues } = await Swal.fire({
+            title: 'Renting y Agencia',
+            html: `
+                <input id="edit-renting" class="swal2-input !w-[80%] !m-0 !mb-4 text-center uppercase" placeholder="Ej: ALD, ARVAL..." value="${rentingActual}">
+                <input id="edit-agencia" class="swal2-input !w-[80%] !m-0 text-center uppercase" placeholder="Empresa de Transporte" value="${agenciaActual}">
+            `,
+            showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Guardar',
+            preConfirm: () => {
+                return { 
+                    renting: document.getElementById('edit-renting').value.toUpperCase().trim(), 
+                    agencia: document.getElementById('edit-agencia').value.toUpperCase().trim() 
+                };
+            }
+        });
+
+        if (formValues) {
+            Swal.fire({title: 'Actualizando...', didOpen: () => Swal.showLoading()});
+            await window.updateDoc(window.doc(window.db, "vehiculos", id), formValues);
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Datos guardados', showConfirmButton: false, timer: 1500 });
+        }
+    };
+
+    // Función Recuperada: Añadir Manual
+    window.anadirVehiculoManual = async function() {
+        const { value: formValues } = await Swal.fire({
+            title: 'Añadir Vehículo Manual',
+            html: `
+                <input id="add-bastidor" class="swal2-input !w-[80%] !m-0 !mb-3 text-center uppercase" placeholder="Bastidor (VIN)">
+                <input id="add-matricula" class="swal2-input !w-[80%] !m-0 !mb-3 text-center uppercase" placeholder="Matrícula">
+                <input id="add-modelo" class="swal2-input !w-[80%] !m-0 text-center uppercase" placeholder="Modelo del Coche">
+            `,
+            showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Añadir',
+            preConfirm: () => {
+                const b = document.getElementById('add-bastidor').value.toUpperCase().trim();
+                const m = document.getElementById('add-matricula').value.toUpperCase().trim();
+                const mod = document.getElementById('add-modelo').value.toUpperCase().trim();
+                if (!b) return Swal.showValidationMessage('El bastidor es obligatorio');
+                return { bastidor: b, matricula: m || "S/M", modelo: mod || "VW" };
+            }
+        });
+
+        if (formValues) {
+            Swal.fire({title: 'Añadiendo...', didOpen: () => Swal.showLoading()});
+            let idNuevo = new Date().getTime().toString();
+            await window.setDoc(window.doc(window.db, "vehiculos", idNuevo), {
+                bastidor: formValues.bastidor, matricula: formValues.matricula, Matricula: formValues.matricula, 
+                modelo: formValues.modelo, pasoAInventario: false, entregado: false, creadoEn: new Date().getTime()
+            });
+            Swal.fire('¡Añadido!', 'Vehículo registrado.', 'success');
+        }
+    };
+
     window.editarVehiculoBasico = async function(id, bastidorActual, matriculaActual, modeloActual) {
         const { value: formValues } = await Swal.fire({
             title: 'Editar Vehículo',
@@ -835,7 +925,6 @@
         }
     };
 
-    // 🔥 1. FUNCIÓN DE ENTREGA Y WHATSAPP A PRUEBA DE FALLOS 🔥
     window.marcarComoEntregado = function(id) {
         let coche = todosLosCoches.find(c => c.fila === id);
         if (!coche) return Swal.fire('Error', 'No se ha encontrado el vehículo.', 'error');
@@ -938,52 +1027,53 @@
     };
 
     window.gestionarTraslado = async function(id) {
-    const { value: formValues } = await Swal.fire({
-        title: 'Traslado a Concesionario',
-        html: `
-            <input id="concesionario-destino" class="swal2-input !w-full !m-0 !mb-3" placeholder="Nombre del Concesionario Destino">
-            <input type="file" id="acta-traslado" accept=".pdf,image/*" class="swal2-file text-sm w-full">
-        `,
-        confirmButtonText: 'Finalizar Traslado',
-        confirmButtonColor: '#f97316',
-        preConfirm: () => {
-            const dest = document.getElementById('concesionario-destino').value;
-            const file = document.getElementById('acta-traslado').files[0];
-            if (!dest) { Swal.showValidationMessage('Indica el concesionario'); return false; }
-            return { dest, file };
-        }
-    });
-
-    if (formValues) {
-        Swal.fire({title: 'Subiendo...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
-        
-        let urlActa = null;
-        if (formValues.file) {
-            const reader = new FileReader();
-            reader.readAsDataURL(formValues.file);
-            urlActa = await new Promise((resolve) => {
-                reader.onload = async () => {
-                    const res = await fetch('URL_DE_TU_GOOGLE_SCRIPT_AQUI', { 
-                        method: 'POST', 
-                        body: JSON.stringify({ base64: reader.result, fileName: formValues.file.name, mimeType: formValues.file.type }) 
-                    });
-                    const data = await res.json();
-                    resolve(data.url);
-                };
-            });
-        }
-
-        await window.updateDoc(window.doc(window.db, "vehiculos", id), {
-            entregado: true, 
-            fechaEntrega: new Date().toLocaleDateString('es-ES'),
-            tipoFinalizacion: 'TRASLADO',
-            concesionarioDestino: formValues.dest,
-            urlActaTraslado: urlActa
+        const { value: formValues } = await Swal.fire({
+            title: 'Traslado a Concesionario',
+            html: `
+                <input id="concesionario-destino" class="swal2-input !w-full !m-0 !mb-3" placeholder="Nombre del Concesionario Destino">
+                <input type="file" id="acta-traslado" accept=".pdf,image/*" class="swal2-file text-sm w-full">
+            `,
+            confirmButtonText: 'Finalizar Traslado',
+            confirmButtonColor: '#f97316',
+            preConfirm: () => {
+                const dest = document.getElementById('concesionario-destino').value;
+                const file = document.getElementById('acta-traslado').files[0];
+                if (!dest) { Swal.showValidationMessage('Indica el concesionario'); return false; }
+                return { dest, file };
+            }
         });
 
-        Swal.fire('¡Traslado Registrado!', 'El vehículo ya consta en el historial.', 'success');
-    }
-};
+        if (formValues) {
+            Swal.fire({title: 'Subiendo...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+            
+            let urlActa = null;
+            if (formValues.file) {
+                const reader = new FileReader();
+                reader.readAsDataURL(formValues.file);
+                urlActa = await new Promise((resolve) => {
+                    reader.onload = async () => {
+                        const res = await fetch('URL_DE_TU_GOOGLE_SCRIPT_AQUI', { 
+                            method: 'POST', 
+                            body: JSON.stringify({ base64: reader.result, fileName: formValues.file.name, mimeType: formValues.file.type }) 
+                        });
+                        const data = await res.json();
+                        resolve(data.url);
+                    };
+                });
+            }
+
+            await window.updateDoc(window.doc(window.db, "vehiculos", id), {
+                entregado: true, 
+                fechaEntrega: new Date().toLocaleDateString('es-ES'),
+                tipoFinalizacion: 'TRASLADO',
+                concesionarioDestino: formValues.dest,
+                urlActaTraslado: urlActa
+            });
+
+            Swal.fire('¡Traslado Registrado!', 'El vehículo ya consta en el historial.', 'success');
+        }
+    };
+    
     window.pasarAInventario = async function(id) {
         Swal.fire({
             title: '¿Mover a Inventario?', text: "Dejará Logística Previa y pasará a Concesionario.", icon: 'question',
@@ -1016,6 +1106,111 @@
       Swal.fire({ icon: 'success', title: fin ? 'Coche Finalizado' : 'Datos Guardados', showConfirmButton: false, timer: 1000 });
     }
 
+    window.pedirInst = function(btn, id, depto) {
+      Swal.fire({ 
+        title: 'Enviar a ' + depto.charAt(0).toUpperCase() + depto.slice(1), 
+        html: `<input type="text" id="ins" class="swal2-input" placeholder="Instrucción o Motivo..."><br><input type="file" id="fileInput" class="mt-4 text-sm w-3/4" accept=".pdf,image/*">`, 
+        showCancelButton: true, 
+        confirmButtonColor: '#001e50', 
+        confirmButtonText: 'Confirmar Solicitud' 
+      }).then((res) => {
+        if (res.isConfirmed) { 
+           let ins = document.getElementById('ins').value; 
+           let f = document.getElementById('fileInput').files[0];
+           if(f) window.subirYEnviar(id, depto, ins, f); 
+           else window.mandar(id, depto, ins);
+        }
+      });
+    }
+
+    window.subirYEnviar = async function(id, depto, ins, file) {
+      Swal.fire({title: 'Adjuntando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false});
+      const reader = new FileReader(); 
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const urlDrive = 'https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec'; 
+        try {
+          const res = await fetch(urlDrive, { method: 'POST', body: JSON.stringify({ base64: reader.result, fileName: file.name, mimeType: file.type }) });
+          const data = await res.json();
+          let fHoy = new Date().toLocaleDateString('es-ES');
+          let upd = depto === 'taller' ? { enTaller: true, instruccionTaller: ins, urlParte: data.url, fechaEntradaTaller: fHoy, finTaller: false } : { enRecambios: true, instruccionRecambios: ins, urlParte: data.url, fechaEntradaRecambios: fHoy, finRecambios: false };
+          await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
+          Swal.fire('Éxito', 'Petición enviada con PDF adjunto', 'success');
+        } catch (e) { Swal.fire('Error', e.message, 'error'); }
+      };
+    }
+
+    window.mandar = async function(id, depto, ins) {
+      let fHoy = new Date().toLocaleDateString('es-ES');
+      let upd = depto === 'taller' ? { enTaller: true, instruccionTaller: ins, fechaEntradaTaller: fHoy, finTaller: false } : { enRecambios: true, instruccionRecambios: ins, fechaEntradaRecambios: fHoy, finRecambios: false };
+      await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
+      Swal.fire('Éxito', 'Petición enviada (sin adjuntos)', 'success');
+    }
+
+    window.abrirChat = async function(id, mod, mat, jsonStr) {
+      document.getElementById('chatFilaActiva').value = id;
+      document.getElementById('chatTituloCoche').innerText = decodeURIComponent(mod);
+      document.getElementById('chatSubtitulo').innerText = "Matrícula: " + decodeURIComponent(mat);
+      
+      let chatObj = { history: [], lastOpened: {} }; 
+      try { if (jsonStr) chatObj = JSON.parse(decodeURIComponent(jsonStr)); } catch(e) {}
+      
+      window.dibujarMsj(chatObj.history || []); 
+      document.getElementById('chatModal').classList.remove('hidden');
+
+      let timestamp = new Date().getTime();
+      let updateData = { chatInfo: { lastOpened: {} } };
+      updateData.chatInfo.lastOpened[userRole.toUpperCase()] = timestamp;
+      
+      try {
+         await window.setDoc(window.doc(window.db, "vehiculos", id), updateData, { merge: true });
+      } catch(e) { console.log("Aviso: No se pudo resetear la notificación", e); }
+    }
+    window.cerrarChat = function() { document.getElementById('chatModal').classList.add('hidden'); }
+
+    window.dibujarMsj = function(hist) {
+      const cont = document.getElementById('chatMessages');
+      if (!hist || hist.length === 0) { 
+          cont.innerHTML = `<p class="text-center text-xs font-bold mt-4 text-gray-500">No hay mensajes. ¡Escribe el primero!</p>`; 
+          return; 
+      }
+      
+      cont.innerHTML = hist.map(m => {
+          let isMe = m.rol.toUpperCase() === userRole.toUpperCase();
+          let bubbleClass = isMe ? 'wa-me' : 'wa-other';
+          let etiquetaRemitente = isMe ? '' : `<span style="display:block; font-size:9px; font-weight:900; color:#128c7e; margin-bottom:3px; text-transform:uppercase;">${m.rol}</span>`;
+          return `<div class="wa-bubble ${bubbleClass}"><div>${etiquetaRemitente}${m.texto}</div></div>`;
+      }).join('');
+      
+      setTimeout(() => { cont.scrollTop = cont.scrollHeight; }, 50);
+    }
+
+    window.enviarMensajeChat = async function() {
+      const id = document.getElementById('chatFilaActiva').value; 
+      const txt = document.getElementById('chatInput').value.trim();
+      if (!id || !txt) return; 
+      
+      document.getElementById('chatInput').value = ""; 
+      
+      const nM = { rol: userRole.toUpperCase(), fecha: new Date().getTime(), texto: txt };
+      let c = todosLosCoches.find(x => x.fila === id);
+      
+      if (c) { 
+          if (!c.chatData) c.chatData = {}; 
+          if (!c.chatData.history) c.chatData.history = [];
+          c.chatData.history.push(nM); 
+          window.dibujarMsj(c.chatData.history); 
+      }
+      
+      try {
+          await window.setDoc(window.doc(window.db, "vehiculos", id), { 
+              chatInfo: { history: window.arrayUnion(nM) } 
+          }, { merge: true });
+      } catch (e) {
+          console.error("Error al enviar el mensaje:", e);
+      }
+    };
+
     // ==========================================
     // AGENDA Y CUADRANTE WEB
     // ==========================================
@@ -1024,6 +1219,19 @@
     window.mesVistaActual.setDate(1);
 
     window.alertaAtrasosMostrada = false;
+    window.fechaEnfoqueForzado = null; 
+
+    window.sincronizarCitasSilencioso = async function() {
+        const btnSync = document.getElementById('btnSyncCitas');
+        if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Actualizando...';
+        
+        try {
+            await window.renderAgenda();
+            if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-arrows-clockwise text-base"></i> Actualizar Agenda';
+        } catch (e) { 
+            if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-warning text-red-500"></i> Error Sync'; 
+        }
+    };
 
     window.renderAgenda = function() { 
        let div = document.getElementById('contenedorAgenda');
@@ -1046,6 +1254,7 @@
                    });
                });
                window.dibujarCuadranteMes();
+               window.comprobarAtrasosGenerales(); 
            });
 
            window.onSnapshot(window.collection(window.db, "bloqueos_agenda"), (querySnapshot) => {
@@ -1061,8 +1270,6 @@
        }
     }
 
-    // 🔥 2. SISTEMA DE ALERTA BLINDADO PARA CITAS PASADAS 🔥
-    // 🔥 FUNCIÓN ACTUALIZADA: Listado clicable de citas pasadas
     window.comprobarAtrasosGenerales = function() {
         let atrasados = [];
         let hoyLimpio = new Date();
@@ -1077,16 +1284,21 @@
             let fechaCitaLimpia = new Date(fechaCitaPartes[0], fechaCitaPartes[1] - 1, fechaCitaPartes[2]);
             fechaCitaLimpia.setHours(0, 0, 0, 0);
             
-            let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '') : '';
+            let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '').toUpperCase() : '';
             let basCita = cita.bastidor ? String(cita.bastidor).toUpperCase() : '';
-            let cocheEnBaseDatos = todosLosCoches.find(c => (c.B && c.B.replace(/\s/g, '') === matCita) || (c.A && c.A === basCita));
+            
+            let cocheEnBaseDatos = todosLosCoches.find(c => 
+                (c.B && String(c.B).replace(/\s/g, '').toUpperCase() === matCita) || 
+                (c.A && String(c.A).toUpperCase() === basCita)
+            );
             
             let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
             
             if (fechaCitaLimpia < hoyLimpio && !yaEntregado) {
-                // ✅ CAMBIO: Envolvemos el texto en un elemento clicable con un icono de enlace
-                let fechaCitaRaw = cita.fechaHora.split('T')[0];
-                atrasados.push(`<span class="cursor-pointer hover:underline text-red-700 hover:text-red-900 transition-colors inline-flex items-center gap-1" onclick="window.irACitaAtrasada('${fechaCitaRaw}')"><b>${cita.matricula || "S/M"}</b> - ${cita.modelo || "Vehículo"} (${fechaCitaPartes[2]}/${fechaCitaPartes[1]}) <i class="ph-bold ph-arrow-square-out"></i></span>`);
+                let fechaCitaRaw = cita.fechaHora.split('T')[0]; 
+                let modeloSeguro = window.escapeJS(cita.modelo);
+                
+                atrasados.push(`<span class="cursor-pointer hover:underline text-red-700 hover:text-red-900 transition-colors inline-flex items-center gap-1" onclick="window.irACitaAtrasada('${fechaCitaRaw}')"><b>${cita.matricula || "S/M"}</b> - ${modeloSeguro} (${fechaCitaPartes[2]}/${fechaCitaPartes[1]}) <i class="ph-bold ph-arrow-square-out text-sm"></i></span>`);
             }
         });
 
@@ -1094,45 +1306,38 @@
 
         if (window.listaCitasAtrasadas.length > 0 && !window.alertaAtrasosMostrada) {
             window.alertaAtrasosMostrada = true;
-            setTimeout(() => {
-                window.mostrarPopupAtrasados();
-            }, 2500); 
+            setTimeout(() => { window.mostrarPopupAtrasados(); }, 2500); 
         }
 
         return window.listaCitasAtrasadas; 
     };
 
-    // ✅ NUEVA FUNCIÓN: Viaje directo a la cita atrasada
-    window.irACitaAtrasada = function(fechaStr) {
-        Swal.close(); // Cerramos la alerta roja
-        
-        let parts = fechaStr.split('-');
-        let anio = parseInt(parts[0]);
-        let mes = parseInt(parts[1]) - 1; // En JavaScript, enero es 0 y diciembre es 11
-        
-        // 1. Cambiamos el mes visible al mes de la cita que hemos pulsado
-        window.mesVistaActual = new Date(anio, mes, 1);
-        
-        // 2. Guardamos la fecha en la memoria para que el Auto-Scroll sepa adónde ir
-        window.fechaEnfoqueForzado = fechaStr;
-        
-        // 3. Activamos la pestaña de la agenda (esto dispara el renderizado y el scroll)
-        window.cambiarPestana('agenda');
-        
-        // 4. Limpiamos la memoria para futuras interacciones regulares
-        setTimeout(() => { window.fechaEnfoqueForzado = null; }, 1500);
-    };
     window.mostrarPopupAtrasados = function() {
         if (!window.listaCitasAtrasadas || window.listaCitasAtrasadas.length === 0) return;
         Swal.fire({
             title: '⚠️ Entregas Pasadas',
-            html: `<p class="mb-3 text-gray-600">Tienes <b>${window.listaCitasAtrasadas.length}</b> entrega(s) de días anteriores sin marcar como completadas:</p>
+            html: `<p class="mb-3 text-gray-600">Tienes <b>${window.listaCitasAtrasadas.length}</b> entrega(s) de días anteriores sin confirmar:</p>
                    <div class="text-sm text-left bg-red-50 p-3 rounded-lg border border-red-200 max-h-40 overflow-y-auto custom-scrollbar">
-                     <ul class="list-disc pl-5 space-y-1 text-red-900"><li>${window.listaCitasAtrasadas.join('</li><li>')}</li></ul>
+                     <ul class="list-disc pl-5 space-y-2 text-red-900"><li>${window.listaCitasAtrasadas.join('</li><li>')}</li></ul>
                    </div>
-                   <p class="mt-3 text-xs text-gray-500">Búscalas en el calendario y haz clic en ellas para marcarlas como entregadas o reagendarlas.</p>`,
+                   <p class="mt-3 text-xs text-gray-500 font-bold">Haz clic en el enlace de cualquier coche para viajar hasta su fecha en el calendario.</p>`,
             icon: 'warning', confirmButtonColor: '#001e50', confirmButtonText: 'Entendido'
         });
+    };
+
+    window.irACitaAtrasada = function(fechaStr) {
+        Swal.close(); 
+        
+        let parts = fechaStr.split('-');
+        let anio = parseInt(parts[0]);
+        let mes = parseInt(parts[1]) - 1; 
+        
+        window.mesVistaActual = new Date(anio, mes, 1);
+        window.fechaEnfoqueForzado = fechaStr;
+        
+        window.cambiarPestana('agenda'); 
+        
+        setTimeout(() => { window.fechaEnfoqueForzado = null; }, 1500);
     };
 
     window.dibujarCuadranteMes = function() {
@@ -1168,10 +1373,9 @@
         const nombresMeses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
         let tituloMes = `${nombresMeses[mes]} ${anio}`;
         
-      let hoyObj = new Date();
+        let hoyObj = new Date();
         let hoyKeyLimpio = hoyObj.getFullYear() + "-" + String(hoyObj.getMonth()+1).padStart(2,'0') + "-" + String(hoyObj.getDate()).padStart(2,'0');
 
-        // ✅ CAMBIO: Si venimos de un "clic" en alerta, usamos esa fecha. Si no, usamos HOY.
         let fechaObjetivo = window.fechaEnfoqueForzado || hoyKeyLimpio;
 
         let claveColumnaEnfoque = diasArrayKeys.find(k => k === fechaObjetivo);
@@ -1275,7 +1479,7 @@
             let columnaHoy = document.getElementById('colDiaHoy');
             
             if (contenedor && columnaHoy && contenedor.scrollWidth > 100) {
-                contenedor.scrollLeft = columnaHoy.offsetLeft - 80; 
+                contenedor.scrollLeft = Math.max(0, columnaHoy.offsetLeft - 80); 
                 clearInterval(motorScroll);
             }
             
@@ -1289,11 +1493,8 @@
         window.dibujarCuadranteMes();
     }
 
-   // 🔥 3. FUNCIÓN DE RENDERIZADO DE CELDAS BLINDADA 🔥
-  // 🔥 FUNCIÓN ACTUALIZADA: COLORES VERDES PARA ENTREGADOS Y BORDES CORREGIDOS 🔥
-// 🔥 FUNCIÓN ACTUALIZADA: COLORES VERDES SEGUROS 🔥
    window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
-       let alturaClase = esUnico ? "min-h-[220px]" : "min-h-[140px]"; 
+       let alturaClase = esUnico ? "min-h-[220px]" : "min-h-[140px]";
        
        if (!cita) {
            return `<div class="flex-1 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center ${alturaClase} opacity-60">
@@ -1304,10 +1505,9 @@
        let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '').toUpperCase() : '';
        let basCita = cita.bastidor ? String(cita.bastidor).toUpperCase() : '';
        
-       // ✅ CORRECCIÓN: Exigimos que la matrícula tenga más de 4 letras para evitar que un campo vacío coincida por error.
        let cocheEnBaseDatos = todosLosCoches.find(c => 
-           (matCita.length > 4 && matCita !== 'S/M' && c.B && c.B.replace(/\s/g, '').toUpperCase() === matCita) || 
-           (basCita.length > 5 && basCita !== 'N/A' && c.A && c.A.toUpperCase() === basCita)
+           (matCita.length > 4 && matCita !== 'S/M' && c.B && String(c.B).replace(/\s/g, '').toUpperCase() === matCita) || 
+           (basCita.length > 5 && basCita !== 'N/A' && c.A && String(c.A).toUpperCase() === basCita)
        );
        
        let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
@@ -1327,13 +1527,16 @@
            let diaStr = fechaCitaObj.toLocaleDateString('es-ES');
            let horaStr = fechaCitaObj.getHours() + ":00h";
            let idFb = cocheEnBaseDatos ? cocheEnBaseDatos.fila : 'no_db';
-           let modeloSeguro = cita.modelo ? String(cita.modelo).replace(/['"]/g, "") : "Coche";
-           let matriculaSegura = cita.matricula ? String(cita.matricula).replace(/['"]/g, "") : "S/M";
+           
+           let modeloSeguro = window.escapeJS(cita.modelo);
+           let matriculaSegura = window.escapeJS(cita.matricula);
            
            alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="if(window.event) window.event.stopPropagation(); window.preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}')"><i class="ph-bold ph-question text-lg"></i></div>`;
            borderColor = "border-[#00b0f0] border-2"; 
        } else if (estaRetenido && cita.matricula !== "---" && !cita.isBlock) {
-           alertaVisual = `<div class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse cursor-pointer z-10" onclick="if(window.event) window.event.stopPropagation(); window.comprobarAlertaEntrega('${cita.matricula}', '${cita.modelo}')"><i class="ph-bold ph-warning"></i></div>`;
+           let escMat = window.escapeJS(cita.matricula);
+           let escMod = window.escapeJS(cita.modelo);
+           alertaVisual = `<div class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse cursor-pointer z-10" onclick="if(window.event) window.event.stopPropagation(); window.comprobarAlertaEntrega('${escMat}', '${escMod}')"><i class="ph-bold ph-warning"></i></div>`;
        }
 
        let textoVO = (cita.entregaVO) ? String(cita.entregaVO).toUpperCase().trim() : '';
@@ -1350,13 +1553,16 @@
        else if (cita.id && cita.matricula !== "---") {
            let d = fechaCitaObj.getFullYear() + "-" + String(fechaCitaObj.getMonth()+1).padStart(2,'0') + "-" + String(fechaCitaObj.getDate()).padStart(2,'0');
            let h = String(fechaCitaObj.getHours()).padStart(2,'0') + ":00";
-           let clienteLimpio = cita.cliente ? cita.cliente.replace(/['"]/g, "") : "Cliente"; 
-           let tlfLimpio = cita.telefono ? cita.telefono.replace(/['"]/g, "") : "";
-           let emailLimpio = cita.email ? cita.email.replace(/['"]/g, "") : "";
-           let voLimpio = cita.entregaVO ? cita.entregaVO.replace(/['"]/g, "") : "NO";
            
-           // Aquí llamamos a la función que vamos a añadir en el Paso 2
-           onclickCode = `onclick="window.abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${clienteLimpio}', '${cita.matricula}', '${tlfLimpio}', '${emailLimpio}', '${voLimpio}')"`;
+           let escCliente = window.escapeJS(cita.cliente); 
+           let escTlf = window.escapeJS(cita.telefono);
+           let escEmail = window.escapeJS(cita.email);
+           let escVO = window.escapeJS(cita.entregaVO);
+           let escMod = window.escapeJS(cita.modelo);
+           let escMat = window.escapeJS(cita.matricula);
+           let escRen = window.escapeJS(cita.renting);
+           
+           onclickCode = `onclick="window.abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${escCliente}', '${escMat}', '${escTlf}', '${escEmail}', '${escVO}')"`;
            cursorClass = "cursor-pointer hover:ring-2 hover:ring-[#00b0f0] hover:scale-[1.02] shadow-sm";
        }
 
@@ -1380,77 +1586,8 @@
              ${cita.renting ? `<p class="truncate uppercase flex items-center gap-1" title="${cita.renting}"><i class="ph-fill ph-buildings text-xs"></i> ${cita.renting}</p>` : ''}
           </div>
        </div>`;
-   }
-   // 🔥 FUNCIONES RECUPERADAS: EDITAR Y BORRAR CITAS 🔥
-    window.abrirEdicionCita = function(id, fecha, hora, agente, cliente, matricula, telefono, email, entregaVO) {
-        Swal.fire({
-            title: 'Gestionar Cita',
-            html: `
-                <div class="text-left px-2">
-                    <label class="text-xs font-bold text-gray-500 uppercase">Cliente</label>
-                    <input id="editCita-cliente" class="swal2-input !w-full !m-0 !mb-3" placeholder="Nombre Completo" value="${cliente !== 'Cliente' ? cliente : ''}">
-                    
-                    <label class="text-xs font-bold text-gray-500 uppercase">Matrícula</label>
-                    <input id="editCita-matricula" class="swal2-input !w-full !m-0 !mb-3" placeholder="1234ABC" value="${matricula !== 'S/M' && matricula !== '---' ? matricula : ''}">
-                    
-                    <label class="text-xs font-bold text-gray-500 uppercase">Teléfono</label>
-                    <input id="editCita-telefono" class="swal2-input !w-full !m-0 !mb-3" placeholder="600000000" value="${telefono}">
-                    
-                    <label class="text-xs font-bold text-gray-500 uppercase">Email</label>
-                    <input id="editCita-email" class="swal2-input !w-full !m-0 !mb-3" placeholder="correo@ejemplo.com" value="${email}">
-                    
-                    <div class="flex items-center gap-2 mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-                        <input type="checkbox" id="editCita-vo" ${entregaVO === 'SÍ' ? 'checked' : ''} class="w-5 h-5 cursor-pointer">
-                        <label for="editCita-vo" class="font-bold text-sm text-purple-900 cursor-pointer">Recoge Vehículo de Ocasión (V.O.)</label>
-                    </div>
-                </div>
-            `,
-            showCancelButton: true,
-            showDenyButton: true,
-            confirmButtonColor: '#001e50',
-            denyButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Guardar Cambios',
-            denyButtonText: '🗑️ Eliminar Cita',
-            cancelButtonText: 'Cancelar',
-            preConfirm: () => {
-                return {
-                    cliente: document.getElementById('editCita-cliente').value.toUpperCase() || "CLIENTE",
-                    matricula: document.getElementById('editCita-matricula').value.toUpperCase() || "S/M",
-                    telefono: document.getElementById('editCita-telefono').value,
-                    email: document.getElementById('editCita-email').value,
-                    entregaVO: document.getElementById('editCita-vo').checked ? 'SÍ' : 'NO'
-                }
-            }
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
-                try {
-                    await window.updateDoc(window.doc(window.db, "citas_agenda", id), result.value);
-                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cita actualizada', showConfirmButton: false, timer: 1500 });
-                } catch(e) {
-                    Swal.fire('Error', 'No se pudo guardar la cita.', 'error');
-                }
-            } else if (result.isDenied) {
-                // Confirmación para evitar borrados por accidente
-                Swal.fire({
-                    title: '¿Seguro que quieres borrarla?',
-                    text: "Esta acción no se puede deshacer y el hueco quedará libre en la agenda.",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ef4444',
-                    cancelButtonColor: '#6b7280',
-                    confirmButtonText: 'Sí, borrar definitivamente'
-                }).then(async (borrarResult) => {
-                    if (borrarResult.isConfirmed) {
-                        Swal.fire({title: 'Borrando...', didOpen: () => Swal.showLoading()});
-                        await window.deleteDoc(window.doc(window.db, "citas_agenda", id));
-                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cita eliminada', showConfirmButton: false, timer: 1500 });
-                    }
-                });
-            }
-        });
-    };
+    }
+
     window.preguntarSiEntregado = function(idFirebase, modelo, matricula, dia, hora) {
         Swal.fire({
             title: '¿ENTREGA COMPLETADA?',
@@ -1467,9 +1604,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 if (idFirebase !== 'no_db') {
-                    setTimeout(() => {
-                        window.marcarComoEntregado(idFirebase);
-                    }, 150);
+                    setTimeout(() => { window.marcarComoEntregado(idFirebase); }, 150);
                 } else { 
                     Swal.fire('Aviso', 'El coche no está en la base de datos de Inventario.', 'info'); 
                 }
@@ -1490,7 +1625,7 @@
     };
 
     // ==========================================
-    // 📊 BUSCADOR LIGERO DE HISTORIAL 
+    // 📊 BUSCADOR DE HISTORIAL Y EXCEL
     // ==========================================
     window.renderEntregados = function() {
        let div = document.getElementById('contenedorEntregados');
@@ -1554,7 +1689,6 @@
        window.inyectarResultadosHistorial(resultados, contenedor, `el día: ${parts[2]}/${parts[1]}/${parts[0]}`);
     };
 
-    // 🔥 4. FUNCIÓN HISTORIAL BLINDADA PARA DESHACER ENTREGA 🔥
    window.inyectarResultadosHistorial = function(resultados, contenedor, criterioTexto) {
         if (resultados.length === 0) {
             contenedor.innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center border border-red-200"><p class="font-bold text-sm">No hay entregas para ${criterioTexto}</p></div>`;
@@ -1624,69 +1758,246 @@
        Swal.close();
     };
 
-  </script>
+    window.descargarExcelReal = function() {
+        let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
+        if (activos.length === 0) return Swal.fire('Aviso', 'No hay datos para exportar.', 'info');
+        
+        let datos = activos.map(c => ({
+            "MODELO": c.C, "MATRÍCULA": c.B, "BASTIDOR": c.A,
+            "ESTADO TALLER": c.finTaller ? "FIN" : (c.enTaller ? "CURSO" : "PTE"),
+            "ESTADO RECAMBIOS": c.finRecambios ? "FIN" : (c.enRecambios ? "CURSO" : "PTE"),
+            "CITA": c.fechaCita || "Sin cita"
+        }));
+        const ws = XLSX.utils.json_to_sheet(datos);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Vehiculos_Activos");
+        XLSX.writeFile(wb, "Inventario_Activo.xlsx");
+    };
 
-  <div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6);">
-    <div style="background-color: #fff; margin: 10% auto; padding: 30px; border: 1px solid #ddd; width: 400px; border-radius: 12px; text-align: center; font-family: 'Inter', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-       <img src="Logo con nombre.png" alt="Logo GesCar OS" style="max-width: 85%; height: auto; margin: 0 auto 15px auto; display: block; mix-blend-mode: multiply;">
-        <p style="font-size: 14px; color: #555;">Versión 1.0.0</p>
-        <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Automotive Operations Platform</p>
-        <hr style="margin-bottom: 20px;">
-        <p style="font-size: 13px; font-weight: bold; color: #333;">&copy; 2026 Manuel Arjona Carrera & Miriam Olmo Fernández.</p>
-        <p style="font-size: 11px; color: #666; margin-bottom: 25px;">Todos los derechos reservados.</p>
-        <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Desarrollado por: M2 Code Systems</p>
-        <button id="btnClose" style="background-color: #001e50; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cerrar</button>
-    </div>
-  </div>
+    // 🔥 FUNCIONES DE AGENDA, CREACIÓN Y BLOQUEO DE CITAS 🔥
+    window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agenteActual, cliente, matricula, telefono, email, vo) {
+        const { value: formValues, isDenied } = await Swal.fire({
+            title: 'Gestionar Cita',
+            html: `
+                <div class="text-sm mb-4 text-gray-700 font-bold bg-white border border-gray-200 shadow-sm p-3 rounded-xl text-left">
+                    <div class="text-[#001e50] text-base mb-1 uppercase"><i class="ph-fill ph-user"></i> ${cliente}</div>
+                    <div class="text-xs mb-1"><i class="ph-bold ph-car"></i> Matrícula: <span class="bg-gray-100 px-1 rounded">${matricula}</span></div>
+                    <div class="text-xs mb-1"><i class="ph-fill ph-phone text-emerald-600"></i> ${telefono || 'Sin teléfono'}</div>
+                    <div class="text-xs mb-1"><i class="ph-fill ph-envelope text-blue-500"></i> ${email || 'Sin correo electrónico'}</div>
+                    <div class="text-xs mt-2"><i class="ph-fill ph-car-profile text-purple-600"></i> Entrega V.O.: <span class="${vo === 'SI' || vo === 'SÍ' ? 'text-purple-600 font-black' : 'text-gray-500'}">${vo || 'NO'}</span></div>
+                </div>
+                <div class="flex gap-2 mb-3">
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-500">Nueva Fecha</label>
+                        <input type="date" id="e-fecha" class="swal2-input !w-full !m-0 text-sm font-bold" value="${fechaActual}">
+                    </div>
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-500">Nueva Hora</label>
+                        <select id="e-hora" class="swal2-select !w-full !m-0 text-sm font-bold">
+                            <option value="10:00" ${horaActual === '10:00' ? 'selected' : ''}>10:00</option><option value="11:00" ${horaActual === '11:00' ? 'selected' : ''}>11:00</option>
+                            <option value="12:00" ${horaActual === '12:00' ? 'selected' : ''}>12:00</option><option value="13:00" ${horaActual === '13:00' ? 'selected' : ''}>13:00</option>
+                            <option value="16:00" ${horaActual === '16:00' ? 'selected' : ''}>16:00</option><option value="17:00" ${horaActual === '17:00' ? 'selected' : ''}>17:00</option>
+                            <option value="18:00" ${horaActual === '18:00' ? 'selected' : ''}>18:00</option><option value="19:00" ${horaActual === '19:00' ? 'selected' : ''}>19:00</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="text-left">
+                    <label class="text-[10px] uppercase font-bold text-gray-500">Agente Asignado</label>
+                    <select id="e-agente" class="swal2-select !w-full !m-0 text-sm font-bold">
+                        <option value="MANUEL" ${agenteActual === 'MANUEL' ? 'selected' : ''}>MANUEL</option>
+                        <option value="ANTONIO" ${agenteActual === 'ANTONIO' ? 'selected' : ''}>ANTONIO</option>
+                    </select>
+                </div>
+            `,
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonColor: '#001e50',
+            denyButtonColor: '#ef4444',
+            confirmButtonText: 'Guardar',
+            denyButtonText: '🗑️ Eliminar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const f = document.getElementById('e-fecha').value;
+                const h = document.getElementById('e-hora').value;
+                const a = document.getElementById('e-agente').value;
+                if (!f) return Swal.showValidationMessage('La fecha es obligatoria');
+                return { fecha: f, hora: h, agente: a };
+            }
+        });
 
-  <script>
-      const modal = document.getElementById("aboutModal");
-      const btn = document.getElementById("btnAbout");
-      const span = document.getElementById("btnClose");
+        if (isDenied) {
+            Swal.fire({
+                title: '¿Seguro?', text: "La cita se borrará permanentemente.", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sí, Borrar'
+            }).then(async (res) => {
+                if (res.isConfirmed) {
+                    await window.deleteDoc(window.doc(window.db, "citas_agenda", idCita));
+                    let coche = todosLosCoches.find(c => c.B && c.B.replace(/\s/g,'') === matricula.replace(/\s/g,''));
+                    if (coche) await window.updateDoc(window.doc(window.db, "vehiculos", coche.fila), { fechaCita: null });
+                    Swal.fire('Eliminada', 'La cita ha sido borrada', 'success');
+                }
+            });
+        } else if (formValues) {
+            Swal.fire({title: 'Actualizando...', didOpen: () => Swal.showLoading()});
+            await window.updateDoc(window.doc(window.db, "citas_agenda", idCita), formValues);
+            Swal.fire('¡Modificada!', 'La agenda se ha actualizado.', 'success');
+        }
+    };
 
-      btn.onclick = function() { modal.style.display = "block"; }
-      span.onclick = function() { modal.style.display = "none"; }
-      window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
-      
-      // 🔥 5. FUNCIÓN FINAL: Deshacer entrega blindado 🔥
-      window.deshacerEntrega = async function(id) {
-          let coche = todosLosCoches.find(c => c.fila === id);
-          let modeloCoche = coche ? coche.C : "el vehículo seleccionado";
+    window.crearCitaManual = function() {
+        Swal.fire({
+            title: 'Nueva Cita Manual',
+            html: `
+                <input id="nc-fecha" type="date" class="swal2-input !w-[80%]">
+                <select id="nc-hora" class="swal2-input !w-[80%]">
+                    <option value="10:00">10:00</option><option value="11:00">11:00</option>
+                    <option value="12:00">12:00</option><option value="13:00">13:00</option>
+                    <option value="16:00">16:00</option><option value="17:00">17:00</option>
+                    <option value="18:00">18:00</option><option value="19:00">19:00</option>
+                </select>
+                <select id="nc-agente" class="swal2-input !w-[80%]">
+                    <option value="MANUEL">MANUEL</option><option value="ANTONIO">ANTONIO</option>
+                </select>
+                <input id="nc-cliente" class="swal2-input !w-[80%]" placeholder="Nombre del Cliente">
+                <input id="nc-modelo" class="swal2-input !w-[80%]" placeholder="Modelo del Vehículo">
+                <input id="nc-matricula" class="swal2-input !w-[80%]" placeholder="Matrícula o Bastidor">
+            `,
+            confirmButtonColor: '#001e50',
+            confirmButtonText: 'Crear Cita',
+            showCancelButton: true,
+            preConfirm: () => {
+                let f = document.getElementById('nc-fecha').value;
+                if(!f) { Swal.showValidationMessage('Selecciona una fecha'); return false; }
+                return {
+                    fecha: f, hora: document.getElementById('nc-hora').value,
+                    agente: document.getElementById('nc-agente').value,
+                    cliente: document.getElementById('nc-cliente').value.toUpperCase() || 'CLIENTE',
+                    modelo: document.getElementById('nc-modelo').value.toUpperCase() || 'VEHÍCULO',
+                    matricula: document.getElementById('nc-matricula').value.toUpperCase() || '---',
+                    renting: "GESTIÓN MANUAL"
+                }
+            }
+        }).then(async (result) => {
+            if(result.isConfirmed) {
+                Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
+                let idCitaNueva = new Date().getTime().toString();
+                await window.setDoc(window.doc(window.db, "citas_agenda", idCitaNueva), result.value);
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cita creada', showConfirmButton: false, timer: 1500 });
+            }
+        });
+    };
+    
+    window.abrirGestorVacaciones = function() {
+        Swal.fire({
+            title: 'Bloquear Fechas',
+            html: `
+                <select id="bv-agente" class="swal2-input !w-[80%]">
+                    <option value="MANUEL">MANUEL</option><option value="ANTONIO">ANTONIO</option>
+                    <option value="AMBOS">AMBOS (Día Festivo)</option>
+                </select>
+                <select id="bv-tipo" class="swal2-input !w-[80%]" onchange="document.getElementById('bv-hora-container').style.display = this.value === 'hora_suelta' ? 'block' : 'none'">
+                    <option value="dia_completo">Día Completo / Rango</option>
+                    <option value="hora_suelta">Hora Suelta</option>
+                </select>
+                <input id="bv-fecha-inicio" type="date" class="swal2-input !w-[80%] mb-1" placeholder="Fecha Inicio">
+                <input id="bv-fecha-fin" type="date" class="swal2-input !w-[80%] mt-1" placeholder="Fecha Fin (Opcional)">
+                <div id="bv-hora-container" style="display:none;">
+                    <select id="bv-hora" class="swal2-input !w-[80%]">
+                        <option value="10:00">10:00</option><option value="11:00">11:00</option>
+                        <option value="12:00">12:00</option><option value="13:00">13:00</option>
+                        <option value="16:00">16:00</option><option value="17:00">17:00</option>
+                        <option value="18:00">18:00</option><option value="19:00">19:00</option>
+                    </select>
+                </div>
+                <input id="bv-motivo" class="swal2-input !w-[80%]" placeholder="Motivo (Vacaciones, Baja, Festivo...)">
+            `,
+            confirmButtonColor: '#001e50', confirmButtonText: 'Aplicar Bloqueo', showCancelButton: true,
+            preConfirm: () => {
+                let inicio = document.getElementById('bv-fecha-inicio').value;
+                if(!inicio) { Swal.showValidationMessage('La fecha es obligatoria'); return false; }
+                return {
+                    agente: document.getElementById('bv-agente').value, tipo: document.getElementById('bv-tipo').value,
+                    fechaInicio: inicio, fechaFin: document.getElementById('bv-fecha-fin').value || inicio,
+                    fecha: inicio, hora: document.getElementById('bv-hora').value,
+                    motivo: document.getElementById('bv-motivo').value.toUpperCase() || 'NO DISPONIBLE'
+                };
+            }
+        }).then(async (result) => {
+            if(result.isConfirmed) {
+                Swal.fire({title: 'Bloqueando...', didOpen: () => Swal.showLoading()});
+                let idB = new Date().getTime().toString();
+                await window.setDoc(window.doc(window.db, "bloqueos_agenda", idB), result.value);
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Agenda bloqueada', showConfirmButton: false, timer: 1500 });
+            }
+        });
+    };
 
-          Swal.fire({
-              title: '¿Deshacer entrega?',
-              text: `El vehículo ${modeloCoche} volverá a la lista de activos (No Entregados).`,
-              icon: 'warning',
-              showCancelButton: true,
-              confirmButtonColor: '#f59e0b',
-              cancelButtonColor: '#6b7280',
-              confirmButtonText: 'Sí, restaurar',
-              cancelButtonText: 'Cancelar'
-          }).then(async (result) => {
-              if (result.isConfirmed) {
-                  Swal.fire({title: 'Restaurando...', didOpen: () => Swal.showLoading()});
-                  try {
-                      await window.updateDoc(window.doc(window.db, "vehiculos", id), {
-                          entregado: false,
-                          fechaEntrega: ""
-                      });
-                      Swal.fire('¡Restaurado!', 'El vehículo vuelve a estar en curso.', 'success');
-                      
-                      setTimeout(() => {
-                          if (document.getElementById('inputBusquedaHistorial').value) {
-                              window.buscarEnHistorial();
-                          } else if (document.getElementById('hist-fecha-inicio').value) {
-                              window.buscarPorDiaManual();
-                          } else {
-                              window.renderEntregados();
-                          }
-                      }, 500);
-                  } catch (error) {
-                      Swal.fire('Error', 'No se ha podido restaurar el vehículo. Revisa la conexión.', 'error');
-                  }
-              }
-          });
-      };
+    window.borrarBloqueo = async function(id) {
+        Swal.fire({
+            title: '¿Desbloquear este espacio?', icon: 'warning', showCancelButton: true,
+            confirmButtonColor: '#10b981', confirmButtonText: 'Sí, liberar hueco'
+        }).then(async (res) => {
+            if(res.isConfirmed) {
+                await window.deleteDoc(window.doc(window.db, "bloqueos_agenda", id));
+            }
+        });
+    };
+
+    window.deshacerEntrega = async function(id) {
+        let coche = todosLosCoches.find(c => c.fila === id);
+        let modeloCoche = coche ? coche.C : "el vehículo seleccionado";
+
+        Swal.fire({
+            title: '¿Deshacer entrega?',
+            text: `El vehículo ${window.escapeJS(modeloCoche)} volverá a la lista de activos.`,
+            icon: 'warning', showCancelButton: true, confirmButtonColor: '#f59e0b', cancelButtonColor: '#6b7280', confirmButtonText: 'Sí, restaurar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                Swal.fire({title: 'Restaurando...', didOpen: () => Swal.showLoading()});
+                try {
+                    await window.updateDoc(window.doc(window.db, "vehiculos", id), { entregado: false, fechaEntrega: "" });
+                    Swal.fire('¡Restaurado!', 'El vehículo vuelve a estar en curso.', 'success');
+                    setTimeout(() => {
+                        if (document.getElementById('inputBusquedaHistorial').value) { window.buscarEnHistorial(); } 
+                        else if (document.getElementById('hist-fecha-inicio').value) { window.buscarPorDiaManual(); } 
+                        else { window.renderEntregados(); }
+                    }, 500);
+                } catch (error) { Swal.fire('Error', 'No se pudo restaurar el vehículo.', 'error'); }
+            }
+        });
+    };
+    
+    window.iniciarMotorAlertas = function() {
+        if (window.unsubscribeAlertas) { window.unsubscribeAlertas(); }
+        window.unsubscribeAlertas = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "modified") {
+                    const data = change.doc.data();
+                    if (data.clienteEnPuerta === true && data.alertaAtendida === false) {
+                        window.lanzarAlertaMovil(data, change.doc.id);
+                    }
+                }
+            });
+        });
+    };
+
+    window.lanzarAlertaMovil = function(data, docId) {
+        try { new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(e=>{}); } catch(e) {}
+
+        const tarjetas = document.querySelectorAll('.fila-coche');
+        tarjetas.forEach(tarjeta => {
+            if (tarjeta.innerText.includes(data.matricula)) tarjeta.classList.add('alerta-llegada');
+        });
+
+        Swal.fire({
+            title: '🔔 ¡CLIENTE LLEGÓ!',
+            html: `<div class="text-left"><p class="font-bold text-lg">${window.escapeJS(data.cliente) || 'Conductor'}</p><p class="text-sm">${window.escapeJS(data.modelo)} - ${window.escapeJS(data.matricula)}</p></div>`,
+            icon: 'warning', confirmButtonColor: '#001e50', confirmButtonText: 'IR A RECEPCIÓN'
+        }).then(() => {
+            tarjetas.forEach(t => t.classList.remove('alerta-llegada'));
+            window.updateDoc(window.doc(window.db, "vehiculos", docId), { alertaAtendida: true });
+        });
+    };
   </script>
 </body>
 </html>
