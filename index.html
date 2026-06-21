@@ -21,9 +21,6 @@
          * @project GesCar OS (Incluye App Clientes y Portal de Renting)
          * @author Manuel Arjona Carrera & Miriam Olmo Fernández (Equipo M2 Code Systems)
          * @copyright © 2026 Manuel Arjona Carrera & Miriam Olmo Fernández. Todos los derechos reservados.
-         * * Este código fuente es propiedad exclusiva de sus autores.
-         * Queda estrictamente prohibida su copia, distribución, modificación 
-         * o uso comercial sin autorización expresa por escrito.
          */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
    import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
@@ -256,10 +253,6 @@
      * 🔥 CABECERA DE PROPIEDAD INTELECTUAL 🔥
      * @project GesCar OS (Panel Interno)
      * @author Manuel Arjona Carrera & Miriam Olmo Fernández (Equipo M2 Code Systems)
-     * @copyright © 2026 Manuel Arjona Carrera & Miriam Olmo Fernández. Todos los derechos reservados.
-     * * Este código fuente es propiedad exclusiva de sus autores.
-     * Queda estrictamente prohibida su copia, distribución, modificación 
-     * o uso comercial sin autorización expresa por escrito.
      */
     let userRole = ""; let activeTab = 'logistica'; let modoVistaActual = 'tarjetas'; 
     let primeraCargaDb = true;
@@ -288,21 +281,16 @@
         document.getElementById('sidebarApp').style.display = 'flex';
         document.getElementById('mainApp').style.display = 'flex';
         
-        // Cargamos los datos visuales para todos los departamentos
         cargar(); 
 
-        // Evaluamos el rol del usuario
         if (rol === 'entregas') {
-            // 🔥 ENCENDEMOS EL MOTOR DE ALERTAS SOLO PARA ENTREGAS 🔥
             if (typeof window.iniciarMotorAlertas === 'function') {
                 window.iniciarMotorAlertas(); 
             }
-
             document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
             document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
             cambiarPestana('logistica');
         } else { 
-            // Configuración para Taller y Recambios (sin alertas de llegada)
             document.getElementById('contenedorTarjetas').style.display = 'grid';
         }
     }
@@ -312,13 +300,11 @@
       activeTab = pestana;
       const botones = document.querySelectorAll('#tabsEntregas button');
       
-      // Limpiamos los estilos activos de todos los botones
       botones.forEach(b => { 
         b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-amber-500/10', 'border-amber-500/30', 'bg-red-500/10', 'border-red-500/50', 'bg-emerald-500/10'); 
         b.classList.add('text-gray-300');
       });
       
-      // Asignamos el estilo iluminado al botón correspondiente basándonos en el nuevo orden
       if (pestana === 'logistica') botones[0].classList.add('text-amber-300', 'bg-amber-500/10', 'border-amber-500/30');
       else if (pestana === 'todos') botones[1].classList.add('bg-white/10', 'text-white');
       else if (pestana === 'agenda') botones[2].classList.add('bg-white/10', 'text-white');
@@ -327,7 +313,6 @@
       else if (pestana === 'entregados') botones[5].classList.add('bg-white/10', 'text-white');
       else if (pestana === 'dashboard') botones[6].classList.add('text-emerald-400', 'bg-emerald-500/10', 'border-emerald-500/30');
 
-      // Ocultamos todos los contenedores por defecto
       document.getElementById('contenedorLogistica').style.display = 'none';
       document.getElementById('contenedorTarjetas').style.display = 'none';
       document.getElementById('contenedorTabla').style.display = 'none';
@@ -335,14 +320,12 @@
       document.getElementById('contenedorEntregados').style.display = 'none';
       document.getElementById('contenedorDashboard').style.display = 'none';
       
-      // Control de cabeceras y buscadores
       document.getElementById('filtrosVisuales').style.display = 'none';
       document.getElementById('controlesVistaExcel').style.display = 'none';
       document.getElementById('botonesLogistica').style.display = 'none'; 
       document.getElementById('botonesAgenda').style.display = 'none';    
       document.getElementById('buscadorInput').style.display = 'block';
 
-      // Rutas de ejecución de pantalla
       if (pestana === 'logistica') {
         document.getElementById('contenedorLogistica').style.display = 'grid';
         document.getElementById('botonesLogistica').style.display = 'flex'; 
@@ -351,7 +334,6 @@
         document.getElementById('filtrosVisuales').style.display = 'flex';
         cambiarModoVisualizacion(modoVistaActual);
       } else if (pestana === 'global-taller' || pestana === 'global-recambios') {
-        // Las dos nuevas vistas globales usarán la cuadrícula de tarjetas estándar
         document.getElementById('contenedorTarjetas').style.display = 'grid';
       } else if (pestana === 'agenda') {
         document.getElementById('contenedorAgenda').style.display = 'block';
@@ -435,8 +417,6 @@
         snapshot.forEach(doc => { 
             let c = doc.data(); 
             c.fila = doc.id; 
-            if (c.fechaCita && !c.citasEnlazadas) {
-                }
             c.A = c.bastidor || "Sin Bastidor"; 
             c.B = c.matricula || c.Matricula || "S/M"; 
             c.C = c.modelo || "VW"; 
@@ -460,7 +440,6 @@
               actualizarContadores(); 
               renderizarVistas(); 
           } else if (activeTab === 'global-taller') {
-              // 🔴 VISTA GLOBAL: Filtra cualquier coche que esté en taller en este momento
               let cochesEnTaller = todosLosCoches.filter(c => c.enTaller && !c.finTaller && c.entregado !== true && c.entregado !== "true");
               let div = document.getElementById('contenedorTarjetas');
               if (cochesEnTaller.length === 0) {
@@ -469,7 +448,6 @@
                   div.innerHTML = cochesEnTaller.map(c => renderTarjetaCompacta(c)).join('');
               }
           } else if (activeTab === 'global-recambios') {
-              // 🟢 VISTA GLOBAL: Filtra cualquier coche que esté en recambios en este momento
               let cochesEnRecambios = todosLosCoches.filter(c => c.enRecambios && !c.finRecambios && c.entregado !== true && c.entregado !== "true");
               let div = document.getElementById('contenedorTarjetas');
               if (cochesEnRecambios.length === 0) {
@@ -744,12 +722,9 @@
       let infoExtra = tipo === 'Taller' ? c.instruccionTaller : c.instruccionRecambios;
       let fEntrada = tipo === 'Taller' ? c.fechaEntradaTaller : c.fechaEntradaRecambios;
 
-      // 🔥 NUEVO: Comunicación bidireccional entre Taller y Recambios 🔥
       let btnInterDepto = '';
       
       if (tipo === 'Taller') {
-          // El Taller ve el estado de Recambios
-          // Añadimos 'animate-pulse' y un borde más oscuro para que resalte cuando Recambios termina
           let btnR = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800 w-full animate-pulse border border-emerald-500 shadow-md"><i class="ph-bold ph-check"></i> Recambios Listos</span>` 
                    : c.enRecambios  ? `<span class="status-btn bg-teal-100 text-teal-800 w-full"><i class="ph-bold ph-package"></i> Pedido en Curso</span>` 
                                     : `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm w-full"><i class="ph-bold ph-plus"></i> Solicitar Recambios</button>`;
@@ -761,8 +736,6 @@
           </div>`;
           
       } else if (tipo === 'Recambios') {
-          // Recambios ve el estado del Taller
-          // Añadimos 'animate-pulse' y un borde más oscuro para que resalte cuando Taller termina
           let btnT = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800 w-full animate-pulse border border-emerald-500 shadow-md"><i class="ph-bold ph-check"></i> Taller Listo</span>` 
                    : c.enTaller  ? `<span class="status-btn bg-amber-100 text-amber-800 w-full"><i class="ph-bold ph-wrench"></i> Taller en Curso</span>` 
                                  : `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm w-full"><i class="ph-bold ph-plus"></i> Enviar a Taller</button>`;
@@ -815,6 +788,7 @@
         </div>
       </div>`;
     }
+    
     // ==========================================
     // 🛠️ FUNCIONES DE BOTONES Y TARJETAS
     // ==========================================
@@ -861,36 +835,29 @@
         }
     };
 
- window.marcarComoEntregado = function(id) {
-        // 1. Buscamos el coche en Firebase (con protección por si ya no está)
+    // 🔥 1. FUNCIÓN DE ENTREGA Y WHATSAPP A PRUEBA DE FALLOS 🔥
+    window.marcarComoEntregado = function(id) {
         let coche = todosLosCoches.find(c => c.fila === id);
-        if (!coche) {
-            Swal.fire('Error', 'No se ha encontrado el vehículo. Es posible que ya esté entregado.', 'error');
-            return;
-        }
+        if (!coche) return Swal.fire('Error', 'No se ha encontrado el vehículo.', 'error');
         
-        // 2. Buscamos la cita en la agenda para extraer nombre y teléfono de forma segura
         let citaAsociada = window.datosAgenda.find(cita => 
             (cita.matricula && coche.B && String(cita.matricula).replace(/\s/g, '') === String(coche.B).replace(/\s/g, '')) || 
             (cita.bastidor && coche.A && String(cita.bastidor) === String(coche.A))
         );
 
-        // Extraemos y forzamos a texto para que no haya fallos ocultos
         let nombreCompleto = (citaAsociada && citaAsociada.cliente) ? String(citaAsociada.cliente) : (coche.cliente ? String(coche.cliente) : "Familia");
-        let nombreCliente = nombreCompleto.split(" ")[0]; 
+        let nombreCliente = nombreCompleto.split(" ")[0] || "Familia"; 
         let modeloCoche = coche.C || "tu nuevo vehículo";
         
         let telefonoRaw = (citaAsociada && citaAsociada.telefono) ? String(citaAsociada.telefono) : "";
         let telefonoLimpio = telefonoRaw.replace(/\s/g, '').replace(/^\+?34/, '');
         let urlWhatsAppBase = telefonoLimpio ? `https://wa.me/34${telefonoLimpio}?text=` : `https://wa.me/?text=`;
 
-        // 3. Lanzamos el modal con el campo para adjuntar imagen
         Swal.fire({
             title: '¿Completar Entrega?',
             html: `
-                <p class="mb-4 text-sm text-gray-600">El coche pasará al historial. Opcionalmente, adjunta una fotografía de la entrega:</p>
+                <p class="mb-4 text-sm text-gray-600">El coche pasará al historial. Opcionalmente, adjunta una fotografía:</p>
                 <input type="file" id="fileFotos" accept="image/*" class="swal2-file text-sm w-full" style="padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
-                
                 <div style="margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
                     <input type="checkbox" id="pedirResena" checked style="width: 20px; height: 20px; cursor: pointer;">
                     <label for="pedirResena" style="font-weight: bold; color: #374151; cursor: pointer;">Solicitar reseña en Google</label>
@@ -902,65 +869,56 @@
             confirmButtonText: 'Entregar y Avisar',
             cancelButtonText: 'Cancelar',
             preConfirm: () => {
-                return {
-                    archivoFoto: document.getElementById('fileFotos').files[0],
-                    pedirResena: document.getElementById('pedirResena').checked
-                };
+                let f = document.getElementById('fileFotos');
+                let c = document.getElementById('pedirResena');
+                return { archivoFoto: f ? f.files[0] : null, pedirResena: c ? c.checked : true };
             }
         }).then(async (result) => {
             if (result.isConfirmed) {
                 let { archivoFoto, pedirResena } = result.value;
                 
                 const finalizarYEnviar = async (linkSubido) => {
-                    // 1. Guardamos los datos en Firebase
-                    await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
-                        entregado: true, 
-                        fechaEntrega: new Date().toLocaleDateString('es-ES') 
-                    });
+                    try {
+                        await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
+                            entregado: true, 
+                            fechaEntrega: new Date().toLocaleDateString('es-ES') 
+                        });
+                    } catch(e) { console.error("Firebase falló, pero el proceso continúa."); }
                     
-                    // 2. Construimos el mensaje
                     let nombreFinal = nombreCliente.charAt(0).toUpperCase() + nombreCliente.slice(1).toLowerCase();
                     let mensaje = `¡Hola, ${nombreFinal}! Ha sido un verdadero placer entregarte tu ${modeloCoche} hoy. Esperamos que lo disfrutes muchísimo. `;
                     
-                    if (linkSubido) {
-                        mensaje += `Aquí tienes un enlace con la fotografía de este momento tan especial: ${linkSubido} `;
-                    }
-                    
-                    if (pedirResena) {
-                        mensaje += `¿Nos ayudarías con una reseña? Nos haría mucha ilusión: https://search.google.com/local/writereview?placeid=ChIJc6vL3fIvQg0RGT8iQzPAenc ¡Gracias!`;
-                    }
+                    if (linkSubido) mensaje += `Aquí tienes un enlace con la fotografía de este momento tan especial: ${linkSubido} `;
+                    if (pedirResena) mensaje += `¿Nos ayudarías con una reseña? Nos haría mucha ilusión: https://search.google.com/local/writereview?placeid=ChIJc6vL3fIvQg0RGT8iQzPAenc ¡Gracias!`;
                     
                     let urlWa = urlWhatsAppBase + encodeURIComponent(mensaje);
                     
-                    // 3. Intentamos abrir WhatsApp automáticamente
-                    window.open(urlWa, "_blank");
+                    try { window.open(urlWa, "_blank"); } catch(e) {}
 
-                    // 4. Mostramos el mensaje de éxito con el "Plan B" (Botón manual)
                     Swal.fire({
                         title: '¡Entrega Registrada!',
                         html: `
-                            <p class="mb-4 text-sm text-gray-600">El vehículo ha pasado al historial de entregados.</p>
-                            <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
-                                <p class="text-xs text-[#001e50] font-bold">Si el navegador ha bloqueado la apertura automática de WhatsApp, haz clic en este botón para enviarlo ahora:</p>
+                            <p class="mb-4 text-sm text-gray-600">El vehículo ha pasado al historial.</p>
+                            <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-200 mb-4">
+                                <p class="text-sm text-emerald-800 font-bold mb-3">Si el navegador ha bloqueado la pestaña, pulsa este botón para enviar el mensaje:</p>
+                                <a href="${urlWa}" target="_blank" class="inline-flex items-center justify-center gap-2 bg-[#25D366] text-white font-black py-3 px-6 rounded-xl shadow-lg hover:bg-[#128C7E] transition-all no-underline uppercase tracking-widest text-sm w-full">
+                                    <i class="ph-fill ph-whatsapp-logo text-2xl"></i> Enviar WhatsApp
+                                </a>
                             </div>
-                            <a href="${urlWa}" target="_blank" class="inline-flex items-center gap-2 bg-[#25D366] text-white font-black py-3 px-6 rounded-lg shadow-md hover:bg-[#128C7E] transition-colors no-underline uppercase tracking-widest text-xs">
-                                <i class="ph-fill ph-whatsapp-logo text-xl"></i> Enviar WhatsApp
-                            </a>
                         `,
                         icon: 'success',
-                        showConfirmButton: false, // Quitamos el botón "OK" estándar para forzar a que vean el verde
-                        showCloseButton: true     // Añadimos la "X" arriba para cerrar si no quieren enviar nada
+                        showConfirmButton: false, 
+                        showCloseButton: true
                     });
                 };
 
                 if (archivoFoto) {
                     Swal.fire({title: 'Subiendo fotografía...', didOpen: () => Swal.showLoading(), allowOutsideClick: false});
-                    
                     const reader = new FileReader();
                     reader.readAsDataURL(archivoFoto);
                     reader.onload = async () => {
-                        const urlDrive = 'https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec'; 
                         try {
+                            const urlDrive = 'https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec'; 
                             const res = await fetch(urlDrive, { 
                                 method: 'POST', 
                                 body: JSON.stringify({ base64: reader.result, fileName: archivoFoto.name, mimeType: archivoFoto.type }) 
@@ -968,8 +926,8 @@
                             const data = await res.json();
                             await finalizarYEnviar(data.url); 
                         } catch (e) {
-                            console.error("Error al subir foto:", e);
-                            Swal.fire('Error', 'No se pudo subir la foto a Drive. Inténtalo sin adjuntar archivo.', 'error');
+                            console.error("Fallo al subir la foto", e);
+                            await finalizarYEnviar(null);
                         }
                     };
                 } else {
@@ -978,6 +936,7 @@
             }
         });
     };
+
     window.gestionarTraslado = async function(id) {
     const { value: formValues } = await Swal.fire({
         title: 'Traslado a Concesionario',
@@ -1000,7 +959,6 @@
         
         let urlActa = null;
         if (formValues.file) {
-            // Reutilizamos tu lógica de subida a Drive
             const reader = new FileReader();
             reader.readAsDataURL(formValues.file);
             urlActa = await new Promise((resolve) => {
@@ -1016,7 +974,7 @@
         }
 
         await window.updateDoc(window.doc(window.db, "vehiculos", id), {
-            entregado: true, // Lo marcamos como finalizado para que entre en estadísticas
+            entregado: true, 
             fechaEntrega: new Date().toLocaleDateString('es-ES'),
             tipoFinalizacion: 'TRASLADO',
             concesionarioDestino: formValues.dest,
@@ -1065,8 +1023,9 @@
     window.mesVistaActual = new Date();
     window.mesVistaActual.setDate(1);
 
-    
-window.renderAgenda = function() { 
+    window.alertaAtrasosMostrada = false;
+
+    window.renderAgenda = function() { 
        let div = document.getElementById('contenedorAgenda');
        div.innerHTML = `<div class="bg-white p-16 rounded-xl shadow-sm border border-gray-200 text-center flex flex-col items-center"><i class="ph-bold ph-spinner animate-spin text-5xl text-[#001e50] mb-4"></i><p class="font-black text-gray-500 tracking-widest uppercase">Conectando Radares en Vivo...</p></div>`;
 
@@ -1075,7 +1034,6 @@ window.renderAgenda = function() {
                window.mesVistaActual = new Date(); window.mesVistaActual.setDate(1);
            }
 
-           // RADAR 1: Escucha Citas Normales
            window.onSnapshot(window.collection(window.db, "citas_agenda"), (querySnapshot) => {
                window.datosAgenda = []; 
                querySnapshot.forEach((doc) => {
@@ -1088,260 +1046,34 @@ window.renderAgenda = function() {
                    });
                });
                window.dibujarCuadranteMes();
-               window.comprobarAtrasosGenerales();
            });
 
-           // RADAR 2: Escucha Ausencias y Bloqueos
            window.onSnapshot(window.collection(window.db, "bloqueos_agenda"), (querySnapshot) => {
                window.datosVacaciones = [];
                querySnapshot.forEach((doc) => {
                    window.datosVacaciones.push({ id: doc.id, ...doc.data() });
                });
-               window.dibujarCuadranteMes(); // Redibuja el calendario para pintar los grises
+               window.dibujarCuadranteMes(); 
            });
 
        } catch (error) {
            div.innerHTML = `<div class="bg-red-50 p-10 rounded-xl shadow-sm border border-red-200 text-center"><p class="font-bold text-red-600 text-lg">Error de conexión en vivo</p></div>`;
        }
     }
-window.dibujarCuadranteMes = function() {
-        let div = document.getElementById('contenedorAgenda');
-        let agendaEstructurada = {};
-        const horasLaborales = ['10', '11', '12', '13', '16', '17', '18', '19'];
 
-        window.datosAgenda.forEach(cita => {
-            if (!cita.fechaHora) return;
-            let fecha = new Date(cita.fechaHora);
-            if (isNaN(fecha.getTime())) return;
-            let dateKey = fecha.getFullYear() + "-" + String(fecha.getMonth()+1).padStart(2,'0') + "-" + String(fecha.getDate()).padStart(2,'0');
-            let horaStr = fecha.getHours().toString().padStart(2, '0');
-            if (!agendaEstructurada[dateKey]) agendaEstructurada[dateKey] = {};
-            if (!agendaEstructurada[dateKey][horaStr]) agendaEstructurada[dateKey][horaStr] = { MANUEL: null, ANTONIO: null };
-            let nombreAgente = (cita.entregador || cita.agente || "MANUEL").toUpperCase();
-            agendaEstructurada[dateKey][horaStr][nombreAgente] = cita;
-        });
-
-        let anio = window.mesVistaActual.getFullYear();
-        let mes = window.mesVistaActual.getMonth();
-        let numDiasMes = new Date(anio, mes + 1, 0).getDate();
-        let diasArrayKeys = [];
-        
-        for(let d = 1; d <= numDiasMes; d++) {
-            let cur = new Date(anio, mes, d);
-            if (cur.getDay() !== 0 && cur.getDay() !== 6) { 
-                let key = cur.getFullYear() + "-" + String(cur.getMonth()+1).padStart(2,'0') + "-" + String(cur.getDate()).padStart(2,'0');
-                diasArrayKeys.push(key);
-            }
-        }
-
-        const nombresMeses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
-        let tituloMes = `${nombresMeses[mes]} ${anio}`;
-        
-        let hoyObj = new Date();
-        let hoyKeyLimpio = hoyObj.getFullYear() + "-" + String(hoyObj.getMonth()+1).padStart(2,'0') + "-" + String(hoyObj.getDate()).padStart(2,'0');
-
-        // 🔥 PROTECCIÓN FIN DE SEMANA: Buscamos el día de enfoque seguro 🔥
-        let claveColumnaEnfoque = diasArrayKeys.find(k => k === hoyKeyLimpio);
-        if (!claveColumnaEnfoque) {
-            // Si hoy es sábado o domingo, el punto de mira viaja al lunes siguiente (o primer día hábil posterior)
-            claveColumnaEnfoque = diasArrayKeys.find(k => k > hoyKeyLimpio) || diasArrayKeys[0];
-        }
-
-        let html = `
-        <div class="bg-white rounded-xl shadow-xl border border-[#001e50] flex flex-col h-[calc(100vh-140px)] w-full relative">
-            <div class="bg-[#001e50] text-white p-3 px-6 flex justify-between items-center shrink-0 z-30">
-               <h2 class="text-base font-black tracking-widest uppercase flex items-center gap-2"><i class="ph-bold ph-calendar-grid-week text-xl text-[#00b0f0]"></i> Cuadrante</h2>
-               <div class="flex items-center gap-4 bg-white/10 rounded-lg p-1.5 px-3 border border-white/20 shadow-sm backdrop-blur-sm">
-                   <button onclick="cambiarMesAgenda(-1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white"><i class="ph-bold ph-caret-left text-xl"></i></button>
-                   <span class="font-black text-sm w-36 text-center tracking-widest">${tituloMes}</span>
-                   <button onclick="cambiarMesAgenda(1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white"><i class="ph-bold ph-caret-right text-xl"></i></button>
-               </div>
-               <div class="flex gap-4 text-xs font-bold">
-                  <span class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-[#c9daf8] rounded-full border border-blue-300"></div> MANUEL</span>
-                  <span class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-[#f9cb9c] rounded-full border border-orange-300"></div> ANTONIO</span>
-               </div>
-            </div>
-            
-            <div id="scrollContainerAgenda" class="overflow-auto flex-1 custom-scrollbar relative scroll-smooth">
-              <table class="w-full text-left border-collapse min-w-max">
-                <thead class="sticky top-0 z-20 shadow-md">
-                  <tr>
-                    <th class="p-3 border-b-2 border-r-2 border-gray-200 bg-gray-100 text-center w-24 sticky left-0 z-30"><i class="ph-bold ph-clock text-2xl text-gray-400"></i></th>
-                    ${diasArrayKeys.map(dateKey => {
-                        let parts = dateKey.split('-');
-                        let fObj = new Date(parts[0], parts[1]-1, parts[2]);
-                        let diaSemana = fObj.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
-                        let diaNum = String(fObj.getDate()).padStart(2, '0');
-                        let isToday = (dateKey === hoyKeyLimpio);
-                        let esDiaEnfoque = (dateKey === claveColumnaEnfoque);
-                        
-                        // El ID "colDiaHoy" se lo lleva el día hábil de enfoque para que el scroll nunca falle
-                        let idHover = esDiaEnfoque ? 'id="colDiaHoy"' : '';
-                        let bgClass = isToday ? 'bg-blue-100 text-[#001e50]' : (esDiaEnfoque ? 'bg-blue-50/40 text-[#001e50]' : 'bg-white text-[#001e50]');
-                        
-                        return `<th ${idHover} class="p-2 border-b-2 border-r border-gray-200 ${bgClass} text-center min-w-[240px]">
-                                  <div class="font-black text-sm">${diaSemana}</div><div class="text-3xl font-black">${diaNum}</div>
-                                </th>`;
-                    }).join('')}
-                  </tr>
-                </thead>
-                <tbody>`;
-
-        horasLaborales.forEach(hora => {
-            html += `<tr><td class="p-3 border-b border-r-2 border-gray-200 bg-gray-50 text-center font-black text-gray-500 text-xl align-top pt-4 sticky left-0 z-10">${hora}:00</td>`;
-            diasArrayKeys.forEach(dateKey => {
-                let bgTd = (dateKey === hoyKeyLimpio) ? 'bg-blue-50/20' : 'bg-white';
-                html += `<td class="p-2.5 border-b border-r border-gray-100 align-top ${bgTd} hover:bg-gray-50"><div class="flex flex-col gap-2 h-full">`;
-                
-                let cM = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].MANUEL : null;
-                let cA = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].ANTONIO : null;
-
-                function obtenerBloqueo(agenteAbuscar) {
-                    if (!window.datosVacaciones) return null;
-                    return window.datosVacaciones.find(b => {
-                        if(b.agente !== agenteAbuscar && b.agente !== 'AMBOS') return false;
-                        if(b.tipo === 'dia_completo') return dateKey >= b.fechaInicio && dateKey <= b.fechaFin;
-                        if(b.tipo === 'hora_suelta') return b.fecha === dateKey && b.hora === (hora + ':00');
-                        return false;
-                    });
-                }
-
-                let bloqueoM = obtenerBloqueo('MANUEL');
-                let bloqueoA = obtenerBloqueo('ANTONIO');
-
-                if (bloqueoM) cM = { isBlock: true, idBloqueo: bloqueoM.id, modelo: bloqueoM.motivo.toUpperCase(), cliente: "AGENDA CERRADA", matricula: "---", bastidor: "", renting: "" };
-                if (bloqueoA) cA = { isBlock: true, idBloqueo: bloqueoA.id, modelo: bloqueoA.motivo.toUpperCase(), cliente: "AGENDA CERRADA", matricula: "---", bastidor: "", renting: "" };
-
-                let isVacM = !!bloqueoM; 
-                let isVacA = !!bloqueoA;
-
-                if (hora === '19') {
-                    if (cM) html += window.renderizarCeldaCita(cM, 'MANUEL', isVacM ? '#e5e7eb' : '#c9daf8', isVacM ? 'text-gray-500' : 'text-blue-900', isVacM ? 'border-gray-300' : 'border-blue-200', true);
-                    else if (cA) html += window.renderizarCeldaCita(cA, 'ANTONIO', isVacA ? '#e5e7eb' : '#f9cb9c', isVacA ? 'text-gray-500' : 'text-orange-900', isVacA ? 'border-gray-300' : 'border-orange-300', true);
-                    else html += window.renderizarCeldaCita(null, 'ÚNICA ENTREGA', '#f3f4f6', 'text-gray-400', 'border-gray-300', true);
-                } else {
-                    html += window.renderizarCeldaCita(cM, 'MANUEL', isVacM ? '#e5e7eb' : '#c9daf8', isVacM ? 'text-gray-500' : 'text-blue-900', isVacM ? 'border-gray-300' : 'border-blue-200', false);
-                    html += window.renderizarCeldaCita(cA, 'ANTONIO', isVacA ? '#e5e7eb' : '#f9cb9c', isVacA ? 'text-gray-500' : 'text-orange-900', isVacA ? 'border-gray-300' : 'border-orange-300', false);
-                }
-                html += `</div></td>`;
-            });
-            html += `</tr>`;
-        });
-        html += `</tbody></table></div></div>`;
-        div.innerHTML = html;
-
-        // Desplazamiento seguro y centrado automático
-        setTimeout(() => {
-            let contenedor = document.getElementById('scrollContainerAgenda');
-            let columnaHoy = document.getElementById('colDiaHoy');
-            if (contenedor && columnaHoy) {
-                contenedor.scrollLeft = columnaHoy.offsetLeft - 150;
-            }
-        }, 300);
-    }
-    window.cambiarMesAgenda = function(delta) {
-        window.mesVistaActual.setMonth(window.mesVistaActual.getMonth() + delta);
-        window.dibujarCuadranteMes();
-    }
-
-   // 🔥 ACTUALIZADA PARA MOSTRAR TODOS LOS DATOS EN LA TARJETA
-   window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
-       let alturaClase = esUnico ? "min-h-[220px]" : "min-h-[140px]"; // Altura ampliada
-       
-       if (!cita) {
-           return `<div class="flex-1 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center ${alturaClase} opacity-60">
-                      <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">Libre</span>
-                   </div>`;
-       }
-       
-       let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '') : '';
-       let basCita = cita.bastidor ? String(cita.bastidor).toUpperCase() : '';
-       
-       let esCitaManual = cita.renting === "GESTIÓN MANUAL";
-       
-       let cocheEnBaseDatos = todosLosCoches.find(c => 
-           (matCita !== 'S/M' && c.B && c.B.replace(/\s/g, '') === matCita) || 
-           (basCita !== '' && basCita !== 'N/A' && c.A && c.A === basCita)
-       );
-       
-       let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
-       let estaRetenido = cocheEnBaseDatos && !yaEntregado && ((cocheEnBaseDatos.enTaller && !cocheEnBaseDatos.finTaller) || (cocheEnBaseDatos.enRecambios && !cocheEnBaseDatos.finRecambios));
-       
-       let ahora = new Date();
-       let fechaCitaObj = cita.fechaHora ? new Date(cita.fechaHora) : ahora;
-       let esPasada = fechaCitaObj < ahora;
-       let alertaVisual = '';
-       
-       if (esPasada && !yaEntregado && cita.matricula !== "---" && !cita.isBlock) {
-           let diaStr = fechaCitaObj.toLocaleDateString('es-ES');
-           let horaStr = fechaCitaObj.getHours() + ":00h";
-           let idFb = cocheEnBaseDatos ? cocheEnBaseDatos.fila : 'no_db';
-           let modeloSeguro = cita.modelo ? String(cita.modelo).replace(/['"]/g, "") : "Coche";
-           let matriculaSegura = cita.matricula ? String(cita.matricula).replace(/['"]/g, "") : "S/M";
-           alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="event.stopPropagation(); preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}')"><i class="ph-bold ph-question text-lg"></i></div>`;
-           borderColor = "border-[#00b0f0] border-2"; 
-       } else if (estaRetenido && cita.matricula !== "---" && !cita.isBlock) {
-           alertaVisual = `<div class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse cursor-pointer z-10" onclick="event.stopPropagation(); comprobarAlertaEntrega('${cita.matricula}', '${cita.modelo}')"><i class="ph-bold ph-warning"></i></div>`;
-       }
-
-       let textoVO = (cita.entregaVO) ? String(cita.entregaVO).toUpperCase().trim() : '';
-       let tagVO = (textoVO === 'SÍ' || textoVO === 'SI') ? `<span class="bg-purple-200 text-purple-900 border border-purple-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest"><i class="ph-bold ph-car-profile"></i> VO</span>` : '';
-       
-       let opacidad = (yaEntregado && !esCitaManual) ? "opacity-50" : "opacity-100";
-       let onclickCode = "";
-       let cursorClass = "";
-       
-       if (cita.isBlock) {
-           onclickCode = `onclick="borrarBloqueo('${cita.idBloqueo}')"`;
-           cursorClass = "cursor-pointer hover:ring-2 hover:ring-red-500 hover:scale-[1.02] shadow-sm";
-       } 
-       else if (cita.id && cita.matricula !== "---" && (!yaEntregado || esCitaManual)) {
-           let d = fechaCitaObj.getFullYear() + "-" + String(fechaCitaObj.getMonth()+1).padStart(2,'0') + "-" + String(fechaCitaObj.getDate()).padStart(2,'0');
-           let h = String(fechaCitaObj.getHours()).padStart(2,'0') + ":00";
-           let clienteLimpio = cita.cliente ? cita.cliente.replace(/['"]/g, "") : "Cliente"; 
-           let tlfLimpio = cita.telefono ? cita.telefono.replace(/['"]/g, "") : "";
-           let emailLimpio = cita.email ? cita.email.replace(/['"]/g, "") : "";
-           let voLimpio = cita.entregaVO ? cita.entregaVO.replace(/['"]/g, "") : "NO";
-           
-           onclickCode = `onclick="abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${clienteLimpio}', '${cita.matricula}', '${tlfLimpio}', '${emailLimpio}', '${voLimpio}')"`;
-           cursorClass = "cursor-pointer hover:ring-2 hover:ring-[#00b0f0] hover:scale-[1.02] shadow-sm";
-       }
-
-       return `
-       <div ${onclickCode} class="flex-1 rounded-lg p-2.5 relative border ${alturaClase} ${opacidad} flex flex-col justify-between transition-all ${cursorClass}" style="background-color: ${bgColor}; border-color: ${borderColor};">
-          ${alertaVisual}
-          <div>
-            <div class="flex justify-between items-start mb-1">
-              <h4 class="font-black text-[11px] ${textColor} uppercase leading-tight line-clamp-1 flex-1">${cita.modelo}</h4>
-              ${tagVO}
-            </div>
-            <div class="flex items-center gap-1.5 mb-1 flex-wrap">
-               <p class="font-bold text-[10px] bg-white/80 px-1.5 py-0.5 rounded text-gray-900 tracking-widest">${cita.matricula}</p>
-               <p class="font-mono text-[9px] text-gray-500 bg-white/50 px-1 py-0.5 rounded border border-gray-200">VIN: ${cita.bastidor || 'S/M'}</p>
-            </div>
-          </div>
-          <div class="mt-1 text-[9px] font-bold ${textColor} leading-tight border-t border-black/10 pt-1.5 space-y-1">
-             <p class="truncate uppercase flex items-center gap-1" title="${cita.cliente}"><i class="ph-fill ph-user text-xs"></i> ${cita.cliente}</p>
-             ${cita.telefono ? `<p class="truncate flex items-center gap-1" title="${cita.telefono}"><i class="ph-fill ph-phone text-xs"></i> ${cita.telefono}</p>` : ''}
-             ${cita.email ? `<p class="truncate flex items-center gap-1" title="${cita.email}"><i class="ph-fill ph-envelope text-xs"></i> ${cita.email}</p>` : ''}
-             ${cita.renting ? `<p class="truncate uppercase flex items-center gap-1" title="${cita.renting}"><i class="ph-fill ph-buildings text-xs"></i> ${cita.renting}</p>` : ''}
-          </div>
-       </div>`;
-    }
-
-    // Variable global para controlar que solo avise 1 vez por sesión
-    window.alertaAtrasosMostrada = false;
-
+    // 🔥 2. SISTEMA DE ALERTA BLINDADO PARA CITAS PASADAS 🔥
+    // 🔥 FUNCIÓN ACTUALIZADA: Listado clicable de citas pasadas
     window.comprobarAtrasosGenerales = function() {
         let atrasados = [];
         let hoyLimpio = new Date();
-        hoyLimpio.setHours(0, 0, 0, 0); // Para comparar solo días enteros, ignorando la hora actual
+        hoyLimpio.setHours(0, 0, 0, 0); 
         
         window.datosAgenda.forEach(cita => {
             if (!cita.fechaHora || cita.matricula === "---") return;
             
-            // Extraer solo la fecha de la cita (YYYY-MM-DD)
             let fechaCitaPartes = cita.fechaHora.split('T')[0].split('-');
+            if(fechaCitaPartes.length !== 3) return;
+
             let fechaCitaLimpia = new Date(fechaCitaPartes[0], fechaCitaPartes[1] - 1, fechaCitaPartes[2]);
             fechaCitaLimpia.setHours(0, 0, 0, 0);
             
@@ -1351,20 +1083,47 @@ window.dibujarCuadranteMes = function() {
             
             let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
             
-            // Si el día de la cita es estrictamente ANTERIOR a hoy, y el coche no está entregado
             if (fechaCitaLimpia < hoyLimpio && !yaEntregado) {
-                atrasados.push(`<b>${cita.matricula || "S/M"}</b> - ${cita.modelo || "Vehículo"} (${fechaCitaPartes[2]}/${fechaCitaPartes[1]})`);
+                // ✅ CAMBIO: Envolvemos el texto en un elemento clicable con un icono de enlace
+                let fechaCitaRaw = cita.fechaHora.split('T')[0];
+                atrasados.push(`<span class="cursor-pointer hover:underline text-red-700 hover:text-red-900 transition-colors inline-flex items-center gap-1" onclick="window.irACitaAtrasada('${fechaCitaRaw}')"><b>${cita.matricula || "S/M"}</b> - ${cita.modelo || "Vehículo"} (${fechaCitaPartes[2]}/${fechaCitaPartes[1]}) <i class="ph-bold ph-arrow-square-out"></i></span>`);
             }
         });
 
-        // Guardamos la lista en una variable global para poder usarla al hacer clic
         window.listaCitasAtrasadas = [...new Set(atrasados)];
-        return window.listaCitasAtrasadas;
+
+        if (window.listaCitasAtrasadas.length > 0 && !window.alertaAtrasosMostrada) {
+            window.alertaAtrasosMostrada = true;
+            setTimeout(() => {
+                window.mostrarPopupAtrasados();
+            }, 2500); 
+        }
+
+        return window.listaCitasAtrasadas; 
     };
 
+    // ✅ NUEVA FUNCIÓN: Viaje directo a la cita atrasada
+    window.irACitaAtrasada = function(fechaStr) {
+        Swal.close(); // Cerramos la alerta roja
+        
+        let parts = fechaStr.split('-');
+        let anio = parseInt(parts[0]);
+        let mes = parseInt(parts[1]) - 1; // En JavaScript, enero es 0 y diciembre es 11
+        
+        // 1. Cambiamos el mes visible al mes de la cita que hemos pulsado
+        window.mesVistaActual = new Date(anio, mes, 1);
+        
+        // 2. Guardamos la fecha en la memoria para que el Auto-Scroll sepa adónde ir
+        window.fechaEnfoqueForzado = fechaStr;
+        
+        // 3. Activamos la pestaña de la agenda (esto dispara el renderizado y el scroll)
+        window.cambiarPestana('agenda');
+        
+        // 4. Limpiamos la memoria para futuras interacciones regulares
+        setTimeout(() => { window.fechaEnfoqueForzado = null; }, 1500);
+    };
     window.mostrarPopupAtrasados = function() {
         if (!window.listaCitasAtrasadas || window.listaCitasAtrasadas.length === 0) return;
-        
         Swal.fire({
             title: '⚠️ Entregas Pasadas',
             html: `<p class="mb-3 text-gray-600">Tienes <b>${window.listaCitasAtrasadas.length}</b> entrega(s) de días anteriores sin marcar como completadas:</p>
@@ -1372,9 +1131,7 @@ window.dibujarCuadranteMes = function() {
                      <ul class="list-disc pl-5 space-y-1 text-red-900"><li>${window.listaCitasAtrasadas.join('</li><li>')}</li></ul>
                    </div>
                    <p class="mt-3 text-xs text-gray-500">Búscalas en el calendario y haz clic en ellas para marcarlas como entregadas o reagendarlas.</p>`,
-            icon: 'warning', 
-            confirmButtonColor: '#001e50',
-            confirmButtonText: 'Entendido'
+            icon: 'warning', confirmButtonColor: '#001e50', confirmButtonText: 'Entendido'
         });
     };
 
@@ -1411,19 +1168,21 @@ window.dibujarCuadranteMes = function() {
         const nombresMeses = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
         let tituloMes = `${nombresMeses[mes]} ${anio}`;
         
-        let hoyObj = new Date();
+      let hoyObj = new Date();
         let hoyKeyLimpio = hoyObj.getFullYear() + "-" + String(hoyObj.getMonth()+1).padStart(2,'0') + "-" + String(hoyObj.getDate()).padStart(2,'0');
 
-        let claveColumnaEnfoque = diasArrayKeys.find(k => k === hoyKeyLimpio);
+        // ✅ CAMBIO: Si venimos de un "clic" en alerta, usamos esa fecha. Si no, usamos HOY.
+        let fechaObjetivo = window.fechaEnfoqueForzado || hoyKeyLimpio;
+
+        let claveColumnaEnfoque = diasArrayKeys.find(k => k === fechaObjetivo);
         if (!claveColumnaEnfoque) {
             claveColumnaEnfoque = diasArrayKeys.find(k => k > hoyKeyLimpio) || diasArrayKeys[0];
         }
 
-        // 🔥 NUEVO: Evaluamos si hay atrasos y creamos el banner rojo
-        let atrasados = window.comprobarAtrasosGenerales();
+        let atrasados = window.comprobarAtrasosGenerales() || [];
         let bannerAtrasados = '';
         if (atrasados.length > 0) {
-            bannerAtrasados = `<div onclick="mostrarPopupAtrasados()" class="bg-red-500 text-white text-[11px] font-black p-2.5 text-center cursor-pointer hover:bg-red-600 uppercase tracking-widest flex items-center justify-center gap-2 shadow-inner z-20"><i class="ph-bold ph-warning text-base animate-pulse"></i> ¡Atención! Tienes ${atrasados.length} entrega(s) pasada(s) sin confirmar. Haz clic para revisarlas.</div>`;
+            bannerAtrasados = `<div onclick="window.mostrarPopupAtrasados()" class="bg-red-600 text-white text-[12px] font-black p-3 text-center cursor-pointer hover:bg-red-700 uppercase tracking-widest flex items-center justify-center gap-2 shadow-md z-20 border-b border-red-800"><i class="ph-bold ph-warning text-lg animate-pulse"></i> ¡Atención! Tienes ${atrasados.length} entrega(s) pasada(s) sin confirmar. Haz clic para revisarlas.</div>`;
         }
 
         let html = `
@@ -1431,9 +1190,9 @@ window.dibujarCuadranteMes = function() {
             <div class="bg-[#001e50] text-white p-3 px-6 flex justify-between items-center shrink-0 z-30">
                <h2 class="text-base font-black tracking-widest uppercase flex items-center gap-2"><i class="ph-bold ph-calendar-grid-week text-xl text-[#00b0f0]"></i> Cuadrante</h2>
                <div class="flex items-center gap-4 bg-white/10 rounded-lg p-1.5 px-3 border border-white/20 shadow-sm backdrop-blur-sm">
-                   <button onclick="cambiarMesAgenda(-1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white"><i class="ph-bold ph-caret-left text-xl"></i></button>
+                   <button onclick="window.cambiarMesAgenda(-1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white"><i class="ph-bold ph-caret-left text-xl"></i></button>
                    <span class="font-black text-sm w-36 text-center tracking-widest">${tituloMes}</span>
-                   <button onclick="cambiarMesAgenda(1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white"><i class="ph-bold ph-caret-right text-xl"></i></button>
+                   <button onclick="window.cambiarMesAgenda(1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white"><i class="ph-bold ph-caret-right text-xl"></i></button>
                </div>
                <div class="flex gap-4 text-xs font-bold">
                   <span class="flex items-center gap-1.5"><div class="w-3.5 h-3.5 bg-[#c9daf8] rounded-full border border-blue-300"></div> MANUEL</span>
@@ -1441,7 +1200,9 @@ window.dibujarCuadranteMes = function() {
                </div>
             </div>
             
-            ${bannerAtrasados} <div id="scrollContainerAgenda" class="overflow-auto flex-1 custom-scrollbar relative scroll-smooth">
+            ${bannerAtrasados}
+
+            <div id="scrollContainerAgenda" class="overflow-auto flex-1 custom-scrollbar relative scroll-smooth">
               <table class="w-full text-left border-collapse min-w-max">
                 <thead class="sticky top-0 z-20 shadow-md">
                   <tr>
@@ -1508,17 +1269,188 @@ window.dibujarCuadranteMes = function() {
         html += `</tbody></table></div></div>`;
         div.innerHTML = html;
 
-        setTimeout(() => {
+        let intentosScroll = 0;
+        let motorScroll = setInterval(() => {
             let contenedor = document.getElementById('scrollContainerAgenda');
             let columnaHoy = document.getElementById('colDiaHoy');
-            if (contenedor && columnaHoy) {
-                contenedor.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                // Si scrollIntoView no funcionase en tu navegador, aplicamos el respaldo matemático:
-                contenedor.scrollLeft = columnaHoy.offsetLeft - 150;
+            
+            if (contenedor && columnaHoy && contenedor.scrollWidth > 100) {
+                contenedor.scrollLeft = columnaHoy.offsetLeft - 80; 
+                clearInterval(motorScroll);
             }
-        }, 300);
+            
+            intentosScroll++;
+            if (intentosScroll > 20) clearInterval(motorScroll); 
+        }, 100);
+    };
+
+    window.cambiarMesAgenda = function(delta) {
+        window.mesVistaActual.setMonth(window.mesVistaActual.getMonth() + delta);
+        window.dibujarCuadranteMes();
     }
 
+   // 🔥 3. FUNCIÓN DE RENDERIZADO DE CELDAS BLINDADA 🔥
+  // 🔥 FUNCIÓN ACTUALIZADA: COLORES VERDES PARA ENTREGADOS Y BORDES CORREGIDOS 🔥
+// 🔥 FUNCIÓN ACTUALIZADA: COLORES VERDES SEGUROS 🔥
+   window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
+       let alturaClase = esUnico ? "min-h-[220px]" : "min-h-[140px]"; 
+       
+       if (!cita) {
+           return `<div class="flex-1 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center ${alturaClase} opacity-60">
+                      <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">Libre</span>
+                   </div>`;
+       }
+       
+       let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '').toUpperCase() : '';
+       let basCita = cita.bastidor ? String(cita.bastidor).toUpperCase() : '';
+       
+       // ✅ CORRECCIÓN: Exigimos que la matrícula tenga más de 4 letras para evitar que un campo vacío coincida por error.
+       let cocheEnBaseDatos = todosLosCoches.find(c => 
+           (matCita.length > 4 && matCita !== 'S/M' && c.B && c.B.replace(/\s/g, '').toUpperCase() === matCita) || 
+           (basCita.length > 5 && basCita !== 'N/A' && c.A && c.A.toUpperCase() === basCita)
+       );
+       
+       let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
+       let estaRetenido = cocheEnBaseDatos && !yaEntregado && ((cocheEnBaseDatos.enTaller && !cocheEnBaseDatos.finTaller) || (cocheEnBaseDatos.enRecambios && !cocheEnBaseDatos.finRecambios));
+       
+       let ahora = new Date();
+       let fechaCitaObj = cita.fechaHora ? new Date(cita.fechaHora) : ahora;
+       let esPasada = fechaCitaObj < ahora;
+       let alertaVisual = '';
+       
+       if (yaEntregado) {
+           bgColor = '#dcfce7'; 
+           textColor = 'text-emerald-900'; 
+           borderColor = 'border-emerald-400 border-2'; 
+           alertaVisual = `<div class="absolute -top-2 -right-2 bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md z-10" title="Vehículo Entregado"><i class="ph-bold ph-check text-sm"></i></div>`;
+       } else if (esPasada && !yaEntregado && cita.matricula !== "---" && !cita.isBlock) {
+           let diaStr = fechaCitaObj.toLocaleDateString('es-ES');
+           let horaStr = fechaCitaObj.getHours() + ":00h";
+           let idFb = cocheEnBaseDatos ? cocheEnBaseDatos.fila : 'no_db';
+           let modeloSeguro = cita.modelo ? String(cita.modelo).replace(/['"]/g, "") : "Coche";
+           let matriculaSegura = cita.matricula ? String(cita.matricula).replace(/['"]/g, "") : "S/M";
+           
+           alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="if(window.event) window.event.stopPropagation(); window.preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}')"><i class="ph-bold ph-question text-lg"></i></div>`;
+           borderColor = "border-[#00b0f0] border-2"; 
+       } else if (estaRetenido && cita.matricula !== "---" && !cita.isBlock) {
+           alertaVisual = `<div class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-pulse cursor-pointer z-10" onclick="if(window.event) window.event.stopPropagation(); window.comprobarAlertaEntrega('${cita.matricula}', '${cita.modelo}')"><i class="ph-bold ph-warning"></i></div>`;
+       }
+
+       let textoVO = (cita.entregaVO) ? String(cita.entregaVO).toUpperCase().trim() : '';
+       let tagVO = (textoVO === 'SÍ' || textoVO === 'SI') ? `<span class="bg-purple-200 text-purple-900 border border-purple-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest"><i class="ph-bold ph-car-profile"></i> VO</span>` : '';
+       
+       let opacidad = (yaEntregado) ? "opacity-100" : "opacity-100";
+       let onclickCode = "";
+       let cursorClass = "";
+       
+       if (cita.isBlock) {
+           onclickCode = `onclick="window.borrarBloqueo('${cita.idBloqueo}')"`;
+           cursorClass = "cursor-pointer hover:ring-2 hover:ring-red-500 hover:scale-[1.02] shadow-sm";
+       } 
+       else if (cita.id && cita.matricula !== "---") {
+           let d = fechaCitaObj.getFullYear() + "-" + String(fechaCitaObj.getMonth()+1).padStart(2,'0') + "-" + String(fechaCitaObj.getDate()).padStart(2,'0');
+           let h = String(fechaCitaObj.getHours()).padStart(2,'0') + ":00";
+           let clienteLimpio = cita.cliente ? cita.cliente.replace(/['"]/g, "") : "Cliente"; 
+           let tlfLimpio = cita.telefono ? cita.telefono.replace(/['"]/g, "") : "";
+           let emailLimpio = cita.email ? cita.email.replace(/['"]/g, "") : "";
+           let voLimpio = cita.entregaVO ? cita.entregaVO.replace(/['"]/g, "") : "NO";
+           
+           // Aquí llamamos a la función que vamos a añadir en el Paso 2
+           onclickCode = `onclick="window.abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${clienteLimpio}', '${cita.matricula}', '${tlfLimpio}', '${emailLimpio}', '${voLimpio}')"`;
+           cursorClass = "cursor-pointer hover:ring-2 hover:ring-[#00b0f0] hover:scale-[1.02] shadow-sm";
+       }
+
+       return `
+       <div ${onclickCode} class="flex-1 rounded-lg p-2.5 relative border ${alturaClase} ${opacidad} flex flex-col justify-between transition-all ${cursorClass} ${borderColor}" style="background-color: ${bgColor};">
+          ${alertaVisual}
+          <div>
+            <div class="flex justify-between items-start mb-1">
+              <h4 class="font-black text-[11px] ${textColor} uppercase leading-tight line-clamp-1 flex-1">${cita.modelo}</h4>
+              ${tagVO}
+            </div>
+            <div class="flex items-center gap-1.5 mb-1 flex-wrap">
+               <p class="font-bold text-[10px] bg-white/80 px-1.5 py-0.5 rounded text-gray-900 tracking-widest">${cita.matricula}</p>
+               <p class="font-mono text-[9px] text-gray-500 bg-white/50 px-1 py-0.5 rounded border border-gray-200">VIN: ${cita.bastidor || 'S/M'}</p>
+            </div>
+          </div>
+          <div class="mt-1 text-[9px] font-bold ${textColor} leading-tight border-t border-black/10 pt-1.5 space-y-1">
+             <p class="truncate uppercase flex items-center gap-1" title="${cita.cliente}"><i class="ph-fill ph-user text-xs"></i> ${cita.cliente}</p>
+             ${cita.telefono ? `<p class="truncate flex items-center gap-1" title="${cita.telefono}"><i class="ph-fill ph-phone text-xs"></i> ${cita.telefono}</p>` : ''}
+             ${cita.email ? `<p class="truncate flex items-center gap-1" title="${cita.email}"><i class="ph-fill ph-envelope text-xs"></i> ${cita.email}</p>` : ''}
+             ${cita.renting ? `<p class="truncate uppercase flex items-center gap-1" title="${cita.renting}"><i class="ph-fill ph-buildings text-xs"></i> ${cita.renting}</p>` : ''}
+          </div>
+       </div>`;
+   }
+   // 🔥 FUNCIONES RECUPERADAS: EDITAR Y BORRAR CITAS 🔥
+    window.abrirEdicionCita = function(id, fecha, hora, agente, cliente, matricula, telefono, email, entregaVO) {
+        Swal.fire({
+            title: 'Gestionar Cita',
+            html: `
+                <div class="text-left px-2">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Cliente</label>
+                    <input id="editCita-cliente" class="swal2-input !w-full !m-0 !mb-3" placeholder="Nombre Completo" value="${cliente !== 'Cliente' ? cliente : ''}">
+                    
+                    <label class="text-xs font-bold text-gray-500 uppercase">Matrícula</label>
+                    <input id="editCita-matricula" class="swal2-input !w-full !m-0 !mb-3" placeholder="1234ABC" value="${matricula !== 'S/M' && matricula !== '---' ? matricula : ''}">
+                    
+                    <label class="text-xs font-bold text-gray-500 uppercase">Teléfono</label>
+                    <input id="editCita-telefono" class="swal2-input !w-full !m-0 !mb-3" placeholder="600000000" value="${telefono}">
+                    
+                    <label class="text-xs font-bold text-gray-500 uppercase">Email</label>
+                    <input id="editCita-email" class="swal2-input !w-full !m-0 !mb-3" placeholder="correo@ejemplo.com" value="${email}">
+                    
+                    <div class="flex items-center gap-2 mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                        <input type="checkbox" id="editCita-vo" ${entregaVO === 'SÍ' ? 'checked' : ''} class="w-5 h-5 cursor-pointer">
+                        <label for="editCita-vo" class="font-bold text-sm text-purple-900 cursor-pointer">Recoge Vehículo de Ocasión (V.O.)</label>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonColor: '#001e50',
+            denyButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Guardar Cambios',
+            denyButtonText: '🗑️ Eliminar Cita',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                return {
+                    cliente: document.getElementById('editCita-cliente').value.toUpperCase() || "CLIENTE",
+                    matricula: document.getElementById('editCita-matricula').value.toUpperCase() || "S/M",
+                    telefono: document.getElementById('editCita-telefono').value,
+                    email: document.getElementById('editCita-email').value,
+                    entregaVO: document.getElementById('editCita-vo').checked ? 'SÍ' : 'NO'
+                }
+            }
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
+                try {
+                    await window.updateDoc(window.doc(window.db, "citas_agenda", id), result.value);
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cita actualizada', showConfirmButton: false, timer: 1500 });
+                } catch(e) {
+                    Swal.fire('Error', 'No se pudo guardar la cita.', 'error');
+                }
+            } else if (result.isDenied) {
+                // Confirmación para evitar borrados por accidente
+                Swal.fire({
+                    title: '¿Seguro que quieres borrarla?',
+                    text: "Esta acción no se puede deshacer y el hueco quedará libre en la agenda.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Sí, borrar definitivamente'
+                }).then(async (borrarResult) => {
+                    if (borrarResult.isConfirmed) {
+                        Swal.fire({title: 'Borrando...', didOpen: () => Swal.showLoading()});
+                        await window.deleteDoc(window.doc(window.db, "citas_agenda", id));
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cita eliminada', showConfirmButton: false, timer: 1500 });
+                    }
+                });
+            }
+        });
+    };
     window.preguntarSiEntregado = function(idFirebase, modelo, matricula, dia, hora) {
         Swal.fire({
             title: '¿ENTREGA COMPLETADA?',
@@ -1546,6 +1478,7 @@ window.dibujarCuadranteMes = function() {
             }
         });
     };
+    
    window.comprobarAlertaEntrega = function(matricula, modelo) {
         Swal.fire({
             title: 'ALERTA TALLER/RECAMBIOS',
@@ -1621,6 +1554,7 @@ window.dibujarCuadranteMes = function() {
        window.inyectarResultadosHistorial(resultados, contenedor, `el día: ${parts[2]}/${parts[1]}/${parts[0]}`);
     };
 
+    // 🔥 4. FUNCIÓN HISTORIAL BLINDADA PARA DESHACER ENTREGA 🔥
    window.inyectarResultadosHistorial = function(resultados, contenedor, criterioTexto) {
         if (resultados.length === 0) {
             contenedor.innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center border border-red-200"><p class="font-bold text-sm">No hay entregas para ${criterioTexto}</p></div>`;
@@ -1629,13 +1563,11 @@ window.dibujarCuadranteMes = function() {
         
         contenedor.innerHTML = `<p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Resultados (${resultados.length}):</p>` + 
         resultados.map(c => {
-            // Lógica de colores y etiquetas
             let esTraslado = c.tipoFinalizacion === 'TRASLADO';
             let bgTag = esTraslado ? 'bg-orange-500' : 'bg-emerald-500';
             let textoTag = esTraslado ? 'Traslado' : 'Entregado';
             let borderTag = esTraslado ? 'border-orange-500' : 'border-emerald-500';
             
-            // Si es traslado, mostramos el destino y el link al acta
             let infoTraslado = esTraslado ? `
                 <p class="text-[10px] font-bold text-orange-600 mb-1"><i class="ph-bold ph-map-pin"></i> Destino: ${c.concesionarioDestino || 'N/A'}</p>
                 ${c.urlActaTraslado ? `<a href="${c.urlActaTraslado}" target="_blank" class="text-[10px] text-blue-600 font-bold hover:underline mb-2 block"><i class="ph-bold ph-file-pdf"></i> Ver Acta de Traslado</a>` : ''}
@@ -1655,13 +1587,14 @@ window.dibujarCuadranteMes = function() {
                     <span class="bg-gray-100 px-2 py-1 rounded border">${c.renting || '-'}</span>
                 </div>
                 
-                <button onclick="window.deshacerEntrega('${c.fila}', '${c.C}')" class="absolute bottom-3 right-3 text-xs bg-amber-50 text-amber-600 font-bold px-3 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-100 transition-colors shadow-sm flex items-center gap-1">
+                <button onclick="window.deshacerEntrega('${c.fila}')" class="absolute bottom-3 right-3 text-xs bg-amber-50 text-amber-600 font-bold px-3 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-100 transition-colors shadow-sm flex items-center gap-1">
                     <i class="ph-bold ph-arrow-u-up-left"></i> Revertir a Activo
                 </button>
             </div>
             `;
         }).join('');
     };
+    
     window.descargarExcelHistorialRango = function() {
        let fInicioRaw = document.getElementById('hist-fecha-inicio').value;
        let fFinRaw = document.getElementById('hist-fecha-fin').value;
@@ -1691,721 +1624,6 @@ window.dibujarCuadranteMes = function() {
        Swal.close();
     };
 
-   window.abrirGestorVacaciones = async function() {
-        const { value: formValues } = await Swal.fire({
-            title: 'Bloquear Agenda',
-            html: `
-                <select id="b-tipo" class="swal2-select !w-full !m-0 !mb-3 text-sm" style="font-weight:bold;">
-                    <option value="hora_suelta">⏱️ Hora Suelta (Médico, Formación, etc.)</option>
-                    <option value="dia_completo">📅 Día Completo (Vacaciones, Baja, Cierre)</option>
-                </select>
-                
-                <select id="b-agente" class="swal2-select !w-full !m-0 !mb-3 text-sm" style="font-weight:bold;">
-                    <option value="MANUEL">Solo Manuel</option>
-                    <option value="ANTONIO">Solo Antonio</option>
-                    <option value="AMBOS">Ambos (Cierre de Concesionario)</option>
-                </select>
-
-                <input id="b-motivo" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold" placeholder="Motivo (Ej: Médico, Formación...)">
-
-                <div id="ui-dia-completo" class="hidden gap-2 mb-3">
-                    <div class="flex-1 text-left">
-                        <label class="text-[10px] uppercase font-bold text-gray-500">Desde</label>
-                        <input type="date" id="b-fecha-inicio" class="swal2-input !w-full !m-0 text-sm font-bold">
-                    </div>
-                    <div class="flex-1 text-left">
-                        <label class="text-[10px] uppercase font-bold text-gray-500">Hasta</label>
-                        <input type="date" id="b-fecha-fin" class="swal2-input !w-full !m-0 text-sm font-bold">
-                    </div>
-                </div>
-
-                <div id="ui-hora-suelta" class="flex gap-2 mb-3">
-                    <div class="flex-1 text-left">
-                        <label class="text-[10px] uppercase font-bold text-gray-500">Día</label>
-                        <input type="date" id="b-fecha-unica" class="swal2-input !w-full !m-0 text-sm font-bold">
-                    </div>
-                    <div class="flex-1 text-left">
-                        <label class="text-[10px] uppercase font-bold text-gray-500">Hora</label>
-                        <select id="b-hora" class="swal2-select !w-full !m-0 text-sm font-bold">
-                            <option value="10:00">10:00</option><option value="11:00">11:00</option>
-                            <option value="12:00">12:00</option><option value="13:00">13:00</option>
-                            <option value="16:00">16:00</option><option value="17:00">17:00</option>
-                            <option value="18:00">18:00</option><option value="19:00">19:00</option>
-                        </select>
-                    </div>
-                </div>
-            `,
-            didOpen: () => {
-                document.getElementById('b-tipo').addEventListener('change', (e) => {
-                    if(e.target.value === 'dia_completo') {
-                        document.getElementById('ui-dia-completo').style.display = 'flex';
-                        document.getElementById('ui-hora-suelta').style.display = 'none';
-                    } else {
-                        document.getElementById('ui-dia-completo').style.display = 'none';
-                        document.getElementById('ui-hora-suelta').style.display = 'flex';
-                    }
-                });
-            },
-            preConfirm: () => {
-                const tipo = document.getElementById('b-tipo').value;
-                const agente = document.getElementById('b-agente').value;
-                const motivo = document.getElementById('b-motivo').value.trim() || 'BLOQUEADO';
-                
-                if (tipo === 'dia_completo') {
-                    const fInicio = document.getElementById('b-fecha-inicio').value;
-                    const fFin = document.getElementById('b-fecha-fin').value;
-                    if (!fInicio || !fFin) return Swal.showValidationMessage('Rellena las fechas');
-                    if (fInicio > fFin) return Swal.showValidationMessage('La fecha de inicio debe ser anterior a la de fin');
-                    return { tipo, agente, motivo, fechaInicio: fInicio, fechaFin: fFin };
-                } else {
-                    const fecha = document.getElementById('b-fecha-unica').value;
-                    const hora = document.getElementById('b-hora').value;
-                    if (!fecha) return Swal.showValidationMessage('Selecciona el día');
-                    return { tipo, agente, motivo, fecha, hora };
-                }
-            },
-            showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Guardar Bloqueo', cancelButtonText: 'Cancelar'
-        });
-
-        if (formValues) {
-            Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
-            try {
-                let idBloqueo = new Date().getTime().toString();
-                await window.setDoc(window.doc(window.db, "bloqueos_agenda", idBloqueo), formValues);
-                Swal.fire('Guardado', 'El bloqueo aparecerá en la agenda en unos segundos.', 'success');
-            } catch(e) {
-                Swal.fire('Error', 'No se pudo guardar.', 'error');
-            }
-        }
-    };
-    
-    // 1. ELIMINAR BLOQUEOS GRISES
-    window.borrarBloqueo = async function(idBloqueo) {
-        Swal.fire({
-            title: '¿Desbloquear fecha?',
-            text: "Esto eliminará el bloqueo y dejará el hueco libre en la agenda.",
-            icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Sí, liberar hueco'
-        }).then(async (res) => {
-            if(res.isConfirmed) {
-                await window.deleteDoc(window.doc(window.db, "bloqueos_agenda", idBloqueo));
-                Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Hueco liberado', showConfirmButton: false, timer: 1500});
-            }
-        });
-    }
-
-    // 🔥 2. EDICIÓN DE CITAS AMPLIADA 🔥
-    window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agenteActual, cliente, matricula, telefono, email, vo) {
-        const { value: formValues, isDenied } = await Swal.fire({
-            title: 'Gestionar Cita',
-            html: `
-                <div class="text-sm mb-4 text-gray-700 font-bold bg-white border border-gray-200 shadow-sm p-3 rounded-xl text-left">
-                    <div class="text-[#001e50] text-base mb-1 uppercase"><i class="ph-fill ph-user"></i> ${cliente}</div>
-                    <div class="text-xs mb-1"><i class="ph-bold ph-car"></i> Matrícula: <span class="bg-gray-100 px-1 rounded">${matricula}</span></div>
-                    <div class="text-xs mb-1"><i class="ph-fill ph-phone text-emerald-600"></i> ${telefono || 'Sin teléfono'}</div>
-                    <div class="text-xs mb-1"><i class="ph-fill ph-envelope text-blue-500"></i> ${email || 'Sin correo electrónico'}</div>
-                    <div class="text-xs mt-2"><i class="ph-fill ph-car-profile text-purple-600"></i> Entrega Vehículo de Ocasión (VO): <span class="${vo === 'SI' || vo === 'SÍ' ? 'text-purple-600 font-black' : 'text-gray-500'}">${vo || 'NO'}</span></div>
-                </div>
-                <div class="flex gap-2 mb-3">
-                    <div class="flex-1 text-left">
-                        <label class="text-[10px] uppercase font-bold text-gray-500">Nueva Fecha</label>
-                        <input type="date" id="e-fecha" class="swal2-input !w-full !m-0 text-sm font-bold" value="${fechaActual}">
-                    </div>
-                    <div class="flex-1 text-left">
-                        <label class="text-[10px] uppercase font-bold text-gray-500">Nueva Hora</label>
-                        <select id="e-hora" class="swal2-select !w-full !m-0 text-sm font-bold">
-                            <option value="10:00" ${horaActual === '10:00' ? 'selected' : ''}>10:00</option><option value="11:00" ${horaActual === '11:00' ? 'selected' : ''}>11:00</option>
-                            <option value="12:00" ${horaActual === '12:00' ? 'selected' : ''}>12:00</option><option value="13:00" ${horaActual === '13:00' ? 'selected' : ''}>13:00</option>
-                            <option value="16:00" ${horaActual === '16:00' ? 'selected' : ''}>16:00</option><option value="17:00" ${horaActual === '17:00' ? 'selected' : ''}>17:00</option>
-                            <option value="18:00" ${horaActual === '18:00' ? 'selected' : ''}>18:00</option><option value="19:00" ${horaActual === '19:00' ? 'selected' : ''}>19:00</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="text-left">
-                    <label class="text-[10px] uppercase font-bold text-gray-500">Agente Asignado</label>
-                    <select id="e-agente" class="swal2-select !w-full !m-0 text-sm font-bold">
-                        <option value="MANUEL" ${agenteActual === 'MANUEL' ? 'selected' : ''}>MANUEL</option>
-                        <option value="ANTONIO" ${agenteActual === 'ANTONIO' ? 'selected' : ''}>ANTONIO</option>
-                    </select>
-                </div>
-            `,
-            showCancelButton: true,
-            showDenyButton: true,
-            confirmButtonColor: '#001e50',
-            denyButtonColor: '#ef4444',
-            confirmButtonText: 'Guardar',
-            denyButtonText: '🗑️ Eliminar',
-            cancelButtonText: 'Cancelar',
-            preConfirm: () => {
-                const f = document.getElementById('e-fecha').value;
-                const h = document.getElementById('e-hora').value;
-                const a = document.getElementById('e-agente').value;
-                if (!f) return Swal.showValidationMessage('La fecha es obligatoria');
-                return { fecha: f, hora: h, agente: a };
-            }
-        });
-
-        if (isDenied) {
-            Swal.fire({
-                title: '¿Seguro?', text: "La cita se borrará de la agenda permanentemente.", icon: 'warning',
-                showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sí, Borrar'
-            }).then(async (res) => {
-                if (res.isConfirmed) {
-                    await window.deleteDoc(window.doc(window.db, "citas_agenda", idCita));
-                    // Quitamos la alerta del coche en inventario
-                    let coche = todosLosCoches.find(c => c.B && c.B.replace(/\s/g,'') === matricula.replace(/\s/g,''));
-                    if (coche) await window.updateDoc(window.doc(window.db, "vehiculos", coche.fila), { fechaCita: null });
-                    Swal.fire('Eliminada', 'La cita ha sido borrada', 'success');
-                }
-            });
-        } else if (formValues) {
-            Swal.fire({title: 'Actualizando...', didOpen: () => Swal.showLoading()});
-            await window.updateDoc(window.doc(window.db, "citas_agenda", idCita), formValues);
-            
-            let tlf = telefono ? telefono.replace(/\s/g, '').replace(/^\+?34/, '') : '';
-            if (tlf) {
-                let msg = `¡Hola ${cliente}! Te confirmamos que tu cita para la entrega de tu vehículo (${matricula}) ha sido modificada. Te esperamos el ${formValues.fecha.split('-').reverse().join('/')} a las ${formValues.hora}h. Saludos, Castellana Wagen.`;
-                window.open(`https://wa.me/34${tlf}?text=${encodeURIComponent(msg)}`, '_blank');
-            }
-            Swal.fire('¡Modificada!', 'La agenda se ha actualizado.', 'success');
-        }
-    };
-
-    // 3. WHATSAPP AL CREAR CITA MANUAL
-    window.crearCitaManual = async function() {
-        const { value: formValues } = await Swal.fire({
-            title: 'Nueva Cita Manual',
-            html: `
-                <input id="m-cliente" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold" placeholder="Nombre (Ej: Juan Pérez)">
-                <input id="m-telefono" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold" placeholder="Teléfono (Para avisos WhatsApp)">
-                <input id="m-modelo" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold" placeholder="Motivo" value="Solo Entrega VO">
-                <input id="m-matricula" class="swal2-input !w-full !m-0 !mb-3 text-sm font-bold uppercase" placeholder="Matrícula (Opcional)">
-                <div class="flex gap-2 mb-3">
-                    <input type="date" id="m-fecha" class="swal2-input !w-full !m-0 text-sm font-bold flex-1">
-                    <select id="m-hora" class="swal2-select !w-full !m-0 text-sm font-bold flex-1">
-                        <option value="10:00">10:00</option><option value="11:00">11:00</option><option value="12:00">12:00</option>
-                        <option value="13:00">13:00</option><option value="16:00">16:00</option><option value="17:00">17:00</option>
-                        <option value="18:00">18:00</option><option value="19:00">19:00</option>
-                    </select>
-                </div>
-                <select id="m-agente" class="swal2-select !w-full !m-0 text-sm font-bold">
-                    <option value="MANUEL">MANUEL</option><option value="ANTONIO">ANTONIO</option>
-                </select>
-            `,
-            showCancelButton: true, confirmButtonColor: '#10b981', confirmButtonText: 'Agendar',
-            preConfirm: () => {
-                const c = document.getElementById('m-cliente').value.trim();
-                const t = document.getElementById('m-telefono').value.trim();
-                const mo = document.getElementById('m-modelo').value.trim();
-                const ma = document.getElementById('m-matricula').value.trim() || 'S/M';
-                const f = document.getElementById('m-fecha').value;
-                const h = document.getElementById('m-hora').value;
-                const a = document.getElementById('m-agente').value;
-                if (!c || !f) return Swal.showValidationMessage('Falta cliente o fecha');
-                return { cliente: c, telefono: t, modelo: mo, matricula: ma, fecha: f, hora: h, agente: a };
-            }
-        });
-
-        if (formValues) {
-            Swal.fire({title: 'Agendando...', didOpen: () => Swal.showLoading()});
-            let idCitaNueva = new Date().getTime().toString();
-            await window.setDoc(window.doc(window.db, "citas_agenda", idCitaNueva), {
-                ...formValues, bastidor: "N/A", renting: "GESTIÓN MANUAL", entregaVO: "NO", creadoEn: new Date().toISOString()
-            });
-
-            let tlf = formValues.telefono ? formValues.telefono.replace(/\s/g, '').replace(/^\+?34/, '') : '';
-            if (tlf) {
-                let msg = `¡Hola ${formValues.cliente}! Te confirmamos tu reserva para el día ${formValues.fecha.split('-').reverse().join('/')} a las ${formValues.hora}h en Castellana Wagen. ¡Te esperamos!`;
-                window.open(`https://wa.me/34${tlf}?text=${encodeURIComponent(msg)}`, '_blank');
-            }
-            Swal.fire({ icon: 'success', title: '¡Cita Creada!', showConfirmButton: false, timer: 1500 });
-        }
-    };
-
-    // 4. SISTEMA DE RECORDATORIOS (BOTÓN VERDE)
-    window.panelRecordatorios = function() {
-        // Calculamos qué día es mañana
-        let manana = new Date();
-        manana.setDate(manana.getDate() + 1);
-        let diaManana = manana.getFullYear() + "-" + String(manana.getMonth()+1).padStart(2,'0') + "-" + String(manana.getDate()).padStart(2,'0');
-        let diaVisual = String(manana.getDate()).padStart(2,'0') + "/" + String(manana.getMonth()+1).padStart(2,'0');
-
-        // Filtramos las citas de mañana (ignorando bloqueos)
-        let citasMañana = window.datosAgenda.filter(c => c.fechaHora && c.fechaHora.startsWith(diaManana) && c.matricula !== "---");
-        
-        if(citasMañana.length === 0) {
-            return Swal.fire('Agenda Libre', 'No hay ninguna entrega programada para mañana.', 'info');
-        }
-        
-        // Creamos los botones de WhatsApp
-        let htmlBotones = citasMañana.map(c => {
-            let tlf = c.telefono ? c.telefono.replace(/\s/g, '').replace(/^\+?34/, '') : '';
-            let horaVisual = c.fechaHora.split('T')[1].substring(0,5);
-            let msg = `¡Hola ${c.cliente}! Te recordamos que mañana (${diaVisual}) a las ${horaVisual}h tienes tu cita de entrega en Castellana Wagen. ¡Estamos deseando entregarte tu vehículo!`;
-            
-            let link = tlf ? `https://wa.me/34${tlf}?text=${encodeURIComponent(msg)}` : '#';
-            let cursor = tlf ? 'cursor-pointer hover:bg-[#128C7E]' : 'opacity-50 cursor-not-allowed';
-            
-            return `
-            <a href="${link}" target="${tlf ? '_blank' : '_self'}" class="block w-full bg-[#25D366] text-white font-bold p-3 rounded-lg mb-2 no-underline text-xs shadow-sm ${cursor}">
-                <div class="flex items-center gap-2">
-                    <i class="ph-fill ph-whatsapp-logo text-lg"></i> 
-                    <div class="text-left leading-tight">
-                        <div>${horaVisual}h - ${c.cliente}</div>
-                        <div class="text-[9px] font-medium text-white/80">${tlf ? 'Enviar WhatsApp' : '⚠️ Sin teléfono guardado'}</div>
-                    </div>
-                </div>
-            </a>`;
-        }).join('');
-        
-        Swal.fire({
-            title: 'Recordatorios: ' + diaVisual,
-            html: `<p class="text-xs text-gray-500 mb-4">Haz clic para enviar el recordatorio 1 a 1:</p><div class="max-h-64 overflow-y-auto pr-2 custom-scrollbar">${htmlBotones}</div>`,
-            showConfirmButton: false,
-            showCloseButton: true
-        });
-    }
-    window.enviarBloqueoWebhook = async function(datos) {
-        // 🔥 ATENCIÓN: Aquí debes pegar la URL que te dé Zapier, Make o Power Automate
-        const webhookUrl = "AQUI_PONDRAS_TU_URL_DE_ZAPIER_O_MAKE";
-
-        if (webhookUrl === "AQUI_PONDRAS_TU_URL_DE_ZAPIER_O_MAKE") {
-            Swal.fire('Falta Configurar', 'El botón está listo, pero necesitas crear el flujo en Zapier/Make y pegar la URL en el código.', 'warning');
-            return;
-        }
-
-        Swal.fire({ title: 'Bloqueando en Bookings...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
-        
-        try {
-            await fetch(webhookUrl, {
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    agente: datos.agente, 
-                    asunto: datos.motivo + " " + datos.agente, 
-                    fechaInicio: datos.fechaInicio, 
-                    horaInicio: datos.horaInicio, 
-                    fechaFin: datos.fechaFin, 
-                    horaFin: datos.horaFin 
-                })
-            });
-            
-            Swal.fire('¡Enviado!', `El bloqueo se ha enviado a Outlook/Bookings correctamente. Aparecerá aquí en la próxima sincronización.`, 'success');
-        } catch (e) { 
-            Swal.fire('Error', 'Fallo conexión con Webhook.', 'error'); 
-        }
-    }
-
-    // Variables globales blindadas para los gráficos
-    window.chartObjDonut = null;
-    window.chartObjMeses = null;
-
-    window.renderizarDashboard = function() {
-        // 1. Cálculos de listas generales
-        let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
-        // Cogemos ABSOLUTAMENTE TODOS los que no están entregados (tanto logística como concesionario)
-        let noEntregados = todosLosCoches.filter(c => c.entregado !== true && c.entregado !== "true");
-        
-        // 2. Cálculos para las Tarjetas (Cifras)
-        let hoyStr = new Date().toLocaleDateString('es-ES');
-        let entregasHoy = entregados.filter(c => c.fechaEntrega === hoyStr).length;
-        let reparados = todosLosCoches.filter(c => c.fechaEntradaTaller || c.fechaEntradaRecambios).length;
-        
-        let devueltos = 0;
-        if (window.datosAgenda && window.datosAgenda.length > 0) {
-            devueltos = window.datosAgenda.filter(cita => {
-                let textoVO = String(cita.entregaVO || '').toUpperCase().trim();
-                return textoVO === 'SÍ' || textoVO === 'SI';
-            }).length;
-        }
-
-        // Inyectamos los números en el HTML
-        document.getElementById('kpi-hoy').innerText = entregasHoy;
-        document.getElementById('kpi-total').innerText = entregados.length;
-        document.getElementById('kpi-reparados').innerText = reparados;
-        document.getElementById('kpi-devueltos').innerText = devueltos;
-
-        // 3. Cálculos para el Gráfico Donut (GLOBALES y sin duplicados)
-        let enTaller = noEntregados.filter(c => c.enTaller && !c.finTaller).length;
-        let enRecambios = noEntregados.filter(c => c.enRecambios && !c.finRecambios).length;
-        
-        // Para que el Donut sume un 100% perfecto, si un coche está en Taller/Recambios, 
-        // lo restamos de Logística Ptea o Listos para que no cuente doble.
-        let pteLogistica = noEntregados.filter(c => 
-            c.pasoAInventario === false && 
-            !(c.enTaller && !c.finTaller) && 
-            !(c.enRecambios && !c.finRecambios)
-        ).length;
-        
-        let listos = noEntregados.filter(c => 
-            c.pasoAInventario !== false && 
-            !(c.enTaller && !c.finTaller) && 
-            !(c.enRecambios && !c.finRecambios)
-        ).length;
-
-        // 4. Cálculos para la gráfica mensual
-        let mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        let conteoMeses = new Array(12).fill(0);
-
-        entregados.forEach(c => {
-            if (c.fechaEntrega) {
-                let partes = c.fechaEntrega.split('/');
-                if (partes.length === 3) {
-                    let mesIndex = parseInt(partes[1], 10) - 1; 
-                    if (mesIndex >= 0 && mesIndex <= 11) {
-                        conteoMeses[mesIndex]++; 
-                    }
-                }
-            }
-        });
-
-        // 5. Destruimos gráficos anteriores de forma segura para redibujar limpios
-        if(window.chartObjDonut) window.chartObjDonut.destroy();
-        if(window.chartObjMeses) window.chartObjMeses.destroy();
-
-        // 6. Dibujar Gráfico Donut
-        const canvasDonut = document.getElementById('graficoDonut');
-        if (canvasDonut) {
-            const ctxDonut = canvasDonut.getContext('2d');
-            window.chartObjDonut = new Chart(ctxDonut, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Listos/Con Cita', 'En Taller', 'En Recambios', 'Logística Ptea.'],
-                    datasets: [{
-                        data: [listos, enTaller, enRecambios, pteLogistica],
-                        backgroundColor: ['#10b981', '#f59e0b', '#14b8a6', '#94a3b8'],
-                        borderWidth: 0,
-                        hoverOffset: 8
-                    }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { size: 11, family: 'Inter' } } } },
-                    cutout: '65%' 
-                }
-            });
-        }
-
-        // 7. Dibujar Gráfico Mensual
-        const canvasMeses = document.getElementById('graficoMeses');
-        if (canvasMeses) {
-            const ctxMeses = canvasMeses.getContext('2d');
-            window.chartObjMeses = new Chart(ctxMeses, {
-                type: 'bar',
-                data: {
-                    labels: mesesNombres,
-                    datasets: [{
-                        label: 'Vehículos Entregados',
-                        data: conteoMeses,
-                        backgroundColor: 'rgba(0, 176, 240, 0.2)', 
-                        borderColor: '#00b0f0', 
-                        borderWidth: 2,
-                        borderRadius: 4, 
-                        hoverBackgroundColor: '#00b0f0'
-                    }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    scales: { 
-                        y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
-                        x: { grid: { display: false } }
-                    },
-                    plugins: { legend: { display: false } } 
-                }
-            });
-        }
-    };
-    window.abrirLectorPDF = function() { document.getElementById('inputUploadPDF').click(); }
-
-    window.procesarPDFs = async function(evento) {
-      const archivos = evento.target.files; if (!archivos || archivos.length === 0) return;
-      Swal.fire({ title: `Analizando...`, allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-      for (let file of archivos) {
-        try {
-          const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise; let txt = "";
-          for (let i = 1; i <= pdf.numPages; i++) { txt += (await (await pdf.getPage(i)).getTextContent()).items.map(item => item.str).join(" "); }
-          const bastidor = (txt.match(/\b[A-HJ-NPR-Z0-9]{17}\b/gi) || [])[0];
-          if (bastidor) {
-             const matricula = (txt.match(/\b\d{4}\s?[B-DF-HJ-NP-TV-Z]{3}\b/i) || [])[0] || 'S/M';
-             await window.setDoc(window.doc(window.db, "vehiculos", bastidor.toUpperCase()), { bastidor: bastidor.toUpperCase(), matricula: matricula.replace(/\s/g, '').toUpperCase(), modelo: "VW PDF", creadoEn: new Date().getTime(), entregado: false, pasoAInventario: false });
-          }
-        } catch (e) {}
-      }
-      document.getElementById('inputUploadPDF').value = ""; 
-      Swal.fire('Completado', `Enviados a Logística`, 'success');
-    }
-
-   window.anadirVehiculoManual = async function() {
-        const { value: formValues } = await Swal.fire({ 
-            title: 'Añadir Vehículo Manual', 
-            html: `
-                <div class="text-left mb-1 text-xs font-bold text-gray-500 uppercase">Bastidor (VIN)</div>
-                <input id="swal-bastidor" class="swal2-input !w-full !m-0 !mb-4 text-center font-mono uppercase" placeholder="Ej: WVWZZZ..." maxlength="17">
-                
-                <div class="text-left mb-1 text-xs font-bold text-gray-500 uppercase">Matrícula</div>
-                <input id="swal-matricula" class="swal2-input !w-full !m-0 !mb-4 text-center uppercase" placeholder="Ej: 1234 ABC">
-                
-                <div class="text-left mb-1 text-xs font-bold text-gray-500 uppercase">Modelo</div>
-                <input id="swal-modelo" class="swal2-input !w-full !m-0 text-center uppercase" placeholder="Ej: VW TIGUAN">
-            `, 
-            showCancelButton: true,
-            confirmButtonColor: '#001e50',
-            confirmButtonText: 'Guardar Vehículo',
-            cancelButtonText: 'Cancelar',
-            preConfirm: () => { 
-                const b = document.getElementById('swal-bastidor').value.toUpperCase().trim();
-                const m = document.getElementById('swal-matricula').value.toUpperCase().trim();
-                const mod = document.getElementById('swal-modelo').value.toUpperCase().trim();
-                
-                if (!b || b.length < 3) { Swal.showValidationMessage('Indica al menos 3 caracteres del bastidor'); return false; }
-                if (!mod) { Swal.showValidationMessage('Indica el modelo'); return false; }
-                
-                return { 
-                    bastidor: b, 
-                    matricula: m || "S/M", 
-                    modelo: mod 
-                }; 
-            } 
-        });
-
-        if (formValues) {
-            Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false});
-            
-            await window.setDoc(window.doc(window.db, "vehiculos", formValues.bastidor), { 
-                bastidor: formValues.bastidor, 
-                matricula: formValues.matricula.replace(/\s/g, ''),
-                Matricula: formValues.matricula.replace(/\s/g, ''),
-                modelo: formValues.modelo, 
-                creadoEn: new Date().getTime(), 
-                entregado: false, 
-                pasoAInventario: false 
-            });
-            
-            Swal.fire('¡Añadido!', 'Vehículo enviado a Logística Previa con éxito.', 'success');
-        }
-    }
-
-    window.editarRentingAgencia = async function(id, rActual, aActual) {
-        const { value: formValues } = await Swal.fire({ 
-            title: 'Renting y Agencia', 
-            html: `
-                <div class="text-left mb-1 ml-1 text-xs font-bold text-gray-500 uppercase">Empresa de Renting</div>
-                <input id="r" class="swal2-input !w-full !m-0 !mb-4 text-center uppercase font-bold text-gray-700" placeholder="Ej: ALD, Arval, Alphabet..." value="${rActual || ''}">
-                
-                <div class="text-left mb-1 ml-1 text-xs font-bold text-gray-500 uppercase">Agencia de Transporte</div>
-                <input id="a" class="swal2-input !w-full !m-0 text-center uppercase font-bold text-gray-700" placeholder="Ej: Tradisa, Sintax, CAT..." value="${aActual || ''}">
-            `, 
-            showCancelButton: true,
-            confirmButtonColor: '#001e50',
-            confirmButtonText: 'Guardar',
-            cancelButtonText: 'Cancelar',
-            preConfirm: () => { 
-                return { 
-                    r: document.getElementById('r').value.trim(), 
-                    a: document.getElementById('a').value.trim() 
-                }; 
-            } 
-        });
-        
-        if (formValues) {
-            Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
-            
-            await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
-                renting: formValues.r.toUpperCase(), 
-                agencia: formValues.a.toUpperCase() 
-            });
-            
-            // Un pequeño aviso discreto para confirmar que se ha guardado
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Datos actualizados', showConfirmButton: false, timer: 1500 });
-        }
-    }
-
-  window.pedirInst = function(btn, id, depto) {
-      Swal.fire({ 
-        title: 'Enviar a ' + depto.charAt(0).toUpperCase() + depto.slice(1), 
-        html: `<input type="text" id="ins" class="swal2-input" placeholder="Instrucción o Motivo..."><br><input type="file" id="fileInput" class="mt-4 text-sm w-3/4" accept=".pdf,image/*">`, 
-        showCancelButton: true, 
-        confirmButtonColor: '#001e50', 
-        confirmButtonText: 'Confirmar Solicitud' 
-      }).then((res) => {
-        if (res.isConfirmed) { 
-           let ins = document.getElementById('ins').value; 
-           let f = document.getElementById('fileInput').files[0];
-           if(f) window.subirYEnviar(id, depto, ins, f); 
-           else window.mandar(id, depto, ins);
-        }
-      });
-    }
-
-    window.subirYEnviar = async function(id, depto, ins, file) {
-      Swal.fire({title: 'Adjuntando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false});
-      const reader = new FileReader(); 
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const urlDrive = 'https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec'; 
-        try {
-          const res = await fetch(urlDrive, { method: 'POST', body: JSON.stringify({ base64: reader.result, fileName: file.name, mimeType: file.type }) });
-          const data = await res.json();
-          let fHoy = new Date().toLocaleDateString('es-ES');
-          let upd = depto === 'taller' ? { enTaller: true, instruccionTaller: ins, urlParte: data.url, fechaEntradaTaller: fHoy, finTaller: false } : { enRecambios: true, instruccionRecambios: ins, urlParte: data.url, fechaEntradaRecambios: fHoy, finRecambios: false };
-          await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
-          Swal.fire('Éxito', 'Petición enviada con PDF adjunto', 'success');
-        } catch (e) { Swal.fire('Error', e.message, 'error'); }
-      };
-    }
-
-    window.mandar = async function(id, depto, ins) {
-      let fHoy = new Date().toLocaleDateString('es-ES');
-      let upd = depto === 'taller' ? { enTaller: true, instruccionTaller: ins, fechaEntradaTaller: fHoy, finTaller: false } : { enRecambios: true, instruccionRecambios: ins, fechaEntradaRecambios: fHoy, finRecambios: false };
-      await window.updateDoc(window.doc(window.db, "vehiculos", id), upd);
-      Swal.fire('Éxito', 'Petición enviada (sin adjuntos)', 'success');
-    }
-window.abrirChat = async function(id, mod, mat, jsonStr) {
-      document.getElementById('chatFilaActiva').value = id;
-      document.getElementById('chatTituloCoche').innerText = decodeURIComponent(mod);
-      document.getElementById('chatSubtitulo').innerText = "Matrícula: " + decodeURIComponent(mat);
-      
-      let chatObj = { history: [], lastOpened: {} }; 
-      try { if (jsonStr) chatObj = JSON.parse(decodeURIComponent(jsonStr)); } catch(e) {}
-      
-      // Aseguramos que siempre pasamos un array válido al dibujar
-      window.dibujarMsj(chatObj.history || []); 
-      document.getElementById('chatModal').classList.remove('hidden');
-
-      // 🔥 CORRECCIÓN: Reseteamos la notificación de forma 100% segura sin romper la estructura
-      let timestamp = new Date().getTime();
-      let updateData = { chatInfo: { lastOpened: {} } };
-      updateData.chatInfo.lastOpened[userRole.toUpperCase()] = timestamp;
-      
-      try {
-         // Usamos setDoc con { merge: true } para que respete lo que ya existe y solo añada la hora
-         await window.setDoc(window.doc(window.db, "vehiculos", id), updateData, { merge: true });
-      } catch(e) { console.log("Aviso: No se pudo resetear la notificación", e); }
-    }
-    window.cerrarChat = function() { document.getElementById('chatModal').classList.add('hidden'); }
-
-    window.dibujarMsj = function(hist) {
-      const cont = document.getElementById('chatMessages');
-      if (!hist || hist.length === 0) { 
-          cont.innerHTML = `<p class="text-center text-xs font-bold mt-4 text-gray-500">No hay mensajes. ¡Escribe el primero!</p>`; 
-          return; 
-      }
-      
-      cont.innerHTML = hist.map(m => {
-          let isMe = m.rol.toUpperCase() === userRole.toUpperCase();
-          let bubbleClass = isMe ? 'wa-me' : 'wa-other';
-          
-          // 🔥 CORRECCIÓN 2: Si no soy yo, pongo el nombre del departamento en pequeñito arriba del mensaje
-          let etiquetaRemitente = isMe ? '' : `<span style="display:block; font-size:9px; font-weight:900; color:#128c7e; margin-bottom:3px; text-transform:uppercase;">${m.rol}</span>`;
-          
-          return `<div class="wa-bubble ${bubbleClass}"><div>${etiquetaRemitente}${m.texto}</div></div>`;
-      }).join('');
-      
-      // Hacemos scroll automático hacia abajo para ver el último mensaje
-      setTimeout(() => { cont.scrollTop = cont.scrollHeight; }, 50);
-    }
-
-    window.enviarMensajeChat = async function() {
-      const id = document.getElementById('chatFilaActiva').value; 
-      const txt = document.getElementById('chatInput').value.trim();
-      if (!id || !txt) return; 
-      
-      // Borramos la caja de texto
-      document.getElementById('chatInput').value = ""; 
-      
-      const nM = { rol: userRole.toUpperCase(), fecha: new Date().getTime(), texto: txt };
-      let c = todosLosCoches.find(x => x.fila === id);
-      
-      if (c) { 
-          // 🔥 PROTECCIÓN: Si no existe la carpeta chatData o el historial, los creamos sobre la marcha
-          if (!c.chatData) c.chatData = {}; 
-          if (!c.chatData.history) c.chatData.history = [];
-          
-          // Empujamos el mensaje y lo dibujamos
-          c.chatData.history.push(nM); 
-          window.dibujarMsj(c.chatData.history); 
-      }
-      
-      // 🔥 PROTECCIÓN FIRBEASE: Enviamos el mensaje de forma que si el historial no existía, lo cree solo
-      try {
-          await window.setDoc(window.doc(window.db, "vehiculos", id), { 
-              chatInfo: { history: window.arrayUnion(nM) } 
-          }, { merge: true });
-      } catch (e) {
-          console.error("Error de conexión al enviar el mensaje:", e);
-      }
-    };
-
-   window.sincronizarCitasSilencioso = async function() {
-        const btnSync = document.getElementById('btnSyncCitas');
-        if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Actualizando...';
-        
-        try {
-            // Simplemente volvemos a cargar la agenda desde Firebase
-            await window.renderAgenda();
-            
-            // Refrescamos también el botón para que diga "Actualizar Agenda" en vez de Outlook
-            if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-arrows-clockwise text-base"></i> Actualizar Agenda';
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Agenda actualizada`, showConfirmButton: false, timer: 2000 });
-            
-        } catch (e) { 
-            if(btnSync) btnSync.innerHTML = '<i class="ph-bold ph-warning text-red-500"></i> Error Sync'; 
-        }
-    };
-
-    window.iniciarMotorAlertas = function() {
-        console.log("🟢 [RADAR LLEGADAS] Encendiendo motor de escucha...");
-        
-        if (window.unsubscribeAlertas) {
-            window.unsubscribeAlertas();
-        }
-        
-        window.unsubscribeAlertas = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
-            console.log("🟢 [RADAR LLEGADAS] Sincronizado con Firebase. Cambios en esta lectura: " + snapshot.docChanges().length);
-            
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === "modified") {
-                    const data = change.doc.data();
-                    console.log(`🟡 [RADAR] Modificado: ${data.matricula} | clienteEnPuerta: ${data.clienteEnPuerta} | alertaAtendida: ${data.alertaAtendida}`);
-                    
-                    // Si el cliente está en la puerta y no lo hemos atendido, disparamos
-                    if (data.clienteEnPuerta === true && data.alertaAtendida === false) {
-                        console.log("🔴 [RADAR] ¡CUMPLEN CONDICIONES! DISPARANDO ALARMA...");
-                        window.lanzarAlertaMovil(data, change.doc.id);
-                    }
-                }
-            });
-        });
-    };
-
-    window.lanzarAlertaMovil = function(data, docId) {
-        console.log("🔊 Lanzando alerta visual y sonora...");
-        
-        // Intentamos reproducir el sonido (el catch evita que la app se cuelgue si Chrome lo bloquea)
-        try {
-            new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(e => console.log("🔇 Audio bloqueado por falta de clics previos."));
-        } catch(e) {}
-
-        const tarjetas = document.querySelectorAll('.fila-coche');
-        tarjetas.forEach(tarjeta => {
-            if (tarjeta.innerText.includes(data.matricula)) tarjeta.classList.add('alerta-llegada');
-        });
-
-        Swal.fire({
-            title: '🔔 ¡CLIENTE LLEGÓ!',
-            html: `<div class="text-left"><p class="font-bold text-lg">${data.cliente || 'Conductor'}</p><p class="text-sm">${data.modelo} - ${data.matricula}</p></div>`,
-            icon: 'warning',
-            confirmButtonColor: '#001e50',
-            confirmButtonText: 'IR A RECEPCIÓN'
-        }).then(() => {
-            tarjetas.forEach(t => t.classList.remove('alerta-llegada'));
-            // Marcamos como atendida para el panel, pero NO borramos el clienteEnPuerta porque 
-            // el botón rojo de la app del cliente es el encargado de hacer ese reset.
-            console.log("✅ Alarma atendida por el usuario.");
-            window.updateDoc(window.doc(window.db, "vehiculos", docId), { alertaAtendida: true });
-        });
-    };
   </script>
 
   <div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6);">
@@ -2429,37 +1647,46 @@ window.abrirChat = async function(id, mod, mat, jsonStr) {
       btn.onclick = function() { modal.style.display = "block"; }
       span.onclick = function() { modal.style.display = "none"; }
       window.onclick = function(event) { if (event.target == modal) { modal.style.display = "none"; } }
-      window.deshacerEntrega = async function(id, modelo) {
-        Swal.fire({
-            title: '¿Deshacer entrega?',
-            text: `El vehículo ${modelo} volverá a la lista de activos (No Entregados).`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#f59e0b', // Color ámbar
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Sí, restaurar',
-            cancelButtonText: 'Cancelar'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                Swal.fire({title: 'Restaurando...', didOpen: () => Swal.showLoading()});
-                
-                // Le quitamos el estado de entregado en Firebase
-                await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
-                    entregado: false, 
-                    fechaEntrega: "" 
-                });
-                
-                Swal.fire('¡Restaurado!', 'El vehículo vuelve a estar en curso.', 'success');
-                
-                // Refrescamos la búsqueda del historial para que desaparezca de esta pantalla
-                if (document.getElementById('inputBusquedaHistorial').value) {
-                    window.buscarEnHistorial();
-                } else if (document.getElementById('hist-fecha-inicio').value) {
-                    window.buscarPorDiaManual();
-                }
-            }
-        });
-    };
+      
+      // 🔥 5. FUNCIÓN FINAL: Deshacer entrega blindado 🔥
+      window.deshacerEntrega = async function(id) {
+          let coche = todosLosCoches.find(c => c.fila === id);
+          let modeloCoche = coche ? coche.C : "el vehículo seleccionado";
+
+          Swal.fire({
+              title: '¿Deshacer entrega?',
+              text: `El vehículo ${modeloCoche} volverá a la lista de activos (No Entregados).`,
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#f59e0b',
+              cancelButtonColor: '#6b7280',
+              confirmButtonText: 'Sí, restaurar',
+              cancelButtonText: 'Cancelar'
+          }).then(async (result) => {
+              if (result.isConfirmed) {
+                  Swal.fire({title: 'Restaurando...', didOpen: () => Swal.showLoading()});
+                  try {
+                      await window.updateDoc(window.doc(window.db, "vehiculos", id), {
+                          entregado: false,
+                          fechaEntrega: ""
+                      });
+                      Swal.fire('¡Restaurado!', 'El vehículo vuelve a estar en curso.', 'success');
+                      
+                      setTimeout(() => {
+                          if (document.getElementById('inputBusquedaHistorial').value) {
+                              window.buscarEnHistorial();
+                          } else if (document.getElementById('hist-fecha-inicio').value) {
+                              window.buscarPorDiaManual();
+                          } else {
+                              window.renderEntregados();
+                          }
+                      }, 500);
+                  } catch (error) {
+                      Swal.fire('Error', 'No se ha podido restaurar el vehículo. Revisa la conexión.', 'error');
+                  }
+              }
+          });
+      };
   </script>
 </body>
 </html>
