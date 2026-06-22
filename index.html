@@ -299,17 +299,34 @@
       window.onclick = function(event) { if (event.target == document.getElementById("aboutModal")) { document.getElementById("aboutModal").style.display = "none"; } }
     };
 
-    window.iniciar = function() {
+   window.iniciar = async function() {
       userRole = document.getElementById('userRole').value;
       const pass = document.getElementById('userPass').value;
-      const pwd = { 'taller': 'taller2026', 'recambios': 'piezas2026', 'entregas': 'vw2026' };
       
-      if (pass !== pwd[userRole]) { Swal.fire('Error', 'Clave incorrecta', 'error'); return; }
+      if (!pass) return Swal.fire('Error', 'Introduce una clave', 'warning');
       
-      localStorage.setItem('vw_departamento', userRole); 
-      window.iniciarAppDirectamente(userRole);
-    }
+      let btn = document.querySelector('#loginScreen button');
+      let textoOriginal = btn.innerText;
+      btn.innerText = "VERIFICANDO...";
 
+      try {
+          // Consultamos a la base de datos de forma segura
+          const docRef = window.doc(window.db, "credenciales", userRole);
+          const docSnap = await window.getDoc(docRef);
+
+          if (docSnap.exists() && docSnap.data().pass === pass) {
+              localStorage.setItem('vw_departamento', userRole); 
+              window.iniciarAppDirectamente(userRole);
+          } else {
+              Swal.fire('Error', 'Clave incorrecta o acceso denegado', 'error');
+              btn.innerText = textoOriginal;
+          }
+      } catch (error) {
+          console.error(error);
+          Swal.fire('Error', 'No se pudo verificar la credencial', 'error');
+          btn.innerText = textoOriginal;
+      }
+    }
     window.iniciarAppDirectamente = function(rol) {
         document.getElementById('roleBadge').innerText = "Perfil: " + rol;
         document.getElementById('loginScreen').style.display = 'none';
@@ -1350,7 +1367,7 @@ window.renderizarDashboard = function() {
         showCancelButton: true, 
         confirmButtonColor: '#001e50', 
         confirmButtonText: 'Confirmar Solicitud' 
-      }).then((res) => {
+          }).then((res) => {
         if (res.isConfirmed) { 
            let ins = document.getElementById('ins').value; 
            let f = document.getElementById('fileInput').files[0];
