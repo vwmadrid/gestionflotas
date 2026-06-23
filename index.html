@@ -65,6 +65,21 @@
     ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; border: 2px solid #f1f5f9; }
     ::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
     .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+    /* Fuerza al navegador a mostrar el cursor correcto en la agenda y tarjetas */
+    .tabla-excel td, 
+    #contenedorAgenda table td, 
+    #contenedorAgenda .flex-1,
+    .card-mini {
+        cursor: pointer !important; /* Fuerza la mano de clic */
+    }
+
+    /* En caso de que se pase por celdas totalmente vacías o bloqueadas */
+    #contenedorAgenda table td div {
+        cursor: pointer !important;
+    }
+    .swal2-backdrop-show {
+        cursor: default !important;
+    }
   </style>
 </head>
 <body class="text-gray-800 antialiased h-screen flex overflow-hidden">
@@ -288,7 +303,19 @@
     let userRole = ""; let activeTab = 'logistica'; let modoVistaActual = 'tarjetas'; 
     let primeraCargaDb = true;
     let unsubscribeFirebase = null; let todosLosCoches = []; let filtroActual = 'todos';
-
+// Controla qué campos se muestran según el tipo de bloqueo seleccionado
+    window.toggleBloqueoForm = function(val) {
+        const campoFechaFin = document.getElementById('bv-fecha-fin');
+        const contenedorHoras = document.getElementById('bv-hora-container');
+        
+        if (val === 'hora_suelta') {
+            if (campoFechaFin) campoFechaFin.style.display = 'none';
+            if (contenedorHoras) contenedorHoras.style.display = 'block';
+        } else {
+            if (campoFechaFin) campoFechaFin.style.display = 'inline-block';
+            if (contenedorHoras) contenedorHoras.style.display = 'none';
+        }
+    };
     window.onload = function() {
       const rol = localStorage.getItem('vw_departamento');
       if (rol) { userRole = rol; document.getElementById('userRole').value = rol; window.iniciarAppDirectamente(rol); }
@@ -2127,6 +2154,7 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
             }
         });
 
+        // Preparamos el WhatsApp por si hace falta
         let tlfLimpio = telefono ? String(telefono).replace(/\s/g, '').replace(/^\+?34/, '') : '';
         let urlWhatsAppBase = tlfLimpio ? `https://wa.me/34${tlfLimpio}?text=` : null;
 
@@ -2142,6 +2170,7 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                     let coche = todosLosCoches.find(c => c.B && c.B.replace(/\s/g,'') === matricula.replace(/\s/g,''));
                     if (coche) await window.updateDoc(window.doc(window.db, "vehiculos", coche.fila), { fechaCita: null });
                     
+                    // AVISO WHATSAPP: ANULACIÓN
                     if (urlWhatsAppBase) {
                         Swal.fire({
                             title: 'Cita Eliminada',
@@ -2160,25 +2189,25 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                 }
             });
         } else if (formValues) {
-            let cambioFecha = (formValues.fecha !== fechaActual || formValues.hora !== horaActual);
-
-            // 🔥 NUEVO: DETECCIÓN DE HUECO OCUPADO AL MODIFICAR
-            if (cambioFecha) {
-                let citasEnEseHueco = window.datosAgenda.filter(c => {
-                    if (c.id === idCita) return false; // No contar la propia cita que estamos moviendo
-                    return c.fechaHora.startsWith(formValues.fecha + 'T' + formValues.hora);
-                });
-                let capacidadMaxima = (formValues.hora === '19:00') ? 1 : 2;
-                
-                if (citasEnEseHueco.length >= capacidadMaxima) {
-                    Swal.fire('⚠️ Hueco Ocupado', 'Ese día y hora ya están completos. Por favor, selecciona otro horario.', 'error');
-                    return; // Abortamos la modificación
-                }
-            }
-
             Swal.fire({title: 'Actualizando...', didOpen: () => Swal.showLoading()});
             await window.updateDoc(window.doc(window.db, "citas_agenda", idCita), formValues);
+            // 🔥 NUEVO: ACTUALIZAR EL VEHÍCULO PARA QUE COINCIDA CON LA AGENDA
+            let cocheEnBaseDatos = todosLosCoches.find(c => 
+                (c.B && String(c.B).replace(/\s/g, '').toUpperCase() === matricula.replace(/\s/g, ''))
+            );
             
+            if (cocheEnBaseDatos) {
+                let fechaVisual = formValues.fecha.split('-').reverse().join('/');
+                await window.updateDoc(window.doc(window.db, "vehiculos", cocheEnBaseDatos.fila), {
+                    fechaCita: `${fechaVisual} - ${formValues.hora}h`,
+                    agente: formValues.agente
+                });
+            }
+            
+            // Comprobamos si realmente ha cambiado la fecha o la hora
+            let cambioFecha = (formValues.fecha !== fechaActual || formValues.hora !== horaActual);
+            
+            // AVISO WHATSAPP: MODIFICACIÓN
             if (cambioFecha && urlWhatsAppBase) {
                 Swal.fire({
                     title: '¡Cita Modificada!',
@@ -2225,9 +2254,10 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                 </div>
 
                 <div class="text-left text-xs font-bold text-gray-500 uppercase mb-1">Vehículo</div>
+                <input id="nc-modelo" class="swal2-input" placeholder="Modelo" style="width: 100%; margin: 0 0 10px 0; font-size: 14px;">
                 <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <input id="nc-modelo" class="swal2-input" placeholder="Modelo" style="flex: 1; margin: 0; font-size: 14px;">
-                    <input id="nc-matricula" class="swal2-input uppercase" placeholder="Matrícula / VIN" style="flex: 1; margin: 0; font-size: 14px;">
+                    <input id="nc-matricula" class="swal2-input uppercase" placeholder="Matrícula" style="flex: 1; margin: 0; font-size: 14px;">
+                    <input id="nc-bastidor" class="swal2-input uppercase" placeholder="Bastidor (VIN)" style="flex: 1; margin: 0; font-size: 14px;">
                 </div>
                 <select id="nc-vo" class="swal2-input" style="width: 100%; margin: 0; font-size: 14px;">
                     <option value="NO">SIN ENTREGA V.O.</option>
@@ -2241,9 +2271,13 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
             preConfirm: () => {
                 let f = document.getElementById('nc-fecha').value;
                 let mat = document.getElementById('nc-matricula').value.toUpperCase().replace(/\s/g, '');
+                let bas = document.getElementById('nc-bastidor').value.toUpperCase().trim();
                 
+                // Comprobamos que se haya puesto una fecha y, al menos, la matrícula o el bastidor
                 if(!f) { Swal.showValidationMessage('Selecciona una fecha'); return false; }
-                if(!mat || mat.length < 3) { Swal.showValidationMessage('Introduce matrícula o bastidor'); return false; }
+                if((!mat || mat.length < 3) && (!bas || bas.length < 3)) { 
+                    Swal.showValidationMessage('Introduce la matrícula o el bastidor'); return false; 
+                }
 
                 return {
                     fecha: f, 
@@ -2254,7 +2288,8 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                     email: document.getElementById('nc-email').value,
                     entregaVO: document.getElementById('nc-vo').value,
                     modelo: document.getElementById('nc-modelo').value.toUpperCase() || 'VEHÍCULO',
-                    matricula: mat,
+                    matricula: mat || "S/M",
+                    bastidor: bas || "S/B",
                     renting: "GESTIÓN MANUAL",
                     creadoEn: new Date().toISOString()
                 }
@@ -2263,13 +2298,18 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
             if(result.isConfirmed) {
                 const data = result.value;
                 
-                // 1. DETECCIÓN DE MATRÍCULA DUPLICADA
-                let citaExistente = window.datosAgenda.find(c => c.matricula.toUpperCase().replace(/\s/g, '') === data.matricula);
+                // 1. DETECCIÓN DE VEHÍCULO DUPLICADO (Por matrícula o por bastidor)
+                let citaExistente = window.datosAgenda.find(c => {
+                    let coincidenciaMat = (data.matricula !== "S/M" && c.matricula && c.matricula.toUpperCase().replace(/\s/g, '') === data.matricula);
+                    let coincidenciaBas = (data.bastidor !== "S/B" && c.bastidor && c.bastidor.toUpperCase() === data.bastidor);
+                    return coincidenciaMat || coincidenciaBas;
+                });
+                
                 if (citaExistente) {
                     let fechaEx = citaExistente.fechaHora.split('T')[0].split('-').reverse().join('/');
                     let horaEx = citaExistente.fechaHora.split('T')[1].substring(0, 5);
                     Swal.fire({
-                        title: '⚠️ Matrícula Duplicada',
+                        title: '⚠️ Vehículo Duplicado',
                         html: `Este vehículo ya tiene una cita programada el <b>${fechaEx} a las ${horaEx}h</b>.<br><br>Si necesitas cambiarla, búscalo en el cuadrante de la agenda y modifícala desde ahí.`,
                         icon: 'warning',
                         confirmButtonColor: '#001e50'
@@ -2277,23 +2317,25 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                     return; 
                 }
 
-                // 🔥 NUEVO: DETECCIÓN DE HUECO OCUPADO
+                // 2. DETECCIÓN DE HUECO OCUPADO
                 let citasEnEseHueco = window.datosAgenda.filter(c => c.fechaHora.startsWith(data.fecha + 'T' + data.hora));
                 let capacidadMaxima = (data.hora === '19:00') ? 1 : 2;
                 
                 if (citasEnEseHueco.length >= capacidadMaxima) {
                     Swal.fire('⚠️ Hueco Ocupado', 'Ese día y hora ya han alcanzado el límite de citas permitidas. Por favor, elige otro horario.', 'error');
-                    return; // Cortamos el proceso
+                    return; 
                 }
 
                 Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
                 
+                // 3. Guardar en la agenda
                 let idCitaNueva = new Date().getTime().toString();
                 await window.setDoc(window.doc(window.db, "citas_agenda", idCitaNueva), data);
                 
+                // 4. Vincular con el vehículo en el Inventario (usando matrícula o bastidor)
                 let cocheEnBaseDatos = todosLosCoches.find(c => 
-                    (c.B && String(c.B).replace(/\s/g, '').toUpperCase() === data.matricula) || 
-                    (c.A && String(c.A).toUpperCase() === data.matricula)
+                    (data.matricula !== "S/M" && c.B && String(c.B).replace(/\s/g, '').toUpperCase() === data.matricula) || 
+                    (data.bastidor !== "S/B" && c.A && String(c.A).toUpperCase() === data.bastidor)
                 );
 
                 if (cocheEnBaseDatos) {
@@ -2311,52 +2353,49 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
         });
     };
     
-    // Función auxiliar para mostrar/ocultar campos en el formulario de bloqueo
-    window.toggleBloqueoForm = function(val) {
-        if(val === 'hora_suelta') {
-            document.getElementById('bv-fecha-fin').style.display = 'none';
-            document.getElementById('bv-hora-container').style.display = 'block';
-        } else {
-            document.getElementById('bv-fecha-fin').style.display = 'inline-block';
-            document.getElementById('bv-hora-container').style.display = 'none';
-        }
-    };
-
     window.abrirGestorVacaciones = function() {
         Swal.fire({
             title: 'Bloquear Fechas u Horas',
             html: `
-                <select id="bv-agente" class="swal2-input !w-[80%]">
+                <div class="text-left text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Responsable</div>
+                <select id="bv-agente" class="swal2-input !w-[80%] !m-0 !mb-3 text-sm font-bold">
                     <option value="MANUEL">MANUEL</option><option value="ANTONIO">ANTONIO</option>
                     <option value="AMBOS">AMBOS (Día Festivo)</option>
                 </select>
-                <select id="bv-tipo" class="swal2-input !w-[80%]" onchange="window.toggleBloqueoForm(this.value)">
+                
+                <div class="text-left text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Tipo de Bloqueo</div>
+                <select id="bv-tipo" class="swal2-input !w-[80%] !m-0 !mb-3 text-sm font-bold" onchange="window.toggleBloqueoForm(this.value)">
                     <option value="dia_completo">Día Completo / Rango</option>
                     <option value="hora_suelta">Horas Sueltas</option>
                 </select>
                 
-                <input id="bv-fecha-inicio" type="date" class="swal2-input !w-[80%] mb-1" placeholder="Fecha">
-                <input id="bv-fecha-fin" type="date" class="swal2-input !w-[80%] mt-1" placeholder="Fecha Fin (Opcional)">
+                <div class="text-left text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Selecciona el Día / Rango</div>
+                <div style="display: flex; gap: 10px; width: 80%; margin: 0 auto 10px auto;">
+                    <input id="bv-fecha-inicio" type="date" class="swal2-input" style="flex: 1; margin: 0; font-size: 14px;" placeholder="Fecha Inicio">
+                    <input id="bv-fecha-fin" type="date" class="swal2-input" style="flex: 1; margin: 0; font-size: 14px;" placeholder="Fecha Fin">
+                </div>
                 
                 <div id="bv-hora-container" style="display:none; text-align: left; width: 80%; margin: 10px auto; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <label style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 10px; display: block;">Selecciona las horas a bloquear:</label>
+                    <label style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 10px; display: block;">Marca las horas a bloquear:</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; font-weight: bold; color: #334155;">
-                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="10:00"> 10:00</label>
-                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="11:00"> 11:00</label>
-                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="12:00"> 12:00</label>
-                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="13:00"> 13:00</label>
-                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="16:00"> 16:00</label>
-                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="17:00"> 17:00</label>
-                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="18:00"> 18:00</label>
-                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="19:00"> 19:00</label>
+                        <label style="cursor:pointer; display: flex; align-items: center; gap: 6px;"><input type="checkbox" class="bv-hora-cb" value="10:00"> 10:00</label>
+                        <label style="cursor:pointer; display: flex; align-items: center; gap: 6px;"><input type="checkbox" class="bv-hora-cb" value="11:00"> 11:00</label>
+                        <label style="cursor:pointer; display: flex; align-items: center; gap: 6px;"><input type="checkbox" class="bv-hora-cb" value="12:00"> 12:00</label>
+                        <label style="cursor:pointer; display: flex; align-items: center; gap: 6px;"><input type="checkbox" class="bv-hora-cb" value="13:00"> 13:00</label>
+                        <label style="cursor:pointer; display: flex; align-items: center; gap: 6px;"><input type="checkbox" class="bv-hora-cb" value="16:00"> 16:00</label>
+                        <label style="cursor:pointer; display: flex; align-items: center; gap: 6px;"><input type="checkbox" class="bv-hora-cb" value="17:00"> 17:00</label>
+                        <label style="cursor:pointer; display: flex; align-items: center; gap: 6px;"><input type="checkbox" class="bv-hora-cb" value="18:00"> 18:00</label>
+                        <label style="cursor:pointer; display: flex; align-items: center; gap: 6px;"><input type="checkbox" class="bv-hora-cb" value="19:00"> 19:00</label>
                     </div>
                 </div>
                 
-                <input id="bv-motivo" class="swal2-input !w-[80%]" placeholder="Motivo (Vacaciones, Baja, Cita Médica...)">
+                <div class="text-left text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Motivo del Cierre</div>
+                <input id="bv-motivo" class="swal2-input !w-[80%] !m-0" placeholder="Ej: Vacaciones, Reunión, Curso...">
             `,
             confirmButtonColor: '#001e50', 
             confirmButtonText: 'Aplicar Bloqueo', 
             showCancelButton: true,
+            cancelButtonText: 'Cancelar',
             preConfirm: () => {
                 let tipo = document.getElementById('bv-tipo').value;
                 let inicio = document.getElementById('bv-fecha-inicio').value;
@@ -2393,31 +2432,36 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                 Swal.fire({title: 'Aplicando bloqueos...', didOpen: () => Swal.showLoading()});
                 let data = result.value;
                 
-                if (data.tipo === 'hora_suelta') {
-                    // Si son horas sueltas, creamos un documento independiente por cada hora marcada
-                    for (let hora of data.horas) {
-                        let idUnico = new Date().getTime().toString() + Math.floor(Math.random() * 1000);
-                        await window.setDoc(window.doc(window.db, "bloqueos_agenda", idUnico), {
+                try {
+                    if (data.tipo === 'hora_suelta') {
+                        for (let i = 0; i < data.horas.length; i++) {
+                            let hora = data.horas[i];
+                            let idUnico = new Date().getTime().toString() + "-" + i; 
+                            await window.setDoc(window.doc(window.db, "bloqueos_agenda", idUnico), {
+                                agente: data.agente,
+                                tipo: data.tipo,
+                                fecha: data.fecha,
+                                hora: hora,
+                                motivo: data.motivo
+                            });
+                        }
+                    } else {
+                        let idB = new Date().getTime().toString();
+                        await window.setDoc(window.doc(window.db, "bloqueos_agenda", idB), {
                             agente: data.agente,
                             tipo: data.tipo,
-                            fecha: data.fecha,
-                            hora: hora,
+                            fechaInicio: data.fechaInicio,
+                            fechaFin: data.fechaFin,
                             motivo: data.motivo
                         });
                     }
-                } else {
-                    // Si es un día completo o un rango, se guarda normal
-                    let idB = new Date().getTime().toString();
-                    await window.setDoc(window.doc(window.db, "bloqueos_agenda", idB), {
-                        agente: data.agente,
-                        tipo: data.tipo,
-                        fechaInicio: data.fechaInicio,
-                        fechaFin: data.fechaFin,
-                        motivo: data.motivo
-                    });
-                }
+                    
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Agenda bloqueada', showConfirmButton: false, timer: 1500 });
                 
-                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Agenda bloqueada', showConfirmButton: false, timer: 1500 });
+                } catch (error) {
+                    console.error("Error guardando el bloqueo:", error);
+                    Swal.fire('Error', 'No se pudo guardar el bloqueo en Firebase.', 'error');
+                }
             }
         });
     };
