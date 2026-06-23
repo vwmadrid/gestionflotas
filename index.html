@@ -2311,46 +2311,112 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
         });
     };
     
+    // Función auxiliar para mostrar/ocultar campos en el formulario de bloqueo
+    window.toggleBloqueoForm = function(val) {
+        if(val === 'hora_suelta') {
+            document.getElementById('bv-fecha-fin').style.display = 'none';
+            document.getElementById('bv-hora-container').style.display = 'block';
+        } else {
+            document.getElementById('bv-fecha-fin').style.display = 'inline-block';
+            document.getElementById('bv-hora-container').style.display = 'none';
+        }
+    };
+
     window.abrirGestorVacaciones = function() {
         Swal.fire({
-            title: 'Bloquear Fechas',
+            title: 'Bloquear Fechas u Horas',
             html: `
                 <select id="bv-agente" class="swal2-input !w-[80%]">
                     <option value="MANUEL">MANUEL</option><option value="ANTONIO">ANTONIO</option>
                     <option value="AMBOS">AMBOS (Día Festivo)</option>
                 </select>
-                <select id="bv-tipo" class="swal2-input !w-[80%]" onchange="document.getElementById('bv-hora-container').style.display = this.value === 'hora_suelta' ? 'block' : 'none'">
+                <select id="bv-tipo" class="swal2-input !w-[80%]" onchange="window.toggleBloqueoForm(this.value)">
                     <option value="dia_completo">Día Completo / Rango</option>
-                    <option value="hora_suelta">Hora Suelta</option>
+                    <option value="hora_suelta">Horas Sueltas</option>
                 </select>
-                <input id="bv-fecha-inicio" type="date" class="swal2-input !w-[80%] mb-1" placeholder="Fecha Inicio">
+                
+                <input id="bv-fecha-inicio" type="date" class="swal2-input !w-[80%] mb-1" placeholder="Fecha">
                 <input id="bv-fecha-fin" type="date" class="swal2-input !w-[80%] mt-1" placeholder="Fecha Fin (Opcional)">
-                <div id="bv-hora-container" style="display:none;">
-                    <select id="bv-hora" class="swal2-input !w-[80%]">
-                        <option value="10:00">10:00</option><option value="11:00">11:00</option>
-                        <option value="12:00">12:00</option><option value="13:00">13:00</option>
-                        <option value="16:00">16:00</option><option value="17:00">17:00</option>
-                        <option value="18:00">18:00</option><option value="19:00">19:00</option>
-                    </select>
+                
+                <div id="bv-hora-container" style="display:none; text-align: left; width: 80%; margin: 10px auto; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <label style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; margin-bottom: 10px; display: block;">Selecciona las horas a bloquear:</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 14px; font-weight: bold; color: #334155;">
+                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="10:00"> 10:00</label>
+                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="11:00"> 11:00</label>
+                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="12:00"> 12:00</label>
+                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="13:00"> 13:00</label>
+                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="16:00"> 16:00</label>
+                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="17:00"> 17:00</label>
+                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="18:00"> 18:00</label>
+                        <label style="cursor:pointer;"><input type="checkbox" class="bv-hora-cb mr-2" value="19:00"> 19:00</label>
+                    </div>
                 </div>
-                <input id="bv-motivo" class="swal2-input !w-[80%]" placeholder="Motivo (Vacaciones, Baja, Festivo...)">
+                
+                <input id="bv-motivo" class="swal2-input !w-[80%]" placeholder="Motivo (Vacaciones, Baja, Cita Médica...)">
             `,
-            confirmButtonColor: '#001e50', confirmButtonText: 'Aplicar Bloqueo', showCancelButton: true,
+            confirmButtonColor: '#001e50', 
+            confirmButtonText: 'Aplicar Bloqueo', 
+            showCancelButton: true,
             preConfirm: () => {
+                let tipo = document.getElementById('bv-tipo').value;
                 let inicio = document.getElementById('bv-fecha-inicio').value;
+                
                 if(!inicio) { Swal.showValidationMessage('La fecha es obligatoria'); return false; }
-                return {
-                    agente: document.getElementById('bv-agente').value, tipo: document.getElementById('bv-tipo').value,
-                    fechaInicio: inicio, fechaFin: document.getElementById('bv-fecha-fin').value || inicio,
-                    fecha: inicio, hora: document.getElementById('bv-hora').value,
-                    motivo: document.getElementById('bv-motivo').value.toUpperCase() || 'NO DISPONIBLE'
-                };
+                
+                if (tipo === 'hora_suelta') {
+                    let checkboxes = document.querySelectorAll('.bv-hora-cb:checked');
+                    if (checkboxes.length === 0) {
+                        Swal.showValidationMessage('Debes marcar al menos una hora'); 
+                        return false;
+                    }
+                    let horasSeleccionadas = Array.from(checkboxes).map(cb => cb.value);
+                    
+                    return {
+                        agente: document.getElementById('bv-agente').value,
+                        tipo: tipo,
+                        fecha: inicio,
+                        horas: horasSeleccionadas,
+                        motivo: document.getElementById('bv-motivo').value.toUpperCase() || 'NO DISPONIBLE'
+                    };
+                } else {
+                    return {
+                        agente: document.getElementById('bv-agente').value, 
+                        tipo: tipo,
+                        fechaInicio: inicio, 
+                        fechaFin: document.getElementById('bv-fecha-fin').value || inicio,
+                        motivo: document.getElementById('bv-motivo').value.toUpperCase() || 'NO DISPONIBLE'
+                    };
+                }
             }
         }).then(async (result) => {
             if(result.isConfirmed) {
-                Swal.fire({title: 'Bloqueando...', didOpen: () => Swal.showLoading()});
-                let idB = new Date().getTime().toString();
-                await window.setDoc(window.doc(window.db, "bloqueos_agenda", idB), result.value);
+                Swal.fire({title: 'Aplicando bloqueos...', didOpen: () => Swal.showLoading()});
+                let data = result.value;
+                
+                if (data.tipo === 'hora_suelta') {
+                    // Si son horas sueltas, creamos un documento independiente por cada hora marcada
+                    for (let hora of data.horas) {
+                        let idUnico = new Date().getTime().toString() + Math.floor(Math.random() * 1000);
+                        await window.setDoc(window.doc(window.db, "bloqueos_agenda", idUnico), {
+                            agente: data.agente,
+                            tipo: data.tipo,
+                            fecha: data.fecha,
+                            hora: hora,
+                            motivo: data.motivo
+                        });
+                    }
+                } else {
+                    // Si es un día completo o un rango, se guarda normal
+                    let idB = new Date().getTime().toString();
+                    await window.setDoc(window.doc(window.db, "bloqueos_agenda", idB), {
+                        agente: data.agente,
+                        tipo: data.tipo,
+                        fechaInicio: data.fechaInicio,
+                        fechaFin: data.fechaFin,
+                        motivo: data.motivo
+                    });
+                }
+                
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Agenda bloqueada', showConfirmButton: false, timer: 1500 });
             }
         });
