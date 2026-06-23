@@ -2127,7 +2127,6 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
             }
         });
 
-        // Preparamos el WhatsApp por si hace falta
         let tlfLimpio = telefono ? String(telefono).replace(/\s/g, '').replace(/^\+?34/, '') : '';
         let urlWhatsAppBase = tlfLimpio ? `https://wa.me/34${tlfLimpio}?text=` : null;
 
@@ -2143,7 +2142,6 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                     let coche = todosLosCoches.find(c => c.B && c.B.replace(/\s/g,'') === matricula.replace(/\s/g,''));
                     if (coche) await window.updateDoc(window.doc(window.db, "vehiculos", coche.fila), { fechaCita: null });
                     
-                    // AVISO WHATSAPP: ANULACIÓN
                     if (urlWhatsAppBase) {
                         Swal.fire({
                             title: 'Cita Eliminada',
@@ -2162,13 +2160,25 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                 }
             });
         } else if (formValues) {
+            let cambioFecha = (formValues.fecha !== fechaActual || formValues.hora !== horaActual);
+
+            // 🔥 NUEVO: DETECCIÓN DE HUECO OCUPADO AL MODIFICAR
+            if (cambioFecha) {
+                let citasEnEseHueco = window.datosAgenda.filter(c => {
+                    if (c.id === idCita) return false; // No contar la propia cita que estamos moviendo
+                    return c.fechaHora.startsWith(formValues.fecha + 'T' + formValues.hora);
+                });
+                let capacidadMaxima = (formValues.hora === '19:00') ? 1 : 2;
+                
+                if (citasEnEseHueco.length >= capacidadMaxima) {
+                    Swal.fire('⚠️ Hueco Ocupado', 'Ese día y hora ya están completos. Por favor, selecciona otro horario.', 'error');
+                    return; // Abortamos la modificación
+                }
+            }
+
             Swal.fire({title: 'Actualizando...', didOpen: () => Swal.showLoading()});
             await window.updateDoc(window.doc(window.db, "citas_agenda", idCita), formValues);
             
-            // Comprobamos si realmente ha cambiado la fecha o la hora
-            let cambioFecha = (formValues.fecha !== fechaActual || formValues.hora !== horaActual);
-            
-            // AVISO WHATSAPP: MODIFICACIÓN
             if (cambioFecha && urlWhatsAppBase) {
                 Swal.fire({
                     title: '¡Cita Modificada!',
@@ -2187,7 +2197,7 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
         }
     };
 
-    window.crearCitaManual = function() {
+   window.crearCitaManual = function() {
         Swal.fire({
             title: 'Nueva Cita Manual',
             html: `
@@ -2255,7 +2265,6 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                 
                 // 1. DETECCIÓN DE MATRÍCULA DUPLICADA
                 let citaExistente = window.datosAgenda.find(c => c.matricula.toUpperCase().replace(/\s/g, '') === data.matricula);
-                
                 if (citaExistente) {
                     let fechaEx = citaExistente.fechaHora.split('T')[0].split('-').reverse().join('/');
                     let horaEx = citaExistente.fechaHora.split('T')[1].substring(0, 5);
@@ -2265,16 +2274,23 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                         icon: 'warning',
                         confirmButtonColor: '#001e50'
                     });
-                    return; // Bloqueamos la creación para no duplicar
+                    return; 
+                }
+
+                // 🔥 NUEVO: DETECCIÓN DE HUECO OCUPADO
+                let citasEnEseHueco = window.datosAgenda.filter(c => c.fechaHora.startsWith(data.fecha + 'T' + data.hora));
+                let capacidadMaxima = (data.hora === '19:00') ? 1 : 2;
+                
+                if (citasEnEseHueco.length >= capacidadMaxima) {
+                    Swal.fire('⚠️ Hueco Ocupado', 'Ese día y hora ya han alcanzado el límite de citas permitidas. Por favor, elige otro horario.', 'error');
+                    return; // Cortamos el proceso
                 }
 
                 Swal.fire({title: 'Guardando...', didOpen: () => Swal.showLoading()});
                 
-                // 2. Guardar en la agenda
                 let idCitaNueva = new Date().getTime().toString();
                 await window.setDoc(window.doc(window.db, "citas_agenda", idCitaNueva), data);
                 
-                // 3. Vincular con el vehículo en el Inventario (Si existe, le ponemos la etiqueta azul)
                 let cocheEnBaseDatos = todosLosCoches.find(c => 
                     (c.B && String(c.B).replace(/\s/g, '').toUpperCase() === data.matricula) || 
                     (c.A && String(c.A).toUpperCase() === data.matricula)
