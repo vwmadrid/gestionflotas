@@ -2775,6 +2775,34 @@ window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agente
             window.updateDoc(window.doc(window.db, "vehiculos", docId), { alertaAtendida: true });
         });
     };
+      // 🔥 NUEVO: Lógica del buscador de la Agenda
+    window.buscarEnAgenda = function() {
+        let texto = document.getElementById('inputBusquedaAgenda').value.toLowerCase().trim();
+        let tarjetas = document.querySelectorAll('.cita-tarjeta');
+        
+        tarjetas.forEach(t => {
+            // Si el buscador está vacío, todo vuelve a la normalidad
+            if (texto === '') {
+                t.style.opacity = '1';
+                t.style.filter = 'none';
+                t.style.boxShadow = 'none';
+            } 
+            // Si el texto coincide con cualquier dato del interior de la tarjeta (nombre, matrícula, notas...)
+            else if (t.innerText.toLowerCase().includes(texto)) {
+                t.style.opacity = '1';
+                t.style.filter = 'none';
+                t.style.boxShadow = '0 0 12px rgba(0, 176, 240, 0.9)'; // Brillo azul VW
+                t.style.transform = 'scale(1.02)'; // Ligeramente más grande
+            } 
+            // Si no coincide, atenuamos la tarjeta
+            else {
+                t.style.opacity = '0.15'; // Casi transparente
+                t.style.filter = 'grayscale(100%)'; // En blanco y negro
+                t.style.boxShadow = 'none';
+                t.style.transform = 'scale(1)';
+            }
+        });
+    };
   </script>
 </body>
 </html>
