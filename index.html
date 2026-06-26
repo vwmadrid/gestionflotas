@@ -110,20 +110,44 @@
       <p class="text-[10px] text-gray-300 font-bold uppercase tracking-widest mt-1">Gestión de Vehículos</p>
     </div>
  <nav id="tabsEntregas" class="hidden flex-col p-4 gap-2 flex-1 overflow-y-auto custom-scrollbar">
-      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1">Operativa Diaria</p>
-      <button onclick="window.cambiarPestana('logistica')" class="p-3 text-amber-300 bg-amber-500/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all border border-amber-500/30 mb-2"><i class="ph-bold ph-truck text-lg"></i> Logística Renting</button>
-      <button onclick="window.cambiarPestana('todos')" class="p-3 bg-white/10 rounded-xl font-bold text-sm text-left flex items-center gap-2 hover:bg-white/20 transition-all shadow-sm"><i class="ph-bold ph-car text-lg"></i> Inventario Activo</button>
-      <button onclick="window.cambiarPestana('agenda')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-lg"></i> Agenda de Citas</button>
       
-      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1 mt-4">Departamentos</p>
-      <button onclick="window.cambiarPestana('global-taller')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-amber-500/20"><i class="ph-bold ph-wrench text-lg text-amber-400"></i> Todo en Taller</button>
-      <button onclick="window.cambiarPestana('global-recambios')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-teal-500/20"><i class="ph-bold ph-package text-lg text-teal-400"></i> Todo en Recambios</button>
+      <div>
+          <button onclick="window.toggleSubmenu('menu-operativa', this)" class="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-xl font-black text-sm text-white transition-all border border-white/10 shadow-sm">
+              <span class="flex items-center gap-2"><i class="ph-fill ph-briefcase text-lg text-amber-400"></i> Operativa Diaria</span>
+              <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-200 chevron-icon" style="transform: rotate(180deg);"></i>
+          </button>
+          <div id="menu-operativa" class="flex flex-col gap-1 mt-2 pl-2 submenu-container">
+              <button onclick="window.cambiarPestana('logistica')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-truck text-sm"></i> Logística Renting</button>
+              <button onclick="window.cambiarPestana('todos')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-car text-sm"></i> Inventario Activo</button>
+              <button onclick="window.cambiarPestana('agenda')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-sm"></i> Agenda de Citas</button>
+          </div>
+      </div>
 
-      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1 mt-4">Consultas & Análisis</p>
-      <button onclick="window.cambiarPestana('entregados')" class="p-3 text-gray-300 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all border border-white/20"><i class="ph-bold ph-check-square-offset text-lg"></i> Historial Entregados</button>
-      <button onclick="window.cambiarPestana('dashboard')" class="p-3 text-emerald-400 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-1 border border-emerald-500/30"><i class="ph-bold ph-chart-pie-slice text-lg"></i> Estadísticas</button>
-      <button onclick="window.cambiarPestana('encuestas')" class="p-3 text-purple-400 hover:bg-white/5 rounded-xl font-bold text-sm text-left flex items-center gap-2 transition-all mt-1 border border-purple-500/20"><i class="ph-bold ph-chat-centered-dots text-lg"></i> Encuestas Clientes</button>
+      <div>
+          <button onclick="window.toggleSubmenu('menu-dptos', this)" class="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-xl font-black text-sm text-white transition-all border border-white/10 shadow-sm mt-2">
+              <span class="flex items-center gap-2"><i class="ph-fill ph-buildings text-lg text-blue-400"></i> Departamentos</span>
+              <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-200 chevron-icon"></i>
+          </button>
+          <div id="menu-dptos" class="flex flex-col gap-1 mt-2 pl-2 submenu-container hidden">
+              <button onclick="window.cambiarPestana('global-taller')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-wrench text-sm"></i> Todo en Taller</button>
+              <button onclick="window.cambiarPestana('global-recambios')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-package text-sm"></i> Todo en Recambios</button>
+          </div>
+      </div>
+
+      <div>
+          <button onclick="window.toggleSubmenu('menu-consultas', this)" class="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-xl font-black text-sm text-white transition-all border border-white/10 shadow-sm mt-2">
+              <span class="flex items-center gap-2"><i class="ph-fill ph-chart-pie-slice text-lg text-emerald-400"></i> Análisis & Data</span>
+              <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-200 chevron-icon"></i>
+          </button>
+          <div id="menu-consultas" class="flex flex-col gap-1 mt-2 pl-2 submenu-container hidden">
+              <button onclick="window.cambiarPestana('entregados')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-check-square-offset text-sm"></i> Historial Entregados</button>
+              <button onclick="window.cambiarPestana('dashboard')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-trend-up text-sm"></i> Estadísticas Generales</button>
+              <button onclick="window.cambiarPestana('encuestas')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-chat-centered-dots text-sm"></i> Encuestas Clientes</button>
+          </div>
+      </div>
+      
     </nav>
+
     <nav id="tabsDpto" class="hidden flex-col p-4 gap-2 flex-1">
       <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest ml-2 mb-1">Mi Departamento</p>
       
@@ -457,15 +481,31 @@
         if (document.getElementById('sidebarApp')) document.getElementById('sidebarApp').style.display = 'none';
         if (document.getElementById('loginScreen')) document.getElementById('loginScreen').style.display = 'flex';
     };
+    
+// 🔥 Lógica para abrir/cerrar menús laterales
+    window.toggleSubmenu = function(menuId, btnElement) {
+        const menu = document.getElementById(menuId);
+        const chevron = btnElement.querySelector('.chevron-icon');
+        
+        if (menu.classList.contains('hidden')) {
+            menu.classList.remove('hidden');
+            menu.classList.add('flex');
+            chevron.style.transform = 'rotate(180deg)'; // Gira la flecha hacia arriba
+        } else {
+            menu.classList.add('hidden');
+            menu.classList.remove('flex');
+            chevron.style.transform = 'rotate(0deg)'; // Gira la flecha hacia abajo
+        }
+    };
 
     window.cambiarPestana = function(pestana) {
       activeTab = pestana;
       
-      // Resetear colores menú Entregas
-      const botones = document.querySelectorAll('#tabsEntregas button');
+      // Resetear colores menú Entregas (Solo buscamos dentro de los submenus)
+      const botones = document.querySelectorAll('#tabsEntregas .submenu-container button');
       botones.forEach(b => { 
-        b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-amber-500/10', 'border-amber-500/30', 'bg-emerald-500/10'); 
-        b.classList.add('text-gray-300');
+        b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-emerald-400'); 
+        b.classList.add('text-gray-400');
       });
 
       // Resetear colores menú Departamentos
@@ -475,24 +515,26 @@
         b.classList.add('text-gray-300');
       });
       
-      // Control de color de los botones (Entregas tiene 8 botones de nuevo)
-      if (pestana === 'logistica') botones[0].classList.add('text-amber-300', 'bg-amber-500/10', 'border-amber-500/30');
-      else if (pestana === 'todos') botones[1].classList.add('bg-white/10', 'text-white');
-      else if (pestana === 'agenda') botones[2].classList.add('bg-white/10', 'text-white');
+      // Control de color de los sub-botones (Están en el mismo orden que en el HTML)
+      if (pestana === 'logistica') { botones[0].classList.remove('text-gray-400'); botones[0].classList.add('text-amber-300', 'bg-white/10'); }
+      else if (pestana === 'todos') { botones[1].classList.remove('text-gray-400'); botones[1].classList.add('text-white', 'bg-white/10'); }
+      else if (pestana === 'agenda') { botones[2].classList.remove('text-gray-400'); botones[2].classList.add('text-white', 'bg-white/10'); }
+      
       else if (pestana === 'global-taller') {
-          botones[3].classList.add('bg-white/10', 'text-white');
-          if(botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white'); // Taller ve su menú
+          botones[3].classList.remove('text-gray-400'); botones[3].classList.add('text-white', 'bg-white/10');
+          if(botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
       }
       else if (pestana === 'global-recambios') {
-          botones[4].classList.add('bg-white/10', 'text-white');
-          if(botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white'); // Recambios ve su menú
+          botones[4].classList.remove('text-gray-400'); botones[4].classList.add('text-white', 'bg-white/10');
+          if(botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
       }
-      else if (pestana === 'entregados') botones[5].classList.add('bg-white/10', 'text-white');
-      else if (pestana === 'dashboard') botones[6].classList.add('text-emerald-400', 'bg-emerald-500/10', 'border-emerald-500/30');
-      else if (pestana === 'encuestas') botones[7].classList.add('bg-white/10', 'text-white');
+      
+      else if (pestana === 'entregados') { botones[5].classList.remove('text-gray-400'); botones[5].classList.add('text-white', 'bg-white/10'); }
+      else if (pestana === 'dashboard') { botones[6].classList.remove('text-gray-400'); botones[6].classList.add('text-emerald-400', 'bg-white/10'); }
+      else if (pestana === 'encuestas') { botones[7].classList.remove('text-gray-400'); botones[7].classList.add('text-white', 'bg-white/10'); }
       
       else if (pestana === 'historial-dpto') {
-          if(botonesDpto[1]) botonesDpto[1].classList.add('bg-white/10', 'text-white'); // Historial propio del Dpto
+          if(botonesDpto[1]) botonesDpto[1].classList.add('bg-white/10', 'text-white'); 
       }
 
       // Ocultar todos los contenedores primero
@@ -1823,11 +1865,16 @@ window.renderizarDashboard = function() {
         if (atrasados.length > 0) {
             bannerAtrasados = `<div onclick="window.mostrarPopupAtrasados()" class="bg-red-600 text-white text-[12px] font-black p-3 text-center cursor-pointer hover:bg-red-700 uppercase tracking-widest flex items-center justify-center gap-2 shadow-md z-20 border-b border-red-800"><i class="ph-bold ph-warning text-lg animate-pulse"></i> ¡Atención! Tienes ${atrasados.length} entrega(s) pasada(s) sin confirmar. Haz clic para revisarlas.</div>`;
         }
-
         let html = `
         <div class="bg-white rounded-xl shadow-xl border border-[#001e50] flex flex-col h-[calc(100vh-140px)] w-full relative">
             <div class="bg-[#001e50] text-white p-3 px-6 flex justify-between items-center shrink-0 z-30">
                <h2 class="text-base font-black tracking-widest uppercase flex items-center gap-2"><i class="ph-bold ph-calendar-grid-week text-xl text-[#00b0f0]"></i> Cuadrante</h2>
+               
+               <div class="relative w-64">
+                   <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                   <input type="text" id="inputBusquedaAgenda" onkeyup="window.buscarEnAgenda()" placeholder="Buscar cliente, matrícula, modelo..." class="w-full pl-9 pr-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-sm text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-[#00b0f0] transition-all">
+               </div>
+               
                <div class="flex items-center gap-4 bg-white/10 rounded-lg p-1.5 px-3 border border-white/20 shadow-sm backdrop-blur-sm">
                    <button onclick="window.cambiarMesAgenda(-1)" class="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded text-white"><i class="ph-bold ph-caret-left text-xl"></i></button>
                    <span class="font-black text-sm w-36 text-center tracking-widest">${tituloMes}</span>
@@ -2746,6 +2793,36 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
         });
         
         tbody.innerHTML = html;
+    };
+
+    // 🔥 Lógica del buscador de la Agenda recuperada
+    window.buscarEnAgenda = function() {
+        let texto = document.getElementById('inputBusquedaAgenda').value.toLowerCase().trim();
+        let tarjetas = document.querySelectorAll('.cita-tarjeta');
+        
+        tarjetas.forEach(t => {
+            // Si el buscador está vacío, todo vuelve a la normalidad
+            if (texto === '') {
+                t.style.opacity = '1';
+                t.style.filter = 'none';
+                t.style.boxShadow = 'none';
+                t.style.transform = 'scale(1)';
+            } 
+            // Si el texto coincide con cualquier dato de la tarjeta
+            else if (t.innerText.toLowerCase().includes(texto)) {
+                t.style.opacity = '1';
+                t.style.filter = 'none';
+                t.style.boxShadow = '0 0 12px rgba(0, 176, 240, 0.9)'; // Brillo azul
+                t.style.transform = 'scale(1.02)';
+            } 
+            // Si no coincide, la atenuamos
+            else {
+                t.style.opacity = '0.15';
+                t.style.filter = 'grayscale(100%)';
+                t.style.boxShadow = 'none';
+                t.style.transform = 'scale(1)';
+            }
+        });
     };
   </script>
 </body>
