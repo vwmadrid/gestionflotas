@@ -466,20 +466,32 @@
     };
 
     window.mostrarErrorFirebase = function(error, titulo) {
-        console.error('Firebase Error:', error);
-        let mensaje = 'No se pudo conectar con Firebase. Comprueba que el proyecto está configurado correctamente y que tienes permisos en Firestore.';
-        if (error && error.code === 'permission-denied') {
-            mensaje = 'Permiso denegado en Firebase. Revisa los permisos de Firestore y la configuración de seguridad de tu proyecto.';
-        }
+        console.error('Alerta capturada:', error);
+        
+        // Comprobamos si es un error crítico de base de datos
+        let esErrorCritico = error && error.code === 'permission-denied';
+        
+        let mensaje = esErrorCritico 
+            ? 'Permiso denegado en Firebase. Tu sesión podría haber caducado.' 
+            : 'Se ha producido un pequeño error de interfaz. Revisa la consola (F12).';
+
+        // Mostramos el aviso (Si no es crítico, es solo una ventanita pequeña que desaparece sola)
         Swal.fire({
-            icon: 'error',
-            title: titulo || 'Error Firebase',
-            html: `<p>${mensaje}</p><p style="margin-top:12px; font-size:12px; color:#3b3b3b; white-space: pre-wrap;">${window.escapeJS(error && (error.message || String(error)))}</p>`,
-            confirmButtonColor: '#001e50'
+            icon: esErrorCritico ? 'error' : 'warning',
+            title: titulo || 'Aviso del Sistema',
+            text: mensaje,
+            toast: !esErrorCritico,
+            position: esErrorCritico ? 'center' : 'bottom-end',
+            showConfirmButton: esErrorCritico,
+            timer: esErrorCritico ? undefined : 4000
         });
-        if (document.getElementById('mainApp')) document.getElementById('mainApp').style.display = 'none';
-        if (document.getElementById('sidebarApp')) document.getElementById('sidebarApp').style.display = 'none';
-        if (document.getElementById('loginScreen')) document.getElementById('loginScreen').style.display = 'flex';
+
+        // 🔥 SOLO echamos al usuario al Login si es un error grave de Firebase
+        if (esErrorCritico) {
+            if (document.getElementById('mainApp')) document.getElementById('mainApp').style.display = 'none';
+            if (document.getElementById('sidebarApp')) document.getElementById('sidebarApp').style.display = 'none';
+            if (document.getElementById('loginScreen')) document.getElementById('loginScreen').style.display = 'flex';
+        }
     };
     
 // 🔥 Lógica para abrir/cerrar menús laterales
@@ -501,43 +513,46 @@
     window.cambiarPestana = function(pestana) {
       activeTab = pestana;
       
-      // Resetear colores menú Entregas (Solo buscamos dentro de los submenus)
+      // 1. Resetear colores menú Entregas (Buscamos dentro de los submenus del acordeón)
       const botones = document.querySelectorAll('#tabsEntregas .submenu-container button');
       botones.forEach(b => { 
         b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-emerald-400'); 
         b.classList.add('text-gray-400');
       });
 
-      // Resetear colores menú Departamentos
+      // 2. Resetear colores menú Departamentos
       const botonesDpto = document.querySelectorAll('#tabsDpto button');
-      botonesDpto.forEach(b => {
-        b.classList.remove('bg-white/10', 'text-white');
-        b.classList.add('text-gray-300');
-      });
-      
-      // Control de color de los sub-botones (Están en el mismo orden que en el HTML)
-      if (pestana === 'logistica') { botones[0].classList.remove('text-gray-400'); botones[0].classList.add('text-amber-300', 'bg-white/10'); }
-      else if (pestana === 'todos') { botones[1].classList.remove('text-gray-400'); botones[1].classList.add('text-white', 'bg-white/10'); }
-      else if (pestana === 'agenda') { botones[2].classList.remove('text-gray-400'); botones[2].classList.add('text-white', 'bg-white/10'); }
-      
-      else if (pestana === 'global-taller') {
-          botones[3].classList.remove('text-gray-400'); botones[3].classList.add('text-white', 'bg-white/10');
-          if(botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
-      }
-      else if (pestana === 'global-recambios') {
-          botones[4].classList.remove('text-gray-400'); botones[4].classList.add('text-white', 'bg-white/10');
-          if(botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
+      if (botonesDpto) {
+        botonesDpto.forEach(b => {
+          b.classList.remove('bg-white/10', 'text-white');
+          b.classList.add('text-gray-300');
+        });
       }
       
-      else if (pestana === 'entregados') { botones[5].classList.remove('text-gray-400'); botones[5].classList.add('text-white', 'bg-white/10'); }
-      else if (pestana === 'dashboard') { botones[6].classList.remove('text-gray-400'); botones[6].classList.add('text-emerald-400', 'bg-white/10'); }
-      else if (pestana === 'encuestas') { botones[7].classList.remove('text-gray-400'); botones[7].classList.add('text-white', 'bg-white/10'); }
+      // 3. Control de color de los sub-botones de Entregas
+      if (botones && botones.length > 0) {
+        if (pestana === 'logistica') { botones[0].classList.remove('text-gray-400'); botones[0].classList.add('text-amber-300', 'bg-white/10'); }
+        else if (pestana === 'todos') { botones[1].classList.remove('text-gray-400'); botones[1].classList.add('text-white', 'bg-white/10'); }
+        else if (pestana === 'agenda') { botones[2].classList.remove('text-gray-400'); botones[2].classList.add('text-white', 'bg-white/10'); }
+        else if (pestana === 'global-taller') {
+            botones[3].classList.remove('text-gray-400'); botones[3].classList.add('text-white', 'bg-white/10');
+            if(botonesDpto && botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
+        }
+        else if (pestana === 'global-recambios') {
+            botones[4].classList.remove('text-gray-400'); botones[4].classList.add('text-white', 'bg-white/10');
+            if(botonesDpto && botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
+        }
+        else if (pestana === 'entregados') { botones[5].classList.remove('text-gray-400'); botones[5].classList.add('text-white', 'bg-white/10'); }
+        else if (pestana === 'dashboard') { botones[6].classList.remove('text-gray-400'); botones[6].classList.add('text-emerald-400', 'bg-white/10'); }
+        else if (pestana === 'encuestas') { botones[7].classList.remove('text-gray-400'); botones[7].classList.add('text-white', 'bg-white/10'); }
+      } // <--- ¡Esta es la llave que te faltaba cerrar!
       
-      else if (pestana === 'historial-dpto') {
-          if(botonesDpto[1]) botonesDpto[1].classList.add('bg-white/10', 'text-white'); 
+      // 4. Control de color para el menú exclusivo de Departamentos
+      if (pestana === 'historial-dpto') {
+          if(botonesDpto && botonesDpto[1]) botonesDpto[1].classList.add('bg-white/10', 'text-white'); 
       }
 
-      // Ocultar todos los contenedores primero
+      // 5. Ocultar todos los contenedores de la pantalla
       document.getElementById('contenedorLogistica').style.display = 'none';
       document.getElementById('contenedorTarjetas').style.display = 'none';
       document.getElementById('contenedorTabla').style.display = 'none';
@@ -554,7 +569,7 @@
       document.getElementById('botonesAgenda').style.display = 'none';    
       document.getElementById('buscadorInput').style.display = 'block';
 
-      // Mostrar el contenedor correcto según la pestaña
+      // 6. Mostrar el contenedor correcto según la pestaña activa
       if (pestana === 'logistica') {
         document.getElementById('contenedorLogistica').style.display = 'grid';
         document.getElementById('botonesLogistica').style.display = 'flex'; 
@@ -2274,6 +2289,8 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
     // 🔥 FUNCIÓN RECUPERADA: Editar Citas + Aviso WhatsApp 🔥
    // 🔥 ACTUALIZADO: Añadido el parámetro 'notas' al final
     // 1. MENÚ PRINCIPAL DE SELECCIÓN
+    // 🔥 FUNCIÓN PARA ABRIR Y EDITAR LA CITA AL HACER CLIC EN LA TARJETA 🔥
+    // 🔥 FUNCIÓN PARA ABRIR Y EDITAR LA CITA AL HACER CLIC EN LA TARJETA 🔥
     window.crearCitaManual = function() {
         Swal.fire({
             title: '¿Qué tipo de cita deseas crear?',
@@ -2823,6 +2840,177 @@ let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado 
                 t.style.transform = 'scale(1)';
             }
         });
+    };
+    // 🔥 FUNCIÓN PARA ABRIR Y EDITAR LA CITA AL HACER CLIC EN LA TARJETA 🔥
+    // 🔥 FUNCIÓN PARA ABRIR Y EDITAR LA CITA AL HACER CLIC EN LA TARJETA 🔥
+    // 🔥 FUNCIÓN PARA ABRIR Y EDITAR LA CITA AL HACER CLIC EN LA TARJETA 🔥
+    window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agenteActual, cliente, matricula, telefono, email, vo, notas) {
+        const { value: formValues, isDenied } = await Swal.fire({
+            title: 'Gestionar Cita',
+            width: '700px',
+            html: `
+                <div class="text-left text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1"><i class="ph-bold ph-pencil-simple"></i> Datos del Cliente (Editables)</div>
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4 space-y-4 text-left">
+                    
+                    <div class="w-full">
+                        <label class="text-[10px] uppercase font-bold text-gray-400">Nombre Completo</label>
+                        <input id="e-cliente" class="swal2-input !w-full !m-0 !h-11 text-sm font-bold px-3" value="${cliente || ''}">
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <div class="flex-[2]">
+                            <label class="text-[10px] uppercase font-bold text-gray-400">Email</label>
+                            <input id="e-email" type="email" class="swal2-input !w-full !m-0 !h-11 text-sm font-bold px-3" value="${email || ''}">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] uppercase font-bold text-gray-400">Teléfono</label>
+                            <input id="e-telefono" type="tel" class="swal2-input !w-full !m-0 !h-11 text-sm font-bold px-3" value="${telefono || ''}">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] uppercase font-bold text-gray-400">V.O.</label>
+                            <select id="e-vo" class="swal2-select !w-full !m-0 !h-11 text-sm font-bold px-3">
+                                <option value="NO" ${vo === 'NO' ? 'selected' : ''}>NO</option>
+                                <option value="SI" ${vo === 'SI' || vo === 'SÍ' ? 'selected' : ''}>SÍ</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-left text-xs font-bold text-gray-500 uppercase mb-1 flex items-center gap-1"><i class="ph-bold ph-calendar"></i> Detalles de la Cita</div>
+                <div class="flex gap-3 mb-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-400">Fecha</label>
+                        <input type="date" id="e-fecha" class="swal2-input !w-full !m-0 !h-11 text-sm font-bold px-3" value="${fechaActual}">
+                    </div>
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-400">Hora</label>
+                        <select id="e-hora" class="swal2-select !w-full !m-0 !h-11 text-sm font-bold px-3">
+                            <option value="10:00" ${horaActual === '10:00' ? 'selected' : ''}>10:00</option>
+                            <option value="11:00" ${horaActual === '11:00' ? 'selected' : ''}>11:00</option>
+                            <option value="12:00" ${horaActual === '12:00' ? 'selected' : ''}>12:00</option>
+                            <option value="13:00" ${horaActual === '13:00' ? 'selected' : ''}>13:00</option>
+                            <option value="16:00" ${horaActual === '16:00' ? 'selected' : ''}>16:00</option>
+                            <option value="17:00" ${horaActual === '17:00' ? 'selected' : ''}>17:00</option>
+                            <option value="18:00" ${horaActual === '18:00' ? 'selected' : ''}>18:00</option>
+                            <option value="19:00" ${horaActual === '19:00' ? 'selected' : ''}>19:00</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 text-left">
+                        <label class="text-[10px] uppercase font-bold text-gray-400">Agente</label>
+                        <select id="e-agente" class="swal2-select !w-full !m-0 !h-11 text-sm font-bold px-3">
+                            <option value="MANUEL" ${agenteActual === 'MANUEL' ? 'selected' : ''}>MANUEL</option>
+                            <option value="ANTONIO" ${agenteActual === 'ANTONIO' ? 'selected' : ''}>ANTONIO</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="text-left">
+                    <label class="text-[10px] uppercase font-bold text-gray-500 mb-1 flex items-center gap-1"><i class="ph-bold ph-note"></i> Notas (Opcional)</label>
+                    <textarea id="e-notas" class="swal2-textarea !w-full !m-0 text-sm p-4" style="min-height: 80px;" placeholder="Detalles, retrasos, avisos...">${notas && notas !== 'undefined' ? notas : ''}</textarea>
+                </div>
+            `,
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonColor: '#001e50',
+            denyButtonColor: '#ef4444',
+            confirmButtonText: 'Guardar',
+            denyButtonText: '🗑️ Eliminar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const f = document.getElementById('e-fecha').value;
+                const h = document.getElementById('e-hora').value;
+                const a = document.getElementById('e-agente').value;
+                const c = document.getElementById('e-cliente').value.toUpperCase().trim();
+                const t = document.getElementById('e-telefono').value.trim();
+                const em = document.getElementById('e-email').value.trim();
+                const v = document.getElementById('e-vo').value;
+                const n = document.getElementById('e-notas').value.trim();
+                
+                if (!f) return Swal.showValidationMessage('La fecha es obligatoria');
+                if (!c) return Swal.showValidationMessage('El cliente es obligatorio');
+                
+                return { fecha: f, hora: h, agente: a, cliente: c, telefono: t, email: em, entregaVO: v, notas: n };
+            }
+        });
+
+        let tlfLimpio = telefono ? String(telefono).replace(/\s/g, '').replace(/^\+?34/, '') : '';
+        let urlWhatsAppBase = tlfLimpio ? `https://wa.me/34${tlfLimpio}?text=` : null;
+
+        if (isDenied) {
+            Swal.fire({
+                title: '¿Seguro?', text: "La cita se borrará permanentemente.", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#ef4444', confirmButtonText: 'Sí, Borrar'
+            }).then(async (res) => {
+                if (res.isConfirmed) {
+                    Swal.fire({title: 'Borrando...', didOpen: () => Swal.showLoading()});
+                    try {
+                        await window.deleteDoc(window.doc(window.db, "citas_agenda", idCita));
+                        try {
+                            let coche = todosLosCoches.find(c => c.B && c.B.replace(/\s/g,'') === matricula.replace(/\s/g,''));
+                            if (coche) {
+                                await window.updateDoc(window.doc(window.db, "vehiculos", coche.fila), { fechaCita: null });
+                            }
+                        } catch (errCoche) {}
+
+                        if (urlWhatsAppBase) {
+                            Swal.fire({
+                                title: 'Cita Eliminada',
+                                text: '¿Quieres avisar al cliente por WhatsApp de la anulación?',
+                                icon: 'info', showCancelButton: true, confirmButtonColor: '#25D366', confirmButtonText: 'Sí, avisar', cancelButtonText: 'No'
+                            }).then((waRes) => {
+                                if (waRes.isConfirmed) {
+                                    let fAntigua = fechaActual.split('-').reverse().join('/');
+                                    let msj = `Hola ${cliente}, te informamos que por motivos logísticos tu cita prevista para el ${fAntigua} a las ${horaActual}h ha sido anulada. Contactaremos contigo para agendar una nueva fecha lo antes posible. Disculpa las molestias.`;
+                                    window.open(urlWhatsAppBase + encodeURIComponent(msj), '_blank');
+                                }
+                            });
+                        } else {
+                            Swal.fire('Eliminada', 'La cita ha sido borrada con éxito.', 'success');
+                        }
+                    } catch (errorGeneral) {
+                        Swal.fire('Error', 'No se pudo eliminar la cita.', 'error');
+                    }
+                }
+            });
+        } else if (formValues) {
+            Swal.fire({title: 'Actualizando...', didOpen: () => Swal.showLoading()});
+            try {
+                await window.updateDoc(window.doc(window.db, "citas_agenda", idCita), formValues);
+                try {
+                    let cocheEnBaseDatos = todosLosCoches.find(c => 
+                        (c.B && String(c.B).replace(/\s/g, '').toUpperCase() === matricula.replace(/\s/g, ''))
+                    );
+                    if (cocheEnBaseDatos) {
+                        let fechaVisual = formValues.fecha.split('-').reverse().join('/');
+                        await window.updateDoc(window.doc(window.db, "vehiculos", cocheEnBaseDatos.fila), {
+                            fechaCita: `${fechaVisual} - ${formValues.hora}h`,
+                            agente: formValues.agente,
+                            cliente: formValues.cliente,
+                            entregaVO: formValues.entregaVO
+                        });
+                    }
+                } catch (errCoche) {}
+                
+                let cambioFecha = (formValues.fecha !== fechaActual || formValues.hora !== horaActual);
+                if (cambioFecha && urlWhatsAppBase) {
+                    Swal.fire({
+                        title: '¡Cita Modificada!',
+                        text: 'Has cambiado la fecha/hora. ¿Quieres avisar al cliente por WhatsApp?',
+                        icon: 'success', showCancelButton: true, confirmButtonColor: '#25D366', confirmButtonText: 'Sí, avisar', cancelButtonText: 'No'
+                    }).then((waRes) => {
+                        if (waRes.isConfirmed) {
+                            let fNueva = formValues.fecha.split('-').reverse().join('/');
+                            let msj = `Hola ${formValues.cliente}, te confirmamos que hemos modificado la cita para la gestión de tu vehículo. La nueva fecha confirmada es el ${fNueva} a las ${formValues.hora}h. ¡Te esperamos!`;
+                            window.open(urlWhatsAppBase + encodeURIComponent(msj), '_blank');
+                        }
+                    });
+                } else {
+                    Swal.fire('¡Modificada!', 'La agenda se ha actualizado correctamente.', 'success');
+                }
+            } catch (errorGeneral) {
+                Swal.fire('Error', 'No se pudieron guardar los cambios en la agenda.', 'error');
+            }
+        }
     };
   </script>
 </body>
