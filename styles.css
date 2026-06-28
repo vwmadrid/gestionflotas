@@ -1,0 +1,45 @@
+    body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; }
+    .card-mini { background: white; border-radius: 12px; border: 1px solid #e2e8f0; transition: transform 0.2s; display: flex; flex-direction: column; }
+    .card-mini:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #001e50; }
+    .status-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; width: 100%; }
+    
+    .tabla-excel { width: 100%; min-width: max-content; border-collapse: separate; border-spacing: 0; font-size: 11px; background: white; }
+    .tabla-excel th { background-color: #001e50; color: white; font-weight: bold; text-transform: uppercase; padding: 10px 12px; border: 1px solid #cbd5e1; border-top: none; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.2); }
+    .tabla-excel th:first-child { border-left: none; }
+    .tabla-excel th:last-child { border-right: none; }
+    .tabla-excel td { padding: 6px 12px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; color: #1e293b; vertical-align: middle; }
+    .tabla-excel td:first-child { border-left: 1px solid #e2e8f0; }
+    .tabla-excel tr:nth-child(even) td { background-color: #f8fafc; }
+    .tabla-excel tr:hover td { background-color: #e0f2fe; }
+
+    .excel-check { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 2px solid #94a3b8; border-radius: 3px; margin-right: 6px; font-size: 12px; font-weight: bold; background: white;}
+    .check-curso { border-color: #f59e0b; color: #f59e0b; }
+    .check-fin { border-color: #10b981; color: white; background-color: #10b981; }
+
+    .bg-whatsapp { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-repeat: repeat; }
+    .wa-bubble { position: relative; padding: 6px 12px 20px 12px; border-radius: 8px; font-size: 13px; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); max-width: 85%; }
+    .wa-time { position: absolute; bottom: 4px; right: 8px; font-size: 9px; color: #667781; }
+    .wa-me { background-color: #dcf8c6; border-top-right-radius: 0; align-self: flex-end; }
+    .wa-other { background-color: #ffffff; border-top-left-radius: 0; align-self: flex-start; }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px;} 
+    ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; border: 2px solid #f1f5f9; }
+    ::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+    .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+    /* Fuerza al navegador a mostrar el cursor correcto en la agenda y tarjetas */
+    .tabla-excel td, 
+    #contenedorAgenda table td, 
+    #contenedorAgenda .flex-1,
+    .card-mini {
+        cursor: pointer !important; /* Fuerza la mano de clic */
+    }
+
+    /* En caso de que se pase por celdas totalmente vacías o bloqueadas */
+    #contenedorAgenda table td div {
+        cursor: pointer !important;
+    }
+    .swal2-backdrop-show {
+        cursor: default !important;
+    }
+  
