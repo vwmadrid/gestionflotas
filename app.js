@@ -209,7 +209,8 @@ window.iniciarAppDirectamente = function(rol, usuario) {
         }
         window.cambiarPestana('todos');
     } else { 
-        document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
+        // 🔥 AQUÍ ESTABA EL FALLO: Ahora sí apagamos el menú grande ('flex' a 'hidden')
+        document.getElementById('tabsEntregas').classList.replace('flex', 'hidden'); 
         document.getElementById('tabsDpto').classList.replace('hidden', 'flex');
         
         let icono = rol === 'taller' ? 'ph-wrench' : 'ph-package';
@@ -574,4 +575,129 @@ window.aplicarFiltroVisual = function(filtro, btnElement) {
 window.filtrarCoches = function() {
   const t = document.getElementById('buscadorInput').value.toLowerCase();
   document.querySelectorAll('.fila-coche').forEach(el => { el.style.display = el.innerText.toLowerCase().includes(t) ? '' : 'none'; });
+};
+// ==========================================
+// 📜 MOTOR DEL HISTORIAL DE DEPARTAMENTO
+// ==========================================
+
+// 1. Carga inicial del historial filtrado por el departamento del usuario
+window.cargarUltimosHistorialDpto = async function() {
+    const tbody = document.getElementById('tablaResultadosDpto');
+    if (!tbody) return;
+    
+    // Mostramos un mensaje de carga temporal en la tabla
+    tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-sm text-gray-500 font-bold animate-pulse"><i class="ph-bold ph-spinner-gap"></i> Conectando con el archivo de Firebase...</td></tr>';
+    
+    try {
+        // Traemos todos los documentos de la colección de vehículos
+        const querySnapshot = await window.getDocs(window.collection(window.db, "vehiculos"));
+        let todosLosCoches = [];
+        
+        querySnapshot.forEach((doc) => {
+            let coche = doc.data();
+            coche.fila = doc.id; // Guardamos el ID del documento
+            todosLosCoches.push(coche);
+        });
+        
+        // Filtramos los coches que corresponden a este departamento y que ya están marcados como OK
+        let cochesFinalizados = [];
+        if (window.rolActivo === 'taller') {
+            cochesFinalizados = todosLosCoches.filter(c => c.finTaller === true || c.finTaller === "true");
+        } else if (window.rolActivo === 'recambios') {
+            cochesFinalizados = todosLosCoches.filter(c => c.finRecambios === true || c.finRecambios === "true");
+        }
+        
+        // Ordenamos para que los más nuevos aparezcan arriba del todo
+        cochesFinalizados.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
+        
+        // Enviamos la lista filtrada al pintor de la tabla
+        window.renderizarTablaHistorial(cochesFinalizados);
+        
+    } catch (error) {
+        console.error("Error crítico en el historial de operaciones:", error);
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-sm text-red-500 font-bold">⚠️ Error al conectar con la base de datos. Revisa la consola.</td></tr>';
+    }
+};
+
+// 2. Pintor dinámico de filas HTML dentro de la tabla del historial
+window.renderizarTablaHistorial = function(lista) {
+    const tbody = document.getElementById('tablaResultadosDpto');
+    if (!tbody) return;
+    
+    if (lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-sm text-gray-400 font-bold"><i class="ph-bold ph-archive-tray text-lg"></i> No hay operaciones finalizadas registradas en este departamento.</td></tr>';
+        return;
+    }
+    
+    // Mapeamos el array de datos transformándolo en filas de tabla físicas
+    tbody.innerHTML = lista.map(c => {
+        // Extraemos variables dependiendo de si es taller o recambios para rellenar las columnas simétricas
+        let numOrden = window.rolActivo === 'taller' ? (c.ordenTaller || 'S/N') : (c.ordenRecambios || 'S/N');
+        let fechaEntrada = window.rolActivo === 'taller' ? (c.fechaEntradaTaller || '-') : (c.fechaEntradaRecambios || '-');
+        let fechaSalida = window.rolActivo === 'taller' ? (c.fechaTaller || '-') : (c.fechaRecambios || '-');
+        let motivo = window.rolActivo === 'taller' ? (c.instruccionTaller || 'Operación general') : (c.instruccionRecambios || 'Pedido general');
+        
+        // Selector del documento digital adjunto (Acta de trabajo o albarán)
+        let pdfBtn = c.urlParte 
+            ? `<a href="${c.urlParte}" target="_blank" class="inline-flex items-center justify-center w-7 h-7 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors" title="Ver documento adjunto"><i class="ph-bold ph-file-pdf text-base"></i></a>` 
+            : `<span class="text-gray-300 text-xs font-medium">Sin Acta</span>`;
+            
+        return `
+            <tr class="border-b border-gray-200 hover:bg-gray-50/80 transition-colors text-xs">
+                <td class="p-3 font-black text-[#001e50] uppercase tracking-wide">${c.modelo || c.C || 'VOLKSWAGEN'}</td>
+                <td class="p-3 font-mono text-gray-600">
+                    <span class="block font-bold">${c.matricula || c.B || 'S/M'}</span>
+                    <span class="block text-[10px] text-gray-400 tracking-tighter">VIN: ${c.bastidor || c.A || 'S/B'}</span>
+                </td>
+                <td class="p-3 font-bold text-gray-700">${numOrden}</td>
+                <td class="p-3 text-gray-500 font-medium">${fechaEntrada}</td>
+                <td class="p-3 text-emerald-600 font-bold">${fechaSalida}</td>
+                <td class="p-3 text-gray-600 max-w-xs truncate font-medium" title="${window.escapeJS(motivo)}">${motivo}</td>
+                <td class="p-3 text-center">${pdfBtn}</td>
+            </tr>
+        `;
+    }).join('');
+};
+
+// 3. Buscador predictivo del historial mediante comandos de teclado o botón Buscar
+window.ejecutarBusquedaDpto = async function() {
+    const busqueda = document.getElementById('inputBuscarHistorialDpto').value.trim().toLowerCase();
+    
+    // Si el cuadro está vacío, recargamos el historial completo estándar
+    if (!busqueda) {
+        window.cargarUltimosHistorialDpto();
+        return;
+    }
+    
+    const tbody = document.getElementById('tablaResultadosDpto');
+    if (!tbody) return;
+    
+    try {
+        const querySnapshot = await window.getDocs(window.collection(window.db, "vehiculos"));
+        let cochesFiltrados = [];
+        
+        querySnapshot.forEach((doc) => {
+            let c = doc.data();
+            
+            // Comprobamos si el coche pertenece al historial del rol actual
+            let perteneceAlDpto = window.rolActivo === 'taller' 
+                ? (c.finTaller === true || c.finTaller === "true") 
+                : (c.finRecambios === true || c.finRecambios === "true");
+                
+            if (perteneceAlDpto) {
+                let matchMatricula = (c.matricula || c.B || '').toLowerCase().includes(busqueda);
+                let matchBastidor = (c.bastidor || c.A || '').toLowerCase().includes(busqueda);
+                let matchModelo = (c.modelo || c.C || '').toLowerCase().includes(busqueda);
+                
+                if (matchMatricula || matchBastidor || matchModelo) {
+                    cochesFiltrados.push(c);
+                }
+            }
+        });
+        
+        window.renderizarTablaHistorial(cochesFiltrados);
+        
+    } catch (error) {
+        console.error("Error en la búsqueda:", error);
+    }
 };
