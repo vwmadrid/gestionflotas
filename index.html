@@ -312,17 +312,28 @@
     </div>
   </div>
 
-  <div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6);">
-    <div style="background-color: #fff; margin: 10% auto; padding: 30px; border: 1px solid #ddd; width: 400px; border-radius: 12px; text-align: center; font-family: 'Inter', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-        <p style="font-size: 14px; color: #555;">Versión 1.0.0</p>
-        <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Automotive Operations Platform</p>
-        <hr style="margin-bottom: 20px;">
-        <p style="font-size: 13px; font-weight: bold; color: #333;">&copy; 2026 Manuel Arjona Carrera & Miriam Olmo Fernández.</p>
-        <p style="font-size: 11px; color: #666; margin-bottom: 25px;">Todos los derechos reservados.</p>
-        <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Desarrollado por: M2 Code Systems</p>
-        <button id="btnClose" style="background-color: #001e50; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cerrar</button>
+ <div id="aboutModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background-color: rgba(0,0,0,0.6); overflow: auto;">
+    <div style="background-color: #ffffff; margin: 5% auto; padding: 30px; border: 1px solid #dddddd; width: 400px; border-radius: 12px; text-align: center; font-family: 'Inter', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; box-sizing: border-box;">
+        
+        <div style="margin-bottom: 20px; display: flex; justify-content: center;">
+            <img src="https://raw.githubusercontent.com/vwmadrid/gestionflotas/main/Logo%20con%20nombre.png" alt="Logotipo GesCar OS" style="height: 200px; max-width: 100%; object-fit: contain;">
+        </div>
+
+        <div style="display: block; width: 100%;">
+            <p style="font-size: 14px; color: #555555; margin: 0 0 5px 0;">Versión 1.0.0</p>
+            <p style="font-size: 12px; color: #888888; margin: 0 0 20px 0;">Automotive Operations Platform</p>
+            
+            <hr style="margin: 0 0 20px 0; border: none; border-top: 1px solid #dddddd;">
+            
+            <p style="font-size: 13px; font-weight: bold; color: #333333; margin: 0 0 5px 0;">&copy; 2026 Manuel Arjona Carrera &amp; Miriam Olmo Fernández.</p>
+            <p style="font-size: 11px; color: #666666; margin: 0 0 25px 0;">Todos los derechos reservados.</p>
+            <p style="font-size: 12px; color: #888888; margin: 0 0 20px 0;">Desarrollado por: M2 Code Systems</p>
+        </div>
+        
+        <button id="btnClose" style="background-color: #001e50; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px;">Cerrar</button>
+        
     </div>
-  </div>
+</div>
 
   <script src="app.js"></script>
   <script src="chat.js"></script>

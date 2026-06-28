@@ -126,3 +126,63 @@ window.renderizarDashboard = function() {
             });
         }
     };
+    // ==========================================
+// 📝 SISTEMA DE ENCUESTAS DE CLIENTES
+// ==========================================
+
+window.renderEncuestas = function() {
+    // 1. Mostramos el contenedor principal en la pantalla
+    document.getElementById('contenedorEncuestas').style.display = 'block';
+    
+    // 2. Buscamos el lugar exacto donde inyectaremos la tabla
+    const tabla = document.getElementById('tablaEncuestas');
+    
+    // 3. Nos conectamos a la colección 'app_feedback' de Firebase en tiempo real
+    window.onSnapshot(window.collection(window.db, "app_feedback"), (snapshot) => {
+        // Preparamos la cabecera de la tabla HTML
+        let html = `
+        <table class="tabla-excel w-full">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>Modelo</th>
+                    <th>Facilidad</th>
+                    <th>Utilidad</th>
+                    <th>Comentario</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        
+        // 4. Recorremos cada encuesta recibida desde la base de datos
+        snapshot.forEach(doc => {
+            let d = doc.data();
+            
+            // Creamos una nueva fila por cada encuesta. 
+            // Usamos 'repeat' para dibujar las estrellas según la puntuación (de 1 a 5)
+            html += `
+                <tr>
+                    <td class="font-bold text-gray-500">${d.fecha || '-'}</td>
+                    <td class="font-bold text-[#001e50]">${d.cliente || 'Anónimo'}</td>
+                    <td>${d.modelo || '-'}</td>
+                    <td class="text-center text-lg text-yellow-500">${'★'.repeat(d.facilidadUso || 0)}</td>
+                    <td class="text-center text-lg text-yellow-500">${'★'.repeat(d.utilidadVideos || 0)}</td>
+                    <td class="italic text-gray-600">${d.comentario || '-'}</td>
+                </tr>`;
+        });
+        
+        // Cerramos la tabla HTML
+        html += `</tbody></table>`;
+        
+        // 5. Inyectamos todo el código generado en nuestra pantalla
+        if (tabla) {
+            tabla.innerHTML = html;
+        }
+        
+    }, (error) => {
+        // En caso de que haya un error de lectura, mostramos un aviso
+        if (typeof window.mostrarErrorFirebase === 'function') {
+            window.mostrarErrorFirebase(error, 'Error al cargar encuestas');
+        }
+    });
+};

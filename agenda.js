@@ -561,126 +561,128 @@
     };
 
     window.generarListadoDiario = async function() {
-        const { value: fechaSeleccionada } = await Swal.fire({
-            title: 'Hoja de Preparaciones',
-            input: 'date',
-            inputLabel: 'Selecciona el día para generar el listado de lavaderos/preparadores:',
-            inputValue: new Date().toISOString().split('T')[0],
-            showCancelButton: true,
-            confirmButtonColor: '#001e50',
-            confirmButtonText: 'Generar Hoja'
-        });
+    const { value: fechaSeleccionada } = await Swal.fire({
+        title: 'Hoja de Preparaciones',
+        input: 'date',
+        inputLabel: 'Selecciona el día para generar el listado de lavaderos/preparadores:',
+        inputValue: new Date().toISOString().split('T')[0],
+        showCancelButton: true,
+        confirmButtonColor: '#001e50',
+        confirmButtonText: 'Generar Hoja'
+    });
 
-        if (!fechaSeleccionada) return;
+    if (!fechaSeleccionada) return;
 
-        let partes = fechaSeleccionada.split('-');
-        let fechaVisual = `${partes[2]}/${partes[1]}/${partes[0]}`;
+    let partes = fechaSeleccionada.split('-');
+    let fechaVisual = `${partes[2]}/${partes[1]}/${partes[0]}`;
 
-        let entregasDelDia = window.datosAgenda.filter(cita => {
-            return cita.fechaHora.startsWith(fechaSeleccionada) && !cita.isBlock && !cita.modelo.startsWith('DEVOLUCIÓN');
-        });
+    let entregasDelDia = window.datosAgenda.filter(cita => {
+        return cita.fechaHora.startsWith(fechaSeleccionada) && !cita.isBlock && !cita.modelo.startsWith('DEVOLUCIÓN');
+    });
 
-        entregasDelDia.sort((a, b) => a.fechaHora.localeCompare(b.fechaHora));
+    entregasDelDia.sort((a, b) => a.fechaHora.localeCompare(b.fechaHora));
 
-        if (entregasDelDia.length === 0) {
-            return Swal.fire('Día Libre', `No hay vehículos para entregar programados el día ${fechaVisual}.`, 'info');
-        }
-
-        let filasHTML = entregasDelDia.map(cita => {
-            let hora = cita.fechaHora.split('T')[1].substring(0, 5);
-            let notas = cita.notas ? cita.notas : '';
-            return `
-                <tr style="border-bottom: 1px solid #cbd5e1; background-color: #f8fafc;">
-                    <td style="padding: 12px 10px; font-weight: 900; font-size: 16px; color: #001e50; border-right: 1px solid #cbd5e1;">${hora}</td>
-                    <td style="padding: 12px 10px; font-weight: bold; font-size: 14px; text-transform: uppercase;">${cita.modelo}</td>
-                    <td style="padding: 12px 10px; border-right: 1px solid #cbd5e1;">
-                        <span style="font-size: 14px; font-weight: 900; background: white; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;">${cita.matricula}</span>
-                        <div style="font-size: 10px; color: #64748b; margin-top: 4px;">VIN: ${cita.bastidor || 'N/A'}</div>
-                    </td>
-                    <td style="padding: 12px 10px; color: #475569; font-size: 12px; font-style: italic; border-right: 1px solid #cbd5e1;">${notas}</td>
-                    <td style="padding: 12px 10px; width: 60px;"></td>
-                </tr>
-            `;
-        }).join('');
-
-        let elementoFalso = document.createElement('div');
-        elementoFalso.innerHTML = `
-            <div style="padding: 30px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #0f172a; background: white;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #001e50; padding-bottom: 15px; margin-bottom: 25px;">
-                    <div>
-                        <h1 style="margin:0; font-size: 24px; text-transform: uppercase; font-weight: 900; color: #001e50;">HOJA DE PREPARACIONES</h1>
-                        <h3 style="margin:5px 0 0 0; color: #64748b; font-weight: normal; font-size: 14px;">Entregas programadas Castellana Wagen</h3>
-                    </div>
-                    <div style="text-align: right;">
-                        <p style="margin: 0; font-size: 12px; font-weight: bold; color: #64748b;">FECHA DE OPERATIVA</p>
-                        <h2 style="margin: 0; font-size: 24px; color: #00b0f0;">${fechaVisual}</h2>
-                    </div>
-                </div>
-                <table style="width: 100%; text-align: left; border-collapse: collapse;">
-                    <thead>
-                        <tr style="background-color: #001e50; color: white;">
-                            <th style="padding: 12px 10px; width: 70px;">Hora</th>
-                            <th style="padding: 12px 10px;">Vehículo</th>
-                            <th style="padding: 12px 10px; width: 140px;">Matrícula / VIN</th>
-                            <th style="padding: 12px 10px;">Notas para el Preparador</th>
-                            <th style="padding: 12px 10px; text-align: center; width: 60px;">OK</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${filasHTML}
-                    </tbody>
-                </table>
-                <p style="text-align: center; margin-top: 40px; font-size: 10px; color: #94a3b8;">
-                    Total vehículos a preparar: <b>${entregasDelDia.length}</b> | Uso interno - GesCar OS
-                </p>
-            </div>
-        `;
-
-        let opcionesPDF = {
-            margin:       0.4,
-            filename:     `Preparaciones_${fechaSeleccionada}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-        };
-
-        Swal.fire({ title: 'Procesando Listado...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
-
-        html2pdf().set(opcionesPDF).from(elementoFalso).outputPdf('blob').then(function(pdfBlob) {
-            let pdfUrl = URL.createObjectURL(pdfBlob);
-            
-            Swal.fire({
-                title: '📄 Hoja Generada',
-                text: '¿Cómo se lo quieres enviar a los preparadores?',
-                icon: 'success',
-                showDenyButton: true,
-                showCancelButton: true,
-                confirmButtonColor: '#10b981', 
-                denyButtonColor: '#3b82f6', 
-                cancelButtonColor: '#25D366', 
-                confirmButtonText: '⬇️ Descargar',
-                denyButtonText: '🖨️ Imprimir',
-                cancelButtonText: '💬 WhatsApp'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    html2pdf().set(opcionesPDF).from(elementoFalso).save();
-                } else if (result.isDenied) {
-                    let iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    iframe.src = pdfUrl;
-                    document.body.appendChild(iframe);
-                    iframe.contentWindow.focus();
-                    iframe.contentWindow.print();
-                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    html2pdf().set(opcionesPDF).from(elementoFalso).save();
-                    let msg = `¡Hola Equipo! Os adjunto la Hoja de Preparaciones y Lavado de vehículos para el día *${fechaVisual}*.`;
-                    Swal.fire({
-                        title: 'Abriendo WhatsApp...',
-                        html: '<p class="text-sm text-gray-600">El listado se ha descargado en tu ordenador.<br><br><b>Arrastra el PDF</b> a la ventana de WhatsApp Web para pasarlo por el grupo.</p>',
-                        icon: 'info', confirmButtonColor: '#001e50'
-                    });
-                    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-                }
-            });
-        });
+    if (entregasDelDia.length === 0) {
+        return Swal.fire('Día Libre', `No hay vehículos para entregar programados el día ${fechaVisual}.`, 'info');
     }
+
+    // Dibujamos las filas, incluyendo la nueva celda de Renting
+    let filasHTML = entregasDelDia.map(cita => {
+        let hora = cita.fechaHora.split('T')[1].substring(0, 5);
+        let notas = cita.notas ? cita.notas : '';
+        let rentingStr = cita.renting ? cita.renting : 'N/A'; // <-- Capturamos el Renting
+
+        return `
+            <tr style="border-bottom: 1px solid #cbd5e1; background-color: #f8fafc;">
+                <td style="padding: 12px 10px; font-weight: 900; font-size: 16px; color: #001e50; border-right: 1px solid #cbd5e1;">${hora}</td>
+                <td style="padding: 12px 10px; font-weight: bold; font-size: 14px; text-transform: uppercase; border-right: 1px solid #cbd5e1;">${cita.modelo}</td>
+                <td style="padding: 12px 10px; font-weight: bold; font-size: 12px; text-transform: uppercase; color: #475569; border-right: 1px solid #cbd5e1;">${rentingStr}</td>
+                <td style="padding: 12px 10px; border-right: 1px solid #cbd5e1;">
+                    <span style="font-size: 14px; font-weight: 900; background: white; padding: 2px 6px; border: 1px solid #cbd5e1; border-radius: 4px;">${cita.matricula}</span>
+                    <div style="font-size: 10px; color: #64748b; margin-top: 4px;">VIN: ${cita.bastidor || 'N/A'}</div>
+                </td>
+                <td style="padding: 12px 10px; color: #475569; font-size: 12px; font-style: italic; border-right: 1px solid #cbd5e1;">${notas}</td>
+                <td style="padding: 12px 10px; width: 60px;"></td>
+            </tr>
+        `;
+    }).join('');
+
+    // Estructura del PDF con la nueva cabecera
+    let elementoFalso = document.createElement('div');
+    elementoFalso.innerHTML = `
+        <div style="padding: 30px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #0f172a; background: white;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #001e50; padding-bottom: 15px; margin-bottom: 25px;">
+                <div>
+                    <h1 style="margin:0; font-size: 24px; text-transform: uppercase; font-weight: 900; color: #001e50;">HOJA DE PREPARACIONES</h1>
+                </div>
+                <div style="text-align: right;">
+                    <p style="margin: 0; font-size: 12px; font-weight: bold; color: #64748b;">FECHA OPERATIVA</p>
+                    <h2 style="margin: 0; font-size: 24px; color: #00b0f0;">${fechaVisual}</h2>
+                </div>
+            </div>
+            <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #001e50; color: white;">
+                        <th style="padding: 12px 10px; width: 60px;">Hora</th>
+                        <th style="padding: 12px 10px;">Vehículo</th>
+                        <th style="padding: 12px 10px; width: 110px;">Renting</th>
+                        <th style="padding: 12px 10px; width: 130px;">Matrícula / VIN</th>
+                        <th style="padding: 12px 10px;">Notas</th>
+                        <th style="padding: 12px 10px; text-align: center; width: 50px;">OK</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasHTML}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    let opcionesPDF = {
+        margin:       0.4,
+        filename:     `Preparaciones_${fechaSeleccionada}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    Swal.fire({ title: 'Procesando Listado...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+    html2pdf().set(opcionesPDF).from(elementoFalso).outputPdf('blob').then(function(pdfBlob) {
+        let pdfUrl = URL.createObjectURL(pdfBlob);
+        
+        Swal.fire({
+            title: '📄 Hoja Generada',
+            text: '¿Cómo se lo quieres enviar a los preparadores?',
+            icon: 'success',
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonColor: '#10b981', 
+            denyButtonColor: '#3b82f6', 
+            cancelButtonColor: '#25D366', 
+            confirmButtonText: '⬇️ Descargar',
+            denyButtonText: '🖨️ Imprimir',
+            cancelButtonText: '💬 WhatsApp'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                html2pdf().set(opcionesPDF).from(elementoFalso).save();
+            } else if (result.isDenied) {
+                let iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = pdfUrl;
+                document.body.appendChild(iframe);
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            } else if (result.dismiss === Swal.DismissReason.cancel) {
+                html2pdf().set(opcionesPDF).from(elementoFalso).save();
+                let msg = `¡Hola Equipo! Os adjunto la Hoja de Preparaciones y Lavado de vehículos para el día *${fechaVisual}*.`;
+                Swal.fire({
+                    title: 'Abriendo WhatsApp...',
+                    html: '<p class="text-sm text-gray-600">El listado se ha descargado en tu ordenador.<br><br><b>Arrastra el PDF</b> a la ventana de WhatsApp Web para pasarlo por el grupo.</p>',
+                    icon: 'info', confirmButtonColor: '#001e50'
+                });
+                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+            }
+        });
+    });
+};
