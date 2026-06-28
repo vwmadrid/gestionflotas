@@ -192,30 +192,29 @@ window.iniciarAppDirectamente = function(rol, usuario) {
     document.getElementById('sidebarApp').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'flex';
     
-    window.cargar(); 
+    window.cargar(); // Carga los coches de la app de forma normal
+    
+    // 🔥 AQUÍ ESTÁ LA CLAVE: Enciende el chat general ahora que ya sabemos quién eres
+    if (typeof window.cargarChatGlobal === 'function') {
+        window.cargarChatGlobal();
+    }
 
     if (rol === 'entregas' || rol === 'backoffice') {
         if (typeof window.iniciarMotorAlertas === 'function') { window.iniciarMotorAlertas(); }
-        
         if (rol === 'backoffice' && typeof window.escucharNotificacionesBackOffice === 'function') {
             window.escucharNotificacionesBackOffice();
         }
-
         document.getElementById('tabsDpto').classList.replace('flex', 'hidden');
         document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
-        
         if (rol === 'entregas') {
             document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
         }
         window.cambiarPestana('todos');
     } else { 
-        // 🔥 AQUÍ ESTABA EL FALLO: Ahora sí apagamos el menú grande ('flex' a 'hidden')
         document.getElementById('tabsEntregas').classList.replace('flex', 'hidden'); 
         document.getElementById('tabsDpto').classList.replace('hidden', 'flex');
-        
         let icono = rol === 'taller' ? 'ph-wrench' : 'ph-package';
         document.getElementById('iconoDptoCurso').className = `ph-bold ${icono} text-lg`;
-        
         window.cambiarPestana('global-' + rol);
     }
 };
@@ -577,179 +576,173 @@ window.filtrarCoches = function() {
   document.querySelectorAll('.fila-coche').forEach(el => { el.style.display = el.innerText.toLowerCase().includes(t) ? '' : 'none'; });
 };
 // ==========================================
-// 📜 MOTOR DEL HISTORIAL DE DEPARTAMENTO
+// 💬 MÓDULO INTEGRAL DE CHAT INTERNO (M2 CODE SYSTEMS)
 // ==========================================
 
-// 1. Carga inicial del historial filtrado por el departamento del usuario
-window.cargarUltimosHistorialDpto = async function() {
-    const tbody = document.getElementById('tablaResultadosDpto');
-    if (!tbody) return;
-    
-    // Mostramos un mensaje de carga temporal en la tabla
-    tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-sm text-gray-500 font-bold animate-pulse"><i class="ph-bold ph-spinner-gap"></i> Conectando con el archivo de Firebase...</td></tr>';
-    
-    try {
-        // Traemos todos los documentos de la colección de vehículos
-        const querySnapshot = await window.getDocs(window.collection(window.db, "vehiculos"));
-        let todosLosCoches = [];
-        
-        querySnapshot.forEach((doc) => {
-            let coche = doc.data();
-            coche.fila = doc.id; // Guardamos el ID del documento
-            todosLosCoches.push(coche);
-        });
-        
-        // Filtramos los coches que corresponden a este departamento y que ya están marcados como OK
-        let cochesFinalizados = [];
-        if (window.rolActivo === 'taller') {
-            cochesFinalizados = todosLosCoches.filter(c => c.finTaller === true || c.finTaller === "true");
-        } else if (window.rolActivo === 'recambios') {
-            cochesFinalizados = todosLosCoches.filter(c => c.finRecambios === true || c.finRecambios === "true");
-        }
-        
-        // Ordenamos para que los más nuevos aparezcan arriba del todo
-        cochesFinalizados.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
-        
-        // Enviamos la lista filtrada al pintor de la tabla
-        window.renderizarTablaHistorial(cochesFinalizados);
-        
-    } catch (error) {
-        console.error("Error crítico en el historial de operaciones:", error);
-        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-sm text-red-500 font-bold">⚠️ Error al conectar con la base de datos. Revisa la consola.</td></tr>';
-    }
-};
+// Memoria caché para guardar los mensajes sin machacar Firebase constantemente
+window.mensajesGlobalesCache = [];
 
-// 2. Pintor dinámico de filas HTML dentro de la tabla del historial
-window.renderizarTablaHistorial = function(lista) {
-    const tbody = document.getElementById('tablaResultadosDpto');
-    if (!tbody) return;
-    
-    if (lista.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-sm text-gray-400 font-bold"><i class="ph-bold ph-archive-tray text-lg"></i> No hay operaciones finalizadas registradas en este departamento.</td></tr>';
-        return;
-    }
-    
-    // Mapeamos el array de datos transformándolo en filas de tabla físicas
-    tbody.innerHTML = lista.map(c => {
-        // Extraemos variables dependiendo de si es taller o recambios para rellenar las columnas simétricas
-        let numOrden = window.rolActivo === 'taller' ? (c.ordenTaller || 'S/N') : (c.ordenRecambios || 'S/N');
-        let fechaEntrada = window.rolActivo === 'taller' ? (c.fechaEntradaTaller || '-') : (c.fechaEntradaRecambios || '-');
-        let fechaSalida = window.rolActivo === 'taller' ? (c.fechaTaller || '-') : (c.fechaRecambios || '-');
-        let motivo = window.rolActivo === 'taller' ? (c.instruccionTaller || 'Operación general') : (c.instruccionRecambios || 'Pedido general');
-        
-        // Selector del documento digital adjunto (Acta de trabajo o albarán)
-        let pdfBtn = c.urlParte 
-            ? `<a href="${c.urlParte}" target="_blank" class="inline-flex items-center justify-center w-7 h-7 bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors" title="Ver documento adjunto"><i class="ph-bold ph-file-pdf text-base"></i></a>` 
-            : `<span class="text-gray-300 text-xs font-medium">Sin Acta</span>`;
-            
-        return `
-            <tr class="border-b border-gray-200 hover:bg-gray-50/80 transition-colors text-xs">
-                <td class="p-3 font-black text-[#001e50] uppercase tracking-wide">${c.modelo || c.C || 'VOLKSWAGEN'}</td>
-                <td class="p-3 font-mono text-gray-600">
-                    <span class="block font-bold">${c.matricula || c.B || 'S/M'}</span>
-                    <span class="block text-[10px] text-gray-400 tracking-tighter">VIN: ${c.bastidor || c.A || 'S/B'}</span>
-                </td>
-                <td class="p-3 font-bold text-gray-700">${numOrden}</td>
-                <td class="p-3 text-gray-500 font-medium">${fechaEntrada}</td>
-                <td class="p-3 text-emerald-600 font-bold">${fechaSalida}</td>
-                <td class="p-3 text-gray-600 max-w-xs truncate font-medium" title="${window.escapeJS(motivo)}">${motivo}</td>
-                <td class="p-3 text-center">${pdfBtn}</td>
-            </tr>
-        `;
-    }).join('');
-};
-
-// 3. Buscador predictivo del historial mediante comandos de teclado o botón Buscar
-window.ejecutarBusquedaDpto = async function() {
-    const busqueda = document.getElementById('inputBuscarHistorialDpto').value.trim().toLowerCase();
-    
-    // Si el cuadro está vacío, recargamos el historial completo estándar
-    if (!busqueda) {
-        window.cargarUltimosHistorialDpto();
-        return;
-    }
-    
-    const tbody = document.getElementById('tablaResultadosDpto');
-    if (!tbody) return;
-    
-    try {
-        const querySnapshot = await window.getDocs(window.collection(window.db, "vehiculos"));
-        let cochesFiltrados = [];
-        
-        querySnapshot.forEach((doc) => {
-            let c = doc.data();
-            
-            // Comprobamos si el coche pertenece al historial del rol actual
-            let perteneceAlDpto = window.rolActivo === 'taller' 
-                ? (c.finTaller === true || c.finTaller === "true") 
-                : (c.finRecambios === true || c.finRecambios === "true");
-                
-            if (perteneceAlDpto) {
-                let matchMatricula = (c.matricula || c.B || '').toLowerCase().includes(busqueda);
-                let matchBastidor = (c.bastidor || c.A || '').toLowerCase().includes(busqueda);
-                let matchModelo = (c.modelo || c.C || '').toLowerCase().includes(busqueda);
-                
-                if (matchMatricula || matchBastidor || matchModelo) {
-                    cochesFiltrados.push(c);
-                }
-            }
-        });
-        
-        window.renderizarTablaHistorial(cochesFiltrados);
-        
-    } catch (error) {
-        console.error("Error en la búsqueda:", error);
-    }
-};
-// ==========================================
-// 💬 MOTOR DE CHAT INTERNO DEL CONCESIONARIO
-// ==========================================
-
+// 1. Motor de envío a Firebase
 window.enviarMensajeInterno = async function(destino, texto) {
-    // 1. Verificamos que haya texto y un destino válido
     if (!texto.trim() || !destino) return;
-
-    // 2. Generamos un ID único basado en la fecha y hora al milisegundo
     const idMensaje = "msg_" + new Date().getTime();
-
-    // 3. Estructuramos el "paquete" de datos
+    
     const nuevoMensaje = {
-        remitente: window.usuarioActivo, // Quien está logueado (ej. PRUEBAS)
-        departamentoRemitente: window.rolActivo, // Su rol
-        destinatario: destino, // Puede ser "CARLOS" o "taller"
+        remitente: window.usuarioActivo,
+        departamentoRemitente: window.rolActivo,
+        destinatario: destino,
         texto: texto,
         timestamp: new Date().getTime(),
-        leido: false // Podremos usar esto en el futuro para doble check azul
+        leido: false
     };
 
     try {
-        // 4. Lo enviamos a una NUEVA colección en Firebase llamada "chat_concesionario"
-        // Usamos setDoc y doc, que ya tienes exportados en tu index.html
         await window.setDoc(window.doc(window.db, "chat_concesionario", idMensaje), nuevoMensaje);
-        console.log("Mensaje enviado con éxito a: " + destino);
-        
     } catch (error) {
         console.error("Error enviando mensaje interno:", error);
         Swal.fire({ icon: 'error', title: 'Fallo de conexión', text: 'No se pudo enviar el mensaje.' });
     }
 };
-// ==========================================
-// 🕹️ CONTROLADORES DEL INTERFAZ DE CHAT GLOBAL
-// ==========================================
 
-// Expande la ventana de chat y oculta el botón redondo
+// 2. Control del estado de lectura
+window.marcarChatGlobalComoLeido = function() {
+    const ahora = new Date().getTime();
+    window.ultimaFechaLecturaGlobal = ahora;
+    localStorage.setItem('vw_chat_leido_' + window.usuarioActivo, ahora);
+    const globo = document.getElementById('contadorChatGlobal');
+    if (globo) globo.style.display = 'none';
+};
+
+// 3. Escuchador maestro de base de datos
+window.cargarChatGlobal = function() {
+    const chatRef = window.collection(window.db, "chat_concesionario");
+    window.ultimaFechaLecturaGlobal = localStorage.getItem('vw_chat_leido_' + window.usuarioActivo) || 0;
+    
+    window.onSnapshot(chatRef, (snapshot) => {
+        let mensajes = [];
+        let noLeidos = 0;
+        
+        snapshot.forEach((doc) => {
+            let msg = doc.data();
+            msg.id = doc.id;
+            
+            if (msg.remitente === window.usuarioActivo || 
+                msg.destinatario === window.usuarioActivo || 
+                msg.destinatario === window.rolActivo) {
+                
+                mensajes.push(msg);
+                if (msg.remitente !== window.usuarioActivo && msg.timestamp > window.ultimaFechaLecturaGlobal) {
+                    noLeidos++;
+                }
+            }
+        });
+
+        mensajes.sort((a, b) => a.timestamp - b.timestamp);
+        
+        // Guardamos TODOS los mensajes en la memoria interna
+        window.mensajesGlobalesCache = mensajes; 
+        
+        // Llamamos al filtro para que pinte solo los del canal seleccionado
+        window.actualizarVistaChat();
+        
+        const globo = document.getElementById('contadorChatGlobal');
+        const chatWidget = document.getElementById('chatGlobalWidget');
+        
+        if (globo) {
+            if (chatWidget && chatWidget.style.display === 'flex') {
+                window.marcarChatGlobalComoLeido();
+            } else {
+                if (noLeidos > 0) {
+                    globo.innerText = noLeidos > 99 ? '99+' : noLeidos;
+                    globo.style.display = 'flex';
+                } else {
+                    globo.style.display = 'none';
+                }
+            }
+        }
+    });
+};
+
+// 🔥 4. NUEVO FILTRO: Separa las conversaciones por canales
+window.actualizarVistaChat = function() {
+    const destinoSeleccionado = document.getElementById('chatGlobalDestino').value;
+    const contenedor = document.getElementById('chatGlobalMensajes');
+
+    if (!destinoSeleccionado) {
+        if (contenedor) contenedor.innerHTML = '<div class="text-[10px] text-center font-bold text-gray-400 uppercase tracking-widest bg-white/60 p-1 rounded-full mx-auto w-3/4">Selecciona un chat en el desplegable superior</div>';
+        return;
+    }
+
+    // Filtramos la memoria matemática para separar los canales
+    let mensajesFiltrados = window.mensajesGlobalesCache.filter(msg => {
+        // ¿Es un grupo de departamento?
+        if (['taller', 'recambios', 'entregas', 'backoffice'].includes(destinoSeleccionado)) {
+            return msg.destinatario === destinoSeleccionado;
+        } else {
+            // ¿Es un chat privado de persona a persona?
+            let enviadoPorMiAEl = msg.remitente === window.usuarioActivo && msg.destinatario === destinoSeleccionado;
+            let enviadoPorElAMi = msg.remitente === destinoSeleccionado && msg.destinatario === window.usuarioActivo;
+            return enviadoPorMiAEl || enviadoPorElAMi;
+        }
+    });
+
+    window.renderizarMensajesGlobales(mensajesFiltrados);
+};
+
+// 5. Dibujado de burbujas en la interfaz
+window.renderizarMensajesGlobales = function(listaMensajes) {
+    const contenedor = document.getElementById('chatGlobalMensajes');
+    if (!contenedor) return;
+
+    if (listaMensajes.length === 0) {
+        contenedor.innerHTML = '<div class="text-[10px] text-center font-bold text-gray-400 uppercase tracking-widest bg-white/60 p-1 rounded-full mx-auto w-3/4 mt-4">No hay mensajes en esta conversación</div>';
+        return;
+    }
+
+    contenedor.innerHTML = listaMensajes.map(msg => {
+        let fecha = new Date(msg.timestamp);
+        let horaFormateada = fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let soyYo = msg.remitente === window.usuarioActivo;
+        
+        if (soyYo) {
+            return `
+            <div class="flex flex-col items-end w-full animate-fade-in">
+                <div class="bg-[#001e50] text-white px-3 py-2 rounded-xl rounded-tr-none shadow-sm max-w-[85%] text-xs">
+                    ${msg.texto}
+                </div>
+                <span class="text-[9px] text-gray-400 font-bold mt-1 pr-1">${horaFormateada}</span>
+            </div>`;
+        } else {
+            let etiquetaDestino = msg.destinatario === window.rolActivo ? `<span class="bg-amber-100 text-amber-700 px-1 rounded text-[8px] ml-1">@${window.rolActivo.toUpperCase()}</span>` : '';
+            return `
+            <div class="flex flex-col items-start w-full animate-fade-in">
+                <span class="text-[9px] text-gray-500 font-bold mb-1 pl-1">${msg.remitente} ${etiquetaDestino}</span>
+                <div class="bg-white text-[#001e50] border border-gray-200 px-3 py-2 rounded-xl rounded-tl-none shadow-sm max-w-[85%] text-xs font-medium">
+                    ${msg.texto}
+                </div>
+                <span class="text-[9px] text-gray-400 font-bold mt-1 pl-1">${horaFormateada}</span>
+            </div>`;
+        }
+    }).join('');
+
+    contenedor.scrollTop = contenedor.scrollHeight;
+};
+
+// 6. Gestión del botón abrir y cerrar
 window.abrirChatGlobal = function() {
     document.getElementById('chatGlobalWidget').style.display = 'flex';
     document.getElementById('btnAbrirChatGlobal').style.display = 'none';
+    window.marcarChatGlobalComoLeido();
+    window.actualizarVistaChat(); // Refrescamos la vista al abrir
 };
 
-// Contrae la ventana de chat y vuelve a mostrar el botón redondo
 window.minimizarChatGlobal = function() {
     document.getElementById('chatGlobalWidget').style.display = 'none';
     document.getElementById('btnAbrirChatGlobal').style.display = 'flex';
+    window.marcarChatGlobalComoLeido();
 };
 
-// Captura los datos del HTML y se los pasa al motor de Firebase
+// 7. Captura de la UI al hacer clic en enviar
 window.enviarMensajeGlobalUI = function() {
     const destino = document.getElementById('chatGlobalDestino').value;
     const input = document.getElementById('chatGlobalInput');
@@ -759,7 +752,7 @@ window.enviarMensajeGlobalUI = function() {
         return Swal.fire({ 
             icon: 'warning', 
             title: 'Atención', 
-            text: 'Debes seleccionar un destinatario o departamento en el desplegable superior.',
+            text: 'Debes seleccionar un destinatario en el desplegable superior.',
             toast: true,
             position: 'bottom-end',
             showConfirmButton: false,
@@ -767,23 +760,37 @@ window.enviarMensajeGlobalUI = function() {
         });
     }
     
-    // Verificamos que la función de envío a Firebase existe antes de llamarla
-    if (typeof window.enviarMensajeInterno === 'function') {
+    if (texto.trim() && typeof window.enviarMensajeInterno === 'function') {
         window.enviarMensajeInterno(destino, texto);
-        input.value = ""; // Limpiamos la caja de texto para el siguiente mensaje
-    } else {
-        console.error("La función enviarMensajeInterno no está definida.");
+        input.value = "";
     }
 };
 
-// Permitir enviar el mensaje pulsando la tecla "Enter"
-window.addEventListener('DOMContentLoaded', () => {
+// 8. ESCUCHADOR DE PROTECCIÓN Y EVENTOS DEL DOM
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        if (typeof window.cargarChatGlobal === 'function' && window.usuarioActivo) {
+            window.cargarChatGlobal();
+        }
+    }, 2000);
+
+    const widget = document.getElementById('chatGlobalWidget');
+    const boton = document.getElementById('btnAbrirChatGlobal');
+    if (widget) document.body.appendChild(widget);
+    if (boton) document.body.appendChild(boton);
+
     const inputChat = document.getElementById('chatGlobalInput');
-    if(inputChat) {
+    if (inputChat) {
         inputChat.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 window.enviarMensajeGlobalUI();
             }
         });
+    }
+
+    // 🔥 VINCULAMOS EL DESPLEGABLE AL FILTRO
+    const selectDestino = document.getElementById('chatGlobalDestino');
+    if (selectDestino) {
+        selectDestino.addEventListener('change', window.actualizarVistaChat);
     }
 });

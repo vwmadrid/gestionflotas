@@ -345,17 +345,13 @@
     </div>
 </div>
 
-  <script src="app.js"></script>
-  <script src="chat.js"></script>
-  <script src="dashboard.js"></script>
-  <script src="agenda.js"></script>
-  <script src="vehiculos.js"></script>
+
   <!-- ========================================== -->
   <!-- 💬 WIDGET DE CHAT GLOBAL (M2 Code Systems) -->
   <!-- ========================================== -->
   
   <!-- Ventana de Chat (Oculta por defecto) -->
- <div id="chatGlobalWidget" class="fixed bottom-6 right-6 z-50 flex flex-col items-end shadow-2xl transition-all" style="display: none;">
+ <div id="chatGlobalWidget" class="flex flex-col items-end shadow-2xl transition-all" style="display: none; position: fixed !important; bottom: 84px !important; right: 24px !important; z-index: 99999 !important;">
       <div class="w-80 bg-[#001e50] rounded-t-xl text-white flex justify-between items-center p-3 cursor-pointer shadow-md" onclick="window.minimizarChatGlobal()">
           <div class="flex items-center gap-2">
               <i class="ph-bold ph-chats text-xl text-[#00b0f0]"></i>
@@ -383,8 +379,8 @@
                   </optgroup>
 
                   <optgroup label="🔧 Taller">
-                      <option value="MANUEL LOPEZ">Manuel López</option>
-                      <option value="ALVARO.BELTRAN">Alvaro Beltrán</option>
+                      <option value="CARLOS">Carlos</option>
+                      <option value="PEDRO">Pedro</option>
                   </optgroup>
 
                   <optgroup label="📦 Recambios">
@@ -420,8 +416,34 @@
       </div>
   </div>
 
-  <button id="btnAbrirChatGlobal" onclick="window.abrirChatGlobal()" class="fixed bottom-6 right-6 z-40 bg-[#001e50] text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:bg-blue-900 transition-transform hover:scale-110 border-2 border-white">
+  <button id="btnAbrirChatGlobal" onclick="window.abrirChatGlobal()" class="bg-[#001e50] text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:bg-blue-900 transition-transform hover:scale-110 border-2 border-white" style="position: fixed !important; bottom: 24px !important; right: 24px !important; z-index: 99998 !important;">
       <i class="ph-bold ph-chats text-2xl"></i>
+      <span id="contadorChatGlobal" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm" style="display: none;">0</span>
   </button>
+ <script src="app.js"></script>
+  <script src="chat.js"></script>
+  <script src="dashboard.js"></script>
+  <script src="agenda.js"></script>
+  <script src="vehiculos.js"></script>
+
+  <script>
+    window.addEventListener('load', function() {
+        // Teletransporte visual: Asegura el botón abajo a la derecha sí o sí
+        const widget = document.getElementById('chatGlobalWidget');
+        const boton = document.getElementById('btnAbrirChatGlobal');
+        if (widget) document.body.appendChild(widget);
+        if (boton) document.body.appendChild(boton);
+
+        // Vinculamos la tecla Enter al cuadro de texto del chat
+        const inputChat = document.getElementById('chatGlobalInput');
+        if (inputChat) {
+            inputChat.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    window.enviarMensajeGlobalUI();
+                }
+            });
+        }
+    });
+  </script>
 </body>
 </html>
