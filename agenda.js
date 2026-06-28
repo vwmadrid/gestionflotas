@@ -331,7 +331,16 @@
         let esPasada = fechaCitaObj < ahora;
         let alertaVisual = '';
         
-        if (yaEntregado) {
+        // 🔥 LÓGICA DE APROBACIÓN BACKOFFICE VS ENTREGAS 🔥
+        let esPendiente = cita.estado === 'pendiente';
+        let tagPendiente = esPendiente ? `<span class="bg-amber-100 text-amber-800 border border-amber-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1 animate-pulse"><i class="ph-bold ph-hourglass"></i> PENDIENTE</span>` : '';
+
+        if (esPendiente) {
+            bgColor = '#fffbeb'; // Fondo naranja clarito
+            textColor = 'text-amber-800';
+            borderColor = 'border-amber-400 border-2 border-dashed'; // Borde punteado
+            alertaVisual = `<div class="absolute -top-2 -right-2 bg-amber-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md z-10" title="Pendiente de Confirmar"><i class="ph-bold ph-hourglass text-sm"></i></div>`;
+        } else if (yaEntregado) {
             bgColor = '#dcfce7'; textColor = 'text-emerald-900'; borderColor = 'border-emerald-400 border-2'; 
             alertaVisual = `<div class="absolute -top-2 -right-2 bg-emerald-500 text-white w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md z-10" title="Vehículo Entregado"><i class="ph-bold ph-check text-sm"></i></div>`;
         } else if (esPasada && !yaEntregado && cita.matricula !== "---" && !cita.isBlock) {
@@ -365,8 +374,23 @@
             let escMod = window.escapeJS(cita.modelo); let escMat = window.escapeJS(cita.matricula);
             let escRen = window.escapeJS(cita.renting); let escNotas = window.escapeJS(cita.notas);
             
-            onclickCode = `onclick="window.abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${escCliente}', '${escMat}', '${escTlf}', '${escEmail}', '${escVO}', '${escNotas}')"`;
-            cursorClass = "cursor-pointer hover:ring-2 hover:ring-[#00b0f0] hover:scale-[1.02] shadow-sm";
+            // Bloqueo de edición de tarjeta si está pendiente y eres backoffice
+            if (esPendiente && window.rolActivo === "backoffice") {
+                cursorClass = "cursor-not-allowed";
+            } else {
+                onclickCode = `onclick="window.abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${escCliente}', '${escMat}', '${escTlf}', '${escEmail}', '${escVO}', '${escNotas}')"`;
+                cursorClass = "cursor-pointer hover:ring-2 hover:ring-[#00b0f0] hover:scale-[1.02] shadow-sm";
+            }
+        }
+
+        // Botones rápidos para que Entregas acepte o rechace sin abrir la cita
+        let botonesAprobacion = "";
+        if (esPendiente && window.rolActivo === 'entregas') {
+            botonesAprobacion = `
+            <div class="flex gap-2 mt-2 pt-2 border-t border-amber-200" onclick="if(window.event) window.event.stopPropagation();">
+                <button onclick="window.aprobarCitaPendiente('${cita.id}', '${matCita}')" class="flex-1 bg-emerald-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-emerald-600 transition-colors pointer-events-auto"><i class="ph-bold ph-check"></i> ACEPTAR</button>
+                <button onclick="window.rechazarCitaPendiente('${cita.id}', '${window.escapeJS(cita.modelo)}')" class="flex-1 bg-red-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-red-600 transition-colors pointer-events-auto"><i class="ph-bold ph-x"></i> RECHAZAR</button>
+            </div>`;
         }
 
         return `
@@ -375,7 +399,7 @@
            <div>
              <div class="flex justify-between items-start mb-1">
                <h4 class="font-black text-[11px] ${textColor} uppercase leading-tight line-clamp-1 flex-1">${cita.modelo}</h4>
-               <div class="flex items-center">${tagVO} ${tagNotas}</div>
+               <div class="flex items-center">${tagVO} ${tagPendiente} ${tagNotas}</div>
              </div>
              <div class="flex items-center gap-1.5 mb-1 flex-wrap">
                 <p class="font-bold text-[10px] bg-white/80 px-1.5 py-0.5 rounded text-gray-900 tracking-widest">${cita.matricula}</p>
@@ -388,6 +412,7 @@
               ${cita.email ? `<p class="truncate flex items-center gap-1" title="${cita.email}"><i class="ph-fill ph-envelope text-xs"></i> ${cita.email}</p>` : ''}
               ${cita.renting ? `<p class="truncate uppercase flex items-center gap-1" title="${cita.renting}"><i class="ph-fill ph-buildings text-xs"></i> ${cita.renting}</p>` : ''}
            </div>
+           ${botonesAprobacion}
         </div>`;
     };
 
@@ -559,7 +584,77 @@
             }
         }
     };
+// SUSTITUYE TU FUNCIÓN crearCitaManual ACTUAL POR ESTA:
+window.crearCitaManual = async function() {
+    // Si tuvieras campos prellenados o una búsqueda, adáptalo a lo que ya tenías.
+    // Esta es la versión estándar con la validación de roles.
+    const { value: formValues } = await Swal.fire({
+        title: 'Programar Nueva Cita',
+        html: `
+            <input id="n-mat" class="swal2-input" placeholder="Matrícula / Bastidor">
+            <input id="n-cli" class="swal2-input" placeholder="Nombre Cliente">
+            <input id="n-mod" class="swal2-input" placeholder="Modelo del Coche">
+            <input type="date" id="n-fec" class="swal2-input">
+            <select id="n-hor" class="swal2-select">
+                <option value="10:00">10:00</option>
+                <option value="11:00">11:00</option>
+                <option value="12:00">12:00</option>
+                <option value="13:00">13:00</option>
+                <option value="16:00">16:00</option>
+                <option value="17:00">17:00</option>
+                <option value="18:00">18:00</option>
+                <option value="19:00">19:00</option>
+            </select>
+            <select id="n-age" class="swal2-select">
+                <option value="MANUEL">MANUEL</option>
+                <option value="ANTONIO">ANTONIO</option>
+            </select>
+        `,
+        focusConfirm: false,
+        confirmButtonText: 'Guardar Cita',
+        preConfirm: () => {
+            return {
+                matricula: document.getElementById('n-mat').value.toUpperCase(),
+                cliente: document.getElementById('n-cli').value.toUpperCase(),
+                modelo: document.getElementById('n-mod').value.toUpperCase(),
+                fecha: document.getElementById('n-fec').value,
+                hora: document.getElementById('n-hor').value,
+                agente: document.getElementById('n-age').value
+            }
+        }
+    });
 
+    if (formValues) {
+        if(!formValues.matricula || !formValues.fecha) return Swal.fire('Error', 'Faltan datos obligatorios', 'error');
+        
+        // 🔥 EL CEREBRO DE LA OPERACIÓN: Asignar estado según quién lo crea
+        const estadoAsignado = window.rolActivo === "backoffice" ? "pendiente" : "confirmada";
+
+        try {
+            // Se asume que usas collection de "citas_agenda" (o "agenda", como lo tuvieras configurado).
+            // Usamos setDoc con un doc() nuevo autogenerado (equivalente a addDoc).
+            const nuevaRef = window.doc(window.collection(window.db, "citas_agenda"));
+            await window.setDoc(nuevaRef, {
+                matricula: formValues.matricula,
+                cliente: formValues.cliente,
+                modelo: formValues.modelo,
+                fecha: formValues.fecha,
+                hora: formValues.hora,
+                agente: formValues.agente,
+                creadoPor: window.usuarioActivo,
+                estado: estadoAsignado // <-- Clave para que se dibuje naranja o normal
+            });
+
+            if (estadoAsignado === "pendiente") {
+                Swal.fire('Solicitud Enviada', 'La cita se ha guardado como PENDIENTE. El equipo de Entregas deberá confirmarla.', 'info');
+            } else {
+                Swal.fire('Guardado', 'Cita agendada correctamente', 'success');
+            }
+        } catch (error) {
+            Swal.fire('Error', 'No se pudo guardar la cita', 'error');
+        }
+    }
+};
     window.generarListadoDiario = async function() {
     const { value: fechaSeleccionada } = await Swal.fire({
         title: 'Hoja de Preparaciones',
@@ -686,3 +781,103 @@
         });
     });
 };
+// ==========================================
+    // ✅ VALIDACIONES DE AGENDA (ENTREGAS)
+    // ==========================================
+    window.aprobarCitaPendiente = async function(idCita, matricula) {
+        try {
+            await window.updateDoc(window.doc(window.db, "citas_agenda", idCita), {
+                estado: "confirmada"
+            });
+            
+            // Opcional: También actualizar la fechaCita en la colección 'vehiculos'
+            // if (matricula) { ... buscar coche y updateDoc ... }
+
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cita Confirmada', showConfirmButton: false, timer: 3000 });
+        } catch (error) {
+            Swal.fire('Error', 'No se pudo confirmar la cita.', 'error');
+        }
+    };
+
+    window.rechazarCitaPendiente = async function(idCita, modeloVehiculo) {
+        const { value: motivo } = await Swal.fire({
+            title: 'Rechazar Cita',
+            text: `Vas a rechazar la cita solicitada para el ${modeloVehiculo}.`,
+            input: 'text',
+            inputLabel: 'Escribe el motivo del rechazo para el Back Office:',
+            inputPlaceholder: 'Ej: Ese día el lavadero está saturado a esa hora',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Rechazar y Borrar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (motivo !== undefined) {
+            try {
+                // 1. Recuperamos los datos de la cita antes de borrarla para saber quién la creó
+                const docRef = window.doc(window.db, "citas_agenda", idCita);
+                const docSnap = await window.getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const datosCita = docSnap.data();
+                    
+                    // 2. Si la cita la creó un usuario de Back Office, le creamos una notificación
+                    if (datosCita.creadoPor) {
+                        const refNotificacion = window.doc(window.collection(window.db, "notificaciones_agenda"));
+                        await window.setDoc(refNotificacion, {
+                            vehiculo: modeloVehiculo,
+                            matricula: datosCita.matricula || "S/M",
+                            fechaCita: `${datosCita.fecha} a las ${datosCita.hora}h`,
+                            solicitadoPor: datosCita.creadoPor, // Guardará el nombre del Back Office
+                            motivoRechazo: motivo || "No especificado por el agente",
+                            fechaRegistro: new Date().toLocaleString(),
+                            leido: false // Para saber si ya vio el aviso
+                        });
+                    }
+                }
+
+                // 3. Ahora sí, borramos la cita pendiente para liberar el hueco en el cuadrante
+                await window.deleteDoc(window.doc(window.db, "citas_agenda", idCita));
+                
+                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Cita rechazada y notificada', showConfirmButton: false, timer: 3000 });
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'No se pudo procesar el rechazo de la cita.', 'error');
+            }
+        }
+    };
+    // Escuchador en vivo de notificaciones de rechazo exclusivo para Back Office
+    window.escucharNotificacionesBackOffice = function() {
+        if (window.rolActivo !== "backoffice") return; // Si eres Manuel/Antonio o Taller, esta función no hace nada
+
+        // Escuchamos la colección buscando alertas sin leer destinadas a este usuario activo
+        window.onSnapshot(window.collection(window.db, "notificaciones_agenda"), (snapshot) => {
+            snapshot.forEach(async (docSnap) => {
+                const alerta = docSnap.data();
+                
+                // Si la alerta coincide con tu nombre de usuario de Back Office y no la has leído
+                if (alerta.solicitadoPor === window.usuarioActivo && alerta.leido === false) {
+                    
+                    // Marcamos la alerta como leída inmediatamente en Firebase para que no se repita el aviso
+                    await window.updateDoc(window.doc(window.db, "notificaciones_agenda", docSnap.id), { leido: true });
+
+                    // Lanzamos el aviso en pantalla bien llamativo
+                    Swal.fire({
+                        title: '❌ Cita Denegada por Entregas',
+                        html: `
+                            <div class="text-left space-y-2 text-sm text-gray-700 bg-orange-50 p-4 rounded-xl border border-orange-200 mt-2">
+                                <p><b>Vehículo:</b> ${alerta.vehiculo} (${alerta.matricula})</p>
+                                <p><b>Fecha Solicitada:</b> ${alerta.fechaCita}</p>
+                                <hr class="border-orange-200 my-2">
+                                <p class="text-red-700"><b>Motivo del Rechazo:</b></p>
+                                <p class="font-medium italic text-gray-900">"${alerta.motivoRechazo}"</p>
+                            </div>
+                        `,
+                        icon: 'error',
+                        confirmButtonColor: '#001e50',
+                        confirmButtonText: 'Entendido, volver a agendar'
+                    });
+                }
+            });
+        });
+    };

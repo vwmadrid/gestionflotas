@@ -2,16 +2,24 @@
 // ⚙️ NÚCLEO DE LA APLICACIÓN (APP.JS)
 // ==========================================
 
-// 🔥 HERRAMIENTA CLAVE: Escapar variables para que no rompan el HTML
+// Variables globales de sesión y estado
+window.usuarioActivo = "";
+window.rolActivo = "";
+window.userRole = ""; // Puente de compatibilidad
+
+let activeTab = 'logistica'; 
+let modoVistaActual = 'tarjetas'; 
+let primeraCargaDb = true;
+let unsubscribeFirebase = null; 
+let todosLosCoches = []; 
+let filtroActual = 'todos';
+
+// 🔥 HERRAMIENTA CLAVE: Escapar variables
 window.escapeJS = function(str) {
     return String(str || '').replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
 };
 
-let userRole = ""; let activeTab = 'logistica'; let modoVistaActual = 'tarjetas'; 
-let primeraCargaDb = true;
-let unsubscribeFirebase = null; let todosLosCoches = []; let filtroActual = 'todos';
-
-// Controla qué campos se muestran según el tipo de bloqueo seleccionado
+// Controla qué campos se muestran según el tipo de bloqueo
 window.toggleBloqueoForm = function(val) {
     const campoFechaFin = document.getElementById('bv-fecha-fin');
     const contenedorHoras = document.getElementById('bv-hora-container');
@@ -25,74 +33,179 @@ window.toggleBloqueoForm = function(val) {
     }
 };
 
-window.onload = function() {
-  const rol = localStorage.getItem('vw_departamento');
-  if (rol) { userRole = rol; document.getElementById('userRole').value = rol; window.iniciarAppDirectamente(rol); }
-  
-  // Controladores del Modal
-  document.getElementById("btnAbout").onclick = function() { document.getElementById("aboutModal").style.display = "block"; }
-  document.getElementById("btnClose").onclick = function() { document.getElementById("aboutModal").style.display = "none"; }
-  window.onclick = function(event) { if (event.target == document.getElementById("aboutModal")) { document.getElementById("aboutModal").style.display = "none"; } }
+// ==========================================
+// 🔒 SISTEMA DE ACCESO Y ROLES (ANTIBALAS)
+// ==========================================
 
-  window.addEventListener('error', function(event) {
-      console.error('Global JS error:', event.error || event.message);
-      window.mostrarErrorFirebase(event.error || event.message, 'Error inesperado');
-  });
+window.gestionarCamposLogin = function() {
+    const depto = document.getElementById('selectDepartamento').value;
+    const inputUser = document.getElementById('userLogin');
+    const inputPass = document.getElementById('userPass');
+    const btnLogin = document.getElementById('btnLoginAction');
 
-  window.addEventListener('unhandledrejection', function(event) {
-      console.error('Unhandled promise rejection:', event.reason);
-      window.mostrarErrorFirebase(event.reason, 'Error inesperado');
-  });
+    inputPass.classList.remove('hidden');
+    btnLogin.classList.remove('hidden');
+    inputUser.classList.remove('hidden');
+    inputUser.value = ""; 
+
+    if (depto === 'entregas') inputUser.placeholder = "Nombre (Ej: MANUEL, ANTONIO)";
+    else if (depto === 'taller') inputUser.placeholder = "Operario Taller (Ej: CARLOS, PEDRO)";
+    else if (depto === 'recambios') inputUser.placeholder = "Operario Recambios (Ej: JUAN, LUIS)";
+    else if (depto === 'backoffice') inputUser.placeholder = "Nombre de Usuario";
 };
 
 window.iniciar = async function() {
-  userRole = document.getElementById('userRole').value;
-  const pass = document.getElementById('userPass').value;
-  
-  if (!pass) return Swal.fire('Error', 'Introduce una clave', 'warning');
-  
-  let btn = document.querySelector('#loginScreen button');
-  let textoOriginal = btn.innerText;
-  btn.innerText = "VERIFICANDO...";
+    const depto = document.getElementById('selectDepartamento').value;
+    const usuarioInput = document.getElementById('userLogin').value.trim().toUpperCase();
+    const passInput = document.getElementById('userPass').value.trim();
 
-  try {
-      const docRef = window.doc(window.db, "credenciales", userRole);
-      const docSnap = await window.getDoc(docRef);
+    if (!depto || !usuarioInput || !passInput) {
+        return Swal.fire({ icon: 'warning', title: 'Faltan datos', text: 'Por favor, completa la información requerida.' });
+    }
 
-      if (docSnap.exists() && docSnap.data().pass === pass) {
-          localStorage.setItem('vw_departamento', userRole); 
-          window.iniciarAppDirectamente(userRole);
-      } else {
-          Swal.fire('Error', 'Clave incorrecta o acceso denegado', 'error');
-          btn.innerText = textoOriginal;
-      }
-  } catch (error) {
-      console.error(error);
-      let mensaje = 'No se pudo verificar la credencial';
-      if (error && error.code === 'permission-denied') {
-          mensaje = 'Permiso denegado en Firebase. Revisa las reglas de seguridad de Firestore y los permisos del proyecto.';
-      }
-      Swal.fire('Error', mensaje, 'error');
-      btn.innerText = textoOriginal;
-  }
+    // 🔥 DICCIONARIO DE SEGURIDAD VIP
+    const directorioPersonal = {
+        "MANUEL.ARJONA": "entregas",
+        "ANTONIO.BERMEJO": "entregas",
+        "CARLOS": "taller",
+        "PEDRO": "taller",
+        "SERGIO.CABALLERO": "recambios",
+        "FERNANDO.CRESPO": "recambios",
+        "JAIME.JORGE": "recambios",
+        "FERNANDO.REMON": "recambios",
+        "ABRAHAM.CANIZARES": "recambios",
+        "FATIMA.GARCIA": "backoffice",
+        "GEMA.GOMEZ": "backoffice",
+        "ALBERTO.GUTIERREZ": "backoffice",
+        "RABAB.JAADAR": "backoffice",
+        "RUBEN.GARCIA": "backoffice"
+    };
+    
+    let rolVerdadero = directorioPersonal[usuarioInput];
+
+    if (!rolVerdadero) {
+        return Swal.fire({ icon: 'error', title: 'Usuario no reconocido', text: 'El nombre de usuario no está registrado en el sistema interno.' });
+    }
+
+    if (rolVerdadero !== depto) {
+        return Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: `Seguridad: El usuario ${usuarioInput} no tiene permisos para entrar en el departamento de ${depto.toUpperCase()}.` });
+    }
+
+    let emailSeguro = `${usuarioInput.toLowerCase()}@b2b.castellanawagen.es`;
+    window.rolActivo = rolVerdadero; 
+    window.usuarioActivo = usuarioInput;
+
+    let btn = document.getElementById('btnLoginAction');
+    let textoOriginal = btn.innerText;
+    btn.innerText = "VERIFICANDO...";
+
+    try {
+        const userCredential = await window.signInWithEmailAndPassword(window.auth, emailSeguro, passInput);
+        const user = userCredential.user;
+
+        // 🔒 DETECTOR DE PRIMER ACCESO / CONTRASEÑA TEMPORAL
+        if (passInput === "Castellana2026!" || passInput === "provisional123") { 
+            const { value: nuevaPassword } = await Swal.fire({
+                title: '🔑 Cambio de Clave Obligatorio',
+                text: 'Por seguridad, debes sustituir la contraseña provisional por una clave secreta personal.',
+                input: 'password',
+                inputPlaceholder: 'Introduce tu nueva contraseña',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                confirmButtonColor: '#001e50',
+                confirmButtonText: 'Actualizar Contraseña',
+                inputValidator: (value) => {
+                    if (!value || value.length < 6) {
+                        return 'La contraseña debe tener al menos 6 caracteres';
+                    }
+                }
+            });
+
+            if (nuevaPassword) {
+                await window.updatePassword(user, nuevaPassword);
+                await Swal.fire('¡Actualizada!', 'Tu contraseña personal ha sido guardada de forma segura.', 'success');
+            }
+        }
+        
+        localStorage.setItem('vw_departamento', window.rolActivo);
+        localStorage.setItem('vw_usuario', window.usuarioActivo);
+
+        window.iniciarAppDirectamente(window.rolActivo, window.usuarioActivo);
+
+    } catch (error) {
+        console.error(error);
+        Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'Usuario o contraseña incorrectos.' });
+        btn.innerText = textoOriginal;
+    }
 };
 
-window.iniciarAppDirectamente = function(rol) {
-    document.getElementById('roleBadge').innerText = "Perfil: " + rol;
+window.aplicarPermisosPorRol = function() {
+    if (window.rolActivo === "backoffice") {
+        const botonesOcultar = document.querySelectorAll('#botonesLogistica, .btn-guardar, button[onclick*="guardar"], button[onclick*="eliminar"], button[onclick*="anadirVehiculoManual"], button[onclick*="abrirGestorVacaciones"], button[onclick*="generarListadoDiario"]');
+        botonesOcultar.forEach(btn => {
+            btn.style.setProperty('display', 'none', 'important');
+        });
+        
+        const contenedoresMesa = document.querySelectorAll('#contenedorLogistica, #contenedorTarjetas, #contenedorTabla, #contenedorAgenda');
+        contenedoresMesa.forEach(contenedor => {
+            if (!contenedor) return;
+            
+            const campos = contenedor.querySelectorAll('input, select, textarea');
+            campos.forEach(campo => {
+                const idCampo = (campo.id || "").toLowerCase();
+                const claseCampo = (campo.className || "").toLowerCase();
+                
+                if (idCampo !== 'buscadorinput' && !idCampo.includes('nota') && !claseCampo.includes('nota') && !idCampo.includes('chat')) {
+                    campo.disabled = true;
+                    campo.style.cursor = 'not-allowed';
+                }
+            });
+
+            const botonesInternos = contenedor.querySelectorAll('button');
+            botonesInternos.forEach(btn => {
+                const clickAccion = (btn.getAttribute('onclick') || '').toLowerCase();
+                
+                if (!clickAccion.includes('abrirchat') && 
+                    !clickAccion.includes('nota') && 
+                    !clickAccion.includes('crearcitamanual')) {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.4';
+                    btn.style.cursor = 'not-allowed';
+                    btn.style.pointerEvents = 'none';
+                }
+            });
+        });
+    }
+};
+
+window.iniciarAppDirectamente = function(rol, usuario) {
+    window.rolActivo = rol;
+    window.userRole = rol; 
+    window.usuarioActivo = usuario || rol;
+
+    document.getElementById('roleBadge').innerText = `${window.usuarioActivo} (${window.rolActivo})`;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('sidebarApp').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'flex';
     
     window.cargar(); 
 
-    if (rol === 'entregas') {
+    if (rol === 'entregas' || rol === 'backoffice') {
         if (typeof window.iniciarMotorAlertas === 'function') { window.iniciarMotorAlertas(); }
+        
+        if (rol === 'backoffice' && typeof window.escucharNotificacionesBackOffice === 'function') {
+            window.escucharNotificacionesBackOffice();
+        }
+
         document.getElementById('tabsDpto').classList.replace('flex', 'hidden');
         document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
-        document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
-        window.cambiarPestana('logistica');
+        
+        if (rol === 'entregas') {
+            document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
+        }
+        window.cambiarPestana('todos');
     } else { 
-        document.getElementById('tabsEntregas').classList.replace('flex', 'hidden');
+        document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
         document.getElementById('tabsDpto').classList.replace('hidden', 'flex');
         
         let icono = rol === 'taller' ? 'ph-wrench' : 'ph-package';
@@ -102,7 +215,37 @@ window.iniciarAppDirectamente = function(rol) {
     }
 };
 
-window.cerrarSesion = function() { localStorage.removeItem('vw_departamento'); location.reload(); };
+window.cerrarSesion = function() { 
+    localStorage.removeItem('vw_departamento'); 
+    localStorage.removeItem('vw_usuario');
+    location.reload(); 
+};
+
+// ==========================================
+// 🚀 INICIO Y EVENTOS GLOBALES
+// ==========================================
+
+window.onload = function() {
+    // ❌ BLOQUEO ELIMINADO PARA EVITAR EL "CHOQUE DE TRENES"
+    
+    const rol = localStorage.getItem('vw_departamento');
+    const usr = localStorage.getItem('vw_usuario');
+    if (rol) { 
+        window.iniciarAppDirectamente(rol, usr); 
+    }
+
+    document.getElementById("btnAbout").onclick = function() { document.getElementById("aboutModal").style.display = "block"; };
+    document.getElementById("btnClose").onclick = function() { document.getElementById("aboutModal").style.display = "none"; };
+    window.onclick = function(event) { if (event.target == document.getElementById("aboutModal")) { document.getElementById("aboutModal").style.display = "none"; } };
+
+    window.addEventListener('error', function(event) {
+        console.error('Global JS error:', event.error || event.message);
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+        console.error('Unhandled promise rejection:', event.reason);
+    });
+}; // <---- AQUÍ SE CIERRA CORRECTAMENTE EL ONLOAD
 
 window.safeISOString = function(value) {
     let date = value instanceof Date ? value : new Date(value);
@@ -111,9 +254,7 @@ window.safeISOString = function(value) {
 
 window.mostrarErrorFirebase = function(error, titulo) {
     console.error('Alerta capturada:', error);
-    
     let esErrorCritico = error && error.code === 'permission-denied';
-    
     let mensaje = esErrorCritico 
         ? 'Permiso denegado en Firebase. Tu sesión podría haber caducado.' 
         : 'Se ha producido un pequeño error de interfaz. Revisa la consola (F12).';
@@ -235,6 +376,8 @@ window.cambiarPestana = function(pestana) {
   }
   
   if(pestana !== 'dashboard' && pestana !== 'encuestas' && pestana !== 'historial-dpto') window.cargar();
+  
+  window.aplicarPermisosPorRol();
 };
 
 window.cargar = function() {
@@ -258,9 +401,9 @@ window.cargar = function() {
     
     todosLosCoches.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
 
-    if (userRole === 'taller' || userRole === 'recambios') {
-       if(typeof window.renderizarDepartamentos === 'function') window.renderizarDepartamentos(userRole);
-    } else if (userRole === 'entregas') {
+    if (window.rolActivo === 'taller' || window.rolActivo === 'recambios') {
+       if(typeof window.renderizarDepartamentos === 'function') window.renderizarDepartamentos(window.rolActivo);
+    } else if (window.rolActivo === 'entregas' || window.rolActivo === 'backoffice') {
       if (activeTab === 'logistica') {
           if(typeof window.renderLogistica === 'function') window.renderLogistica();
       } else if (activeTab === 'todos') { 
@@ -293,6 +436,9 @@ window.cargar = function() {
           setTimeout(() => { if(typeof window.sincronizarCitasSilencioso === 'function') window.sincronizarCitasSilencioso(); }, 1500); 
       }
     }
+
+    window.aplicarPermisosPorRol();
+
   }, (error) => {
       window.mostrarErrorFirebase(error, 'Error al cargar vehículos');
   });
