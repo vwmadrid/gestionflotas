@@ -67,8 +67,8 @@ window.iniciar = async function() {
     const directorioPersonal = {
         "MANUEL.ARJONA": "entregas",
         "ANTONIO.BERMEJO": "entregas",
-        "CARLOS": "taller",
-        "PEDRO": "taller",
+        "MANUEL.LOPEZ": "taller",
+        "ALVARO.BELTRAN": "taller",
         "SERGIO.CABALLERO": "recambios",
         "FERNANDO.CRESPO": "recambios",
         "JAIME.JORGE": "recambios",
@@ -701,3 +701,89 @@ window.ejecutarBusquedaDpto = async function() {
         console.error("Error en la búsqueda:", error);
     }
 };
+// ==========================================
+// 💬 MOTOR DE CHAT INTERNO DEL CONCESIONARIO
+// ==========================================
+
+window.enviarMensajeInterno = async function(destino, texto) {
+    // 1. Verificamos que haya texto y un destino válido
+    if (!texto.trim() || !destino) return;
+
+    // 2. Generamos un ID único basado en la fecha y hora al milisegundo
+    const idMensaje = "msg_" + new Date().getTime();
+
+    // 3. Estructuramos el "paquete" de datos
+    const nuevoMensaje = {
+        remitente: window.usuarioActivo, // Quien está logueado (ej. PRUEBAS)
+        departamentoRemitente: window.rolActivo, // Su rol
+        destinatario: destino, // Puede ser "CARLOS" o "taller"
+        texto: texto,
+        timestamp: new Date().getTime(),
+        leido: false // Podremos usar esto en el futuro para doble check azul
+    };
+
+    try {
+        // 4. Lo enviamos a una NUEVA colección en Firebase llamada "chat_concesionario"
+        // Usamos setDoc y doc, que ya tienes exportados en tu index.html
+        await window.setDoc(window.doc(window.db, "chat_concesionario", idMensaje), nuevoMensaje);
+        console.log("Mensaje enviado con éxito a: " + destino);
+        
+    } catch (error) {
+        console.error("Error enviando mensaje interno:", error);
+        Swal.fire({ icon: 'error', title: 'Fallo de conexión', text: 'No se pudo enviar el mensaje.' });
+    }
+};
+// ==========================================
+// 🕹️ CONTROLADORES DEL INTERFAZ DE CHAT GLOBAL
+// ==========================================
+
+// Expande la ventana de chat y oculta el botón redondo
+window.abrirChatGlobal = function() {
+    document.getElementById('chatGlobalWidget').style.display = 'flex';
+    document.getElementById('btnAbrirChatGlobal').style.display = 'none';
+};
+
+// Contrae la ventana de chat y vuelve a mostrar el botón redondo
+window.minimizarChatGlobal = function() {
+    document.getElementById('chatGlobalWidget').style.display = 'none';
+    document.getElementById('btnAbrirChatGlobal').style.display = 'flex';
+};
+
+// Captura los datos del HTML y se los pasa al motor de Firebase
+window.enviarMensajeGlobalUI = function() {
+    const destino = document.getElementById('chatGlobalDestino').value;
+    const input = document.getElementById('chatGlobalInput');
+    const texto = input.value;
+    
+    if (!destino) {
+        return Swal.fire({ 
+            icon: 'warning', 
+            title: 'Atención', 
+            text: 'Debes seleccionar un destinatario o departamento en el desplegable superior.',
+            toast: true,
+            position: 'bottom-end',
+            showConfirmButton: false,
+            timer: 3000
+        });
+    }
+    
+    // Verificamos que la función de envío a Firebase existe antes de llamarla
+    if (typeof window.enviarMensajeInterno === 'function') {
+        window.enviarMensajeInterno(destino, texto);
+        input.value = ""; // Limpiamos la caja de texto para el siguiente mensaje
+    } else {
+        console.error("La función enviarMensajeInterno no está definida.");
+    }
+};
+
+// Permitir enviar el mensaje pulsando la tecla "Enter"
+window.addEventListener('DOMContentLoaded', () => {
+    const inputChat = document.getElementById('chatGlobalInput');
+    if(inputChat) {
+        inputChat.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                window.enviarMensajeGlobalUI();
+            }
+        });
+    }
+});
