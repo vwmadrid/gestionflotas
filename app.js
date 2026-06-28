@@ -83,14 +83,18 @@ window.iniciar = async function() {
     
     let rolVerdadero = directorioPersonal[usuarioInput];
 
-    if (!rolVerdadero) {
-        return Swal.fire({ icon: 'error', title: 'Usuario no reconocido', text: 'El nombre de usuario no está registrado en el sistema interno.' });
+    // 🔥 EL TRUCO DEL USUARIO UNIVERSAL (CAMALEÓN)
+    if (usuarioInput === "PRUEBAS") {
+        rolVerdadero = depto; // El usuario maestro adopta automáticamente el rol del desplegable
+    } else {
+        // Para el resto del personal, aplicamos la seguridad estricta normal
+        if (!rolVerdadero) {
+            return Swal.fire({ icon: 'error', title: 'Usuario no reconocido', text: 'El nombre de usuario no está registrado en el sistema interno.' });
+        }
+        if (rolVerdadero !== depto) {
+            return Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: `Seguridad: El usuario ${usuarioInput} no tiene permisos para entrar en el departamento de ${depto.toUpperCase()}.` });
+        }
     }
-
-    if (rolVerdadero !== depto) {
-        return Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: `Seguridad: El usuario ${usuarioInput} no tiene permisos para entrar en el departamento de ${depto.toUpperCase()}.` });
-    }
-
     let emailSeguro = `${usuarioInput.toLowerCase()}@b2b.castellanawagen.es`;
     window.rolActivo = rolVerdadero; 
     window.usuarioActivo = usuarioInput;
