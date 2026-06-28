@@ -16,12 +16,12 @@
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-  <script type="module">
+<script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
     import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
     
-    window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; window.arrayUnion = arrayUnion; window.deleteDoc = deleteDoc; window.getDocs = getDocs;
-    
+    // Conexión
     const firebaseConfig = {
       apiKey: "AIzaSyCRfERugbIVfAXtKa7mGdLLTm6xwxb5wlE",
       authDomain: "gestion-flotas-vw.firebaseapp.com",
@@ -33,18 +33,24 @@
 
     const app = initializeApp(firebaseConfig);
     window.db = getFirestore(app);
-    window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; window.arrayUnion = arrayUnion; window.deleteDoc = deleteDoc;
-  </script>
+    window.auth = getAuth(app);
+    
+    // Exportamos las herramientas para el app.js
+    window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+    window.updatePassword = updatePassword;
+    window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; 
+    window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; 
+    window.arrayUnion = arrayUnion; window.deleteDoc = deleteDoc; window.getDocs = getDocs;
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-    // ... todo tu código de Firebase ...
-    window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; window.arrayUnion = arrayUnion; window.deleteDoc = deleteDoc;
-  </script>
+    // Activamos el botón de login
+    const btnLogin = document.getElementById('btnLoginAction');
+    if (btnLogin) {
+        btnLogin.disabled = false;
+        btnLogin.innerText = "ACCEDER";
+    }
+</script>
 
-  <!-- 👇 AQUÍ ENLAZAMOS TUS ESTILOS 👇 -->
   <link rel="stylesheet" href="styles.css">
-  
 </head>
 <body class="text-gray-800 antialiased h-screen flex overflow-hidden">
 
@@ -54,14 +60,21 @@
             <img src="https://upload.wikimedia.org/wikipedia/commons/6/6d/Volkswagen_logo_2019.svg" class="w-32 h-32 mx-auto mb-6" alt="VW">
             <h2 class="text-xl font-black text-[#001e50] uppercase tracking-[0.3em]">Castellana Wagen M-40</h2>
         </div>
+        
         <div class="w-full max-w-sm space-y-4">
-            <select id="userRole" class="w-full p-4 bg-gray-50 border border-gray-300 rounded-lg font-bold text-base outline-none focus:ring-2 focus:ring-[#00b0f0]">
+            <select id="selectDepartamento" onchange="window.gestionarCamposLogin()" class="w-full p-4 bg-gray-50 border border-gray-300 rounded-lg font-bold text-[#001e50] text-base outline-none focus:ring-2 focus:ring-[#00b0f0]">
+                <option value="" disabled selected>Selecciona tu área...</option>
                 <option value="entregas">Dpto. Entregas</option>
                 <option value="taller">Dpto. Taller</option>
                 <option value="recambios">Dpto. Recambios</option>
+                <option value="backoffice">Back Office</option>
             </select>
-            <input type="password" id="userPass" placeholder="Clave de acceso" class="w-full p-4 bg-gray-50 border border-gray-300 rounded-lg text-base outline-none focus:ring-2 focus:ring-[#00b0f0] font-medium">
-            <button onclick="window.iniciar()" class="w-full bg-[#001e50] text-white font-black py-4 rounded-lg hover:bg-blue-900 transition-all shadow-lg uppercase tracking-widest text-lg">
+
+            <input type="text" id="userLogin" placeholder="Usuario" class="hidden w-full p-4 bg-gray-50 border border-gray-300 rounded-lg text-base outline-none focus:ring-2 focus:ring-[#00b0f0] font-medium uppercase text-center tracking-widest">
+            
+            <input type="password" id="userPass" placeholder="Clave de acceso" class="hidden w-full p-4 bg-gray-50 border border-gray-300 rounded-lg text-base outline-none focus:ring-2 focus:ring-[#00b0f0] font-medium text-center">
+            
+            <button id="btnLoginAction" onclick="window.iniciar()" class="hidden w-full bg-[#001e50] text-white font-black py-4 rounded-lg hover:bg-blue-900 transition-all shadow-lg uppercase tracking-widest text-lg">
                 Entrar al Sistema
             </button>
         </div>
@@ -195,7 +208,6 @@
       <div id="contenedorAgenda" class="hidden max-w-full mx-auto w-full"></div>
       <div id="contenedorEntregados" class="hidden max-w-full mx-auto w-full"></div>
       <div id="contenedorEncuestas" class="hidden w-full bg-white p-6 rounded-lg shadow-sm border border-gray-300">
-      <!-- Contenedor del Historial de Taller/Recambios -->
       <div id="contenedorHistorialDpto" class="hidden w-full bg-white p-6 rounded-lg shadow-sm border border-gray-300 flex-col h-full">
           <h2 class="text-xl font-black text-[#001e50] mb-4 flex items-center gap-2" id="tituloHistorialDpto">
               <i class="ph-bold ph-archive"></i> Historial de Operaciones
@@ -222,8 +234,7 @@
                       </tr>
                   </thead>
                   <tbody id="tablaResultadosDpto">
-                      <!-- Los resultados irán aquí -->
-                  </tbody>
+                      </tbody>
               </table>
           </div>
       </div>   
@@ -238,7 +249,6 @@
 
       <div id="contenedorDashboard" class="hidden max-w-6xl mx-auto w-full space-y-6">
         
-        <!-- CABECERA CON SELECTOR DE MES -->
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-gray-200 pb-4">
             <h2 class="text-2xl font-black text-[#001e50] uppercase flex items-center gap-2">
                 <i class="ph-bold ph-trend-up text-[#00b0f0]"></i> Rendimiento de la Flota
