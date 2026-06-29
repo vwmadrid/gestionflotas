@@ -208,10 +208,14 @@
       <div id="contenedorAgenda" class="hidden max-w-full mx-auto w-full"></div>
       <div id="contenedorEntregados" class="hidden max-w-full mx-auto w-full"></div>
       <div id="contenedorEncuestas" class="hidden w-full bg-white p-6 rounded-lg shadow-sm border border-gray-300">
-      <div id="contenedorHistorialDpto" class="hidden w-full bg-white p-6 rounded-lg shadow-sm border border-gray-300 flex-col h-full">
-          <h2 class="text-xl font-black text-[#001e50] mb-4 flex items-center gap-2" id="tituloHistorialDpto">
-              <i class="ph-bold ph-archive"></i> Historial de Operaciones
-          </h2>
+      <div id="contenedorHistorialDpto" class="w-full flex-col gap-4 w-full" style="display: none;">
+      <div class="flex justify-between items-end mb-4">
+          <div>
+              <h2 class="text-2xl font-black text-[#001e50] uppercase tracking-tight">Historial de Operaciones</h2>
+              <p class="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">Vehículos finalizados por tu departamento</p>
+          </div>
+      </div>
+      </div>
           
           <div class="flex gap-2 mb-6">
               <input type="text" id="inputBuscarHistorialDpto" onkeyup="if(event.key === 'Enter') window.ejecutarBusquedaDpto()" placeholder="Buscar por Matrícula o Bastidor..." class="flex-1 p-3 border border-gray-300 rounded-lg text-base font-black text-center uppercase outline-none focus:ring-2 focus:ring-[#00b0f0] shadow-inner text-[#001e50]">
