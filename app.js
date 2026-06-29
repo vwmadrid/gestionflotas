@@ -918,3 +918,35 @@ document.addEventListener('DOMContentLoaded', () => {
         selectDestino.addEventListener('change', window.actualizarVistaChat);
     }
 });
+// ==========================================
+// 🛡️ ESCUDO ANTIMONSTRUOS: Bloqueo forzoso del Historial
+// ==========================================
+
+// 1. Inyectamos una regla CSS "Suprema" en el navegador
+const escudoCSS = document.createElement('style');
+escudoCSS.innerHTML = `
+    /* Si el body no tiene el permiso explícito, el historial desaparece sí o sí */
+    body:not(.viendo-historial) #contenedorHistorialDpto,
+    body:not(.viendo-historial) #tablaResultadosDpto,
+    body:not(.viendo-historial) #contenedorHistorial {
+        display: none !important;
+    }
+`;
+document.head.appendChild(escudoCSS);
+
+// 2. Enganchamos el escudo al interruptor de tus pestañas
+const funcionCambiarPestanaVieja = window.cambiarPestana;
+
+window.cambiarPestana = function(pestana) {
+    // Ejecutamos tu cambio de pestaña normal
+    if (funcionCambiarPestanaVieja) {
+        funcionCambiarPestanaVieja(pestana);
+    }
+    
+    // Si pulsas Historial, damos permiso. Si no, activamos el escudo de bloqueo.
+    if (pestana === 'historial-dpto') {
+        document.body.classList.add('viendo-historial');
+    } else {
+        document.body.classList.remove('viendo-historial');
+    }
+};
