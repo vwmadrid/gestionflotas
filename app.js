@@ -579,43 +579,74 @@ window.filtrarCoches = function() {
 // 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS)
 // ==========================================
 
-window.cargarUltimosHistorialDpto = async function() {
-    const tbody = document.getElementById('tablaResultadosDpto');
-    if (!tbody) {
-        console.warn("No se encontró la tabla de historial en el HTML.");
+// ==========================================
+// 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS) - VERSIÓN BLINDADA
+// ==========================================
+
+window.cargarUltimosHistorialDpto = function() {
+    // 1. Buscamos el contenedor principal que sí sabemos que existe
+    const contenedor = document.getElementById('contenedorHistorialDpto');
+    if (!contenedor) return; // Si no existe, abortamos en silencio
+
+    // 2. Usamos los datos que ya están descargados en memoria (instantáneo)
+    if (!window.todosLosCoches || window.todosLosCoches.length === 0) {
+        contenedor.innerHTML = '<div class="w-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg"><i class="ph-bold ph-spinner-gap animate-spin"></i> Cargando datos...</p></div>';
         return;
     }
 
-    tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-sm text-[#001e50] font-bold animate-pulse"><i class="ph-bold ph-spinner-gap text-xl animate-spin"></i> Descargando historial finalizado...</td></tr>';
-
-    try {
-        const querySnapshot = await window.getDocs(window.collection(window.db, "vehiculos"));
-        let cochesFinalizados = [];
-
-        querySnapshot.forEach((doc) => {
-            let c = doc.data();
-            c.fila = doc.id;
-            
-            // 🔥 FILTRO CORREGIDO: Ahora acepta fechas, textos o booleanos
-            if (window.rolActivo === 'taller' && c.finTaller) {
-                cochesFinalizados.push(c);
-            } else if (window.rolActivo === 'recambios' && c.finRecambios) {
-                cochesFinalizados.push(c);
-            }
-        });
-
-        // Ordenamos los coches para que los más recientes salgan primero
-        cochesFinalizados.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
-        
-        // Enviamos los datos al dibujante
-        if(typeof window.renderizarTablaHistorialDpto === 'function') {
-            window.renderizarTablaHistorialDpto(cochesFinalizados);
+    // 3. Filtramos los coches que ya han sido finalizados por tu departamento
+    let cochesFinalizados = [];
+    window.todosLosCoches.forEach(c => {
+        if (window.rolActivo === 'taller' && c.finTaller) {
+            cochesFinalizados.push(c);
+        } else if (window.rolActivo === 'recambios' && c.finRecambios) {
+            cochesFinalizados.push(c);
         }
+    });
 
-    } catch (error) {
-        console.error("Error al descargar historial de Firebase:", error);
-        tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-sm text-red-500 font-bold"><i class="ph-bold ph-warning"></i> Fallo de conexión con la base de datos.</td></tr>';
+    // 4. Si no hay coches terminados, mostramos este aviso
+    if (cochesFinalizados.length === 0) {
+        contenedor.innerHTML = `
+        <div class="w-full col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6">
+            <i class="ph-bold ph-archive text-4xl text-gray-300 mb-3 block"></i>
+            <p class="text-gray-500 font-bold text-lg">Tu departamento no tiene vehículos finalizados en el historial.</p>
+        </div>`;
+        return;
     }
+
+    // 5. Generamos las filas de los coches
+    let filasHTML = cochesFinalizados.map(c => {
+        let fechaCierre = window.rolActivo === 'taller' ? (c.fechaTaller || '-') : (c.fechaRecambios || '-');
+        let infoDpto = window.rolActivo === 'taller' ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
+        
+        return `
+        <tr class="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+            <td class="p-4 text-xs font-bold text-gray-500 tracking-wider">${c.A || '-'}</td>
+            <td class="p-4 text-sm font-black text-[#001e50]">${c.B || 'S/M'}</td>
+            <td class="p-4 text-xs font-bold text-gray-700 uppercase">${c.C || '-'}</td>
+            <td class="p-4 text-xs font-bold text-amber-600 bg-amber-50 rounded-lg px-3">${infoDpto}</td>
+            <td class="p-4 text-xs font-bold text-emerald-600"><i class="ph-bold ph-check-circle text-base align-middle mr-1"></i> ${fechaCierre}</td>
+        </tr>`;
+    }).join('');
+
+    // 6. DIBUJAMOS LA TABLA COMPLETA A LA FUERZA
+    contenedor.innerHTML = `
+    <div class="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-4">
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-[#efeae2] text-[#001e50]">
+                <tr>
+                    <th class="p-4 text-xs font-black uppercase">Bastidor</th>
+                    <th class="p-4 text-xs font-black uppercase">Matrícula</th>
+                    <th class="p-4 text-xs font-black uppercase">Modelo</th>
+                    <th class="p-4 text-xs font-black uppercase">Info Operación</th>
+                    <th class="p-4 text-xs font-black uppercase">Cierre</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${filasHTML}
+            </tbody>
+        </table>
+    </div>`;
 };
 
 window.renderizarTablaHistorialDpto = function(coches) {
