@@ -49,7 +49,7 @@ window.gestionarCamposLogin = function() {
     inputUser.value = ""; 
 
     if (depto === 'entregas') inputUser.placeholder = "Nombre (Ej: MANUEL, ANTONIO)";
-    else if (depto === 'taller') inputUser.placeholder = "Operario Taller (Ej: CARLOS, PEDRO)";
+    else if (depto === 'taller') inputUser.placeholder = "Operario Taller (Ej: MANUEL, ALVARO)";
     else if (depto === 'recambios') inputUser.placeholder = "Operario Recambios (Ej: JUAN, LUIS)";
     else if (depto === 'backoffice') inputUser.placeholder = "Nombre de Usuario";
 };
