@@ -395,6 +395,7 @@ window.cambiarPestana = function(pestana) {
 
 window.cargar = function() {
   if(unsubscribeFirebase) unsubscribeFirebase();
+  
   unsubscribeFirebase = window.onSnapshot(window.collection(window.db, "vehiculos"), (snapshot) => {
     todosLosCoches = [];
     snapshot.forEach(doc => { 
@@ -414,7 +415,8 @@ window.cargar = function() {
     
     todosLosCoches.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
 
-   if (window.rolActivo === 'taller' || window.rolActivo === 'recambios') {
+    // 🔥 ZONA LIMPIA Y BLINDADA DE PESTAÑAS
+    if (window.rolActivo === 'taller' || window.rolActivo === 'recambios') {
         if(typeof window.renderizarDepartamentos === 'function') window.renderizarDepartamentos(window.rolActivo);
         if (activeTab === 'historial-dpto') { window.cargarUltimosHistorialDpto(); }
         
@@ -451,13 +453,13 @@ window.cargar = function() {
             setTimeout(() => { if(typeof window.sincronizarCitasSilencioso === 'function') window.sincronizarCitasSilencioso(); }, 1500); 
         }
     }
+
     window.aplicarPermisosPorRol();
 
   }, (error) => {
       window.mostrarErrorFirebase(error, 'Error al cargar vehículos');
   });
 };
-
 window.actualizarContadores = function() {
    let pendientes = 0, concita = 0, taller = 0, recambios = 0, total = 0;
    todosLosCoches.forEach(c => {
