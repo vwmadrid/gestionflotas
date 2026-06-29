@@ -407,6 +407,8 @@ window.cargar = function() {
 
     if (window.rolActivo === 'taller' || window.rolActivo === 'recambios') {
        if(typeof window.renderizarDepartamentos === 'function') window.renderizarDepartamentos(window.rolActivo);
+        if (activeTab === 'historial-dpto') { window.cargarUltimosHistorialDpto(); }
+    }
     } else if (window.rolActivo === 'entregas' || window.rolActivo === 'backoffice') {
       if (activeTab === 'logistica') {
           if(typeof window.renderLogistica === 'function') window.renderLogistica();
