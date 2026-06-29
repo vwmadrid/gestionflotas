@@ -592,18 +592,21 @@ window.filtrarCoches = function() {
 // ==========================================
 
 window.cargarUltimosHistorialDpto = function() {
+    // 1. Buscamos el cajón (el contenedor)
     const contenedor = document.getElementById('contenedorHistorialDpto');
-    if (!contenedor) return;
+    if (!contenedor) {
+        console.warn("No se encuentra el 'contenedorHistorialDpto' en el HTML.");
+        return; 
+    }
 
-    // 🔥 CORRECCIÓN CRÍTICA: Leemos "todosLosCoches" directamente (sin window.)
+    // 2. Comprobamos si tenemos coches en la memoria global
     if (!todosLosCoches || todosLosCoches.length === 0) {
         contenedor.innerHTML = '<div class="w-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg"><i class="ph-bold ph-spinner-gap animate-spin"></i> Esperando sincronización de datos...</p></div>';
         return;
     }
 
+    // 3. Filtramos coches
     let cochesFinalizados = [];
-    
-    // Filtramos usando la variable local del archivo
     todosLosCoches.forEach(c => {
         if (window.rolActivo === 'taller' && c.finTaller) {
             cochesFinalizados.push(c);
@@ -612,16 +615,17 @@ window.cargarUltimosHistorialDpto = function() {
         }
     });
 
+    // 4. Si no hay coches terminados
     if (cochesFinalizados.length === 0) {
         contenedor.innerHTML = `
         <div class="w-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-4">
             <i class="ph-bold ph-archive text-4xl text-gray-300 mb-3 block"></i>
-            <p class="text-gray-500 font-bold text-lg">Tu departamento no tiene vehículos finalizados en el historial.</p>
+            <p class="text-gray-500 font-bold text-lg">Tu departamento no tiene vehículos finalizados.</p>
         </div>`;
         return;
     }
 
-    // Generamos las filas de la tabla
+    // 5. Generamos las filas
     let filasHTML = cochesFinalizados.map(c => {
         let fechaCierre = window.rolActivo === 'taller' ? (c.fechaTaller || '-') : (c.fechaRecambios || '-');
         let infoDpto = window.rolActivo === 'taller' ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
@@ -636,7 +640,7 @@ window.cargarUltimosHistorialDpto = function() {
         </tr>`;
     }).join('');
 
-    // Inyectamos la estructura limpia
+    // 6. Dibujamos la tabla final
     contenedor.innerHTML = `
     <div class="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-4">
         <table class="w-full text-left border-collapse">
