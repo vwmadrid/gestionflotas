@@ -576,27 +576,23 @@ window.filtrarCoches = function() {
   document.querySelectorAll('.fila-coche').forEach(el => { el.style.display = el.innerText.toLowerCase().includes(t) ? '' : 'none'; });
 };
 // ==========================================
-// 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS)
-// ==========================================
-
-// ==========================================
-// 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS) - VERSIÓN BLINDADA
+// 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS) - CORREGIDO
 // ==========================================
 
 window.cargarUltimosHistorialDpto = function() {
-    // 1. Buscamos el contenedor principal que sí sabemos que existe
     const contenedor = document.getElementById('contenedorHistorialDpto');
-    if (!contenedor) return; // Si no existe, abortamos en silencio
+    if (!contenedor) return;
 
-    // 2. Usamos los datos que ya están descargados en memoria (instantáneo)
-    if (!window.todosLosCoches || window.todosLosCoches.length === 0) {
-        contenedor.innerHTML = '<div class="w-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg"><i class="ph-bold ph-spinner-gap animate-spin"></i> Cargando datos...</p></div>';
+    // 🔥 CORRECCIÓN CRÍTICA: Leemos "todosLosCoches" directamente (sin window.)
+    if (!todosLosCoches || todosLosCoches.length === 0) {
+        contenedor.innerHTML = '<div class="w-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg"><i class="ph-bold ph-spinner-gap animate-spin"></i> Esperando sincronización de datos...</p></div>';
         return;
     }
 
-    // 3. Filtramos los coches que ya han sido finalizados por tu departamento
     let cochesFinalizados = [];
-    window.todosLosCoches.forEach(c => {
+    
+    // Filtramos usando la variable local del archivo
+    todosLosCoches.forEach(c => {
         if (window.rolActivo === 'taller' && c.finTaller) {
             cochesFinalizados.push(c);
         } else if (window.rolActivo === 'recambios' && c.finRecambios) {
@@ -604,32 +600,31 @@ window.cargarUltimosHistorialDpto = function() {
         }
     });
 
-    // 4. Si no hay coches terminados, mostramos este aviso
     if (cochesFinalizados.length === 0) {
         contenedor.innerHTML = `
-        <div class="w-full col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6">
+        <div class="w-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-4">
             <i class="ph-bold ph-archive text-4xl text-gray-300 mb-3 block"></i>
             <p class="text-gray-500 font-bold text-lg">Tu departamento no tiene vehículos finalizados en el historial.</p>
         </div>`;
         return;
     }
 
-    // 5. Generamos las filas de los coches
+    // Generamos las filas de la tabla
     let filasHTML = cochesFinalizados.map(c => {
         let fechaCierre = window.rolActivo === 'taller' ? (c.fechaTaller || '-') : (c.fechaRecambios || '-');
         let infoDpto = window.rolActivo === 'taller' ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
         
         return `
         <tr class="border-b border-gray-100 hover:bg-blue-50 transition-colors">
-            <td class="p-4 text-xs font-bold text-gray-500 tracking-wider">${c.A || '-'}</td>
-            <td class="p-4 text-sm font-black text-[#001e50]">${c.B || 'S/M'}</td>
-            <td class="p-4 text-xs font-bold text-gray-700 uppercase">${c.C || '-'}</td>
+            <td class="p-4 text-xs font-bold text-gray-500 tracking-wider">${c.bastidor || c.A || '-'}</td>
+            <td class="p-4 text-sm font-black text-[#001e50]">${c.matricula || c.B || 'S/M'}</td>
+            <td class="p-4 text-xs font-bold text-gray-700 uppercase">${c.modelo || c.C || '-'}</td>
             <td class="p-4 text-xs font-bold text-amber-600 bg-amber-50 rounded-lg px-3">${infoDpto}</td>
             <td class="p-4 text-xs font-bold text-emerald-600"><i class="ph-bold ph-check-circle text-base align-middle mr-1"></i> ${fechaCierre}</td>
         </tr>`;
     }).join('');
 
-    // 6. DIBUJAMOS LA TABLA COMPLETA A LA FUERZA
+    // Inyectamos la estructura limpia
     contenedor.innerHTML = `
     <div class="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-4">
         <table class="w-full text-left border-collapse">
@@ -648,7 +643,6 @@ window.cargarUltimosHistorialDpto = function() {
         </table>
     </div>`;
 };
-
 window.renderizarTablaHistorialDpto = function(coches) {
     const tbody = document.getElementById('tablaResultadosDpto');
     if (!tbody) return;
