@@ -295,96 +295,116 @@ window.toggleSubmenu = function(menuId, btnElement) {
     }
 };
 
+// ========================================================
+// 🔄 INTERRUPTOR DE PESTAÑAS SEGURO (M2 CODE SYSTEMS)
+// ========================================================
 window.cambiarPestana = function(pestana) {
     activeTab = pestana;
     
-    // 1. GESTIÓN DE BOTONES (COLORES)
-    const botones = document.querySelectorAll('#tabsEntregas .submenu-container button');
-    botones.forEach(b => { 
-        b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-emerald-400'); 
-        b.classList.add('text-gray-400');
-    });
-
-    const botonesDpto = document.querySelectorAll('#tabsDpto button');
-    if (botonesDpto) {
-        botonesDpto.forEach(b => {
-            b.classList.remove('bg-white/10', 'text-white');
-            b.classList.add('text-gray-300');
+    // 1. Gestión de estilos en botones de navegación (con protección contra elementos nulos)
+    try {
+        const botones = document.querySelectorAll('#tabsEntregas .submenu-container button');
+        botones.forEach(b => { 
+            b.classList.remove('bg-white/10', 'text-white', 'text-amber-300', 'bg-emerald-400'); 
+            b.classList.add('text-gray-400');
         });
-    }
-    
-    if (botones && botones.length > 0) {
-        if (pestana === 'logistica') { botones[0].classList.remove('text-gray-400'); botones[0].classList.add('text-amber-300', 'bg-white/10'); }
-        else if (pestana === 'todos') { botones[1].classList.remove('text-gray-400'); botones[1].classList.add('text-white', 'bg-white/10'); }
-        else if (pestana === 'agenda') { botones[2].classList.remove('text-gray-400'); botones[2].classList.add('text-white', 'bg-white/10'); }
-        else if (pestana === 'global-taller') {
-            botones[3].classList.remove('text-gray-400'); botones[3].classList.add('text-white', 'bg-white/10');
-            if(botonesDpto && botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
+
+        const botonesDpto = document.querySelectorAll('#tabsDpto button');
+        if (botonesDpto) {
+            botonesDpto.forEach(b => {
+                b.classList.remove('bg-white/10', 'text-white');
+                b.classList.add('text-gray-300');
+            });
         }
-        else if (pestana === 'global-recambios') {
-            botones[4].classList.remove('text-gray-400'); botones[4].classList.add('text-white', 'bg-white/10');
-            if(botonesDpto && botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
+        
+        if (botones && botones.length > 0) {
+            if (pestana === 'logistica' && botones[0]) { botones[0].classList.remove('text-gray-400'); botones[0].classList.add('text-amber-300', 'bg-white/10'); }
+            else if (pestana === 'todos' && botones[1]) { botones[1].classList.remove('text-gray-400'); botones[1].classList.add('text-white', 'bg-white/10'); }
+            else if (pestana === 'agenda' && botones[2]) { botones[2].classList.remove('text-gray-400'); botones[2].classList.add('text-white', 'bg-white/10'); }
+            else if (pestana === 'global-taller' && botones[3]) {
+                botones[3].classList.remove('text-gray-400'); botones[3].classList.add('text-white', 'bg-white/10');
+                if(botonesDpto && botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
+            }
+            else if (pestana === 'global-recambios' && botones[4]) {
+                botones[4].classList.remove('text-gray-400'); botones[4].classList.add('text-white', 'bg-white/10');
+                if(botonesDpto && botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
+            }
+            else if (pestana === 'entregados' && botones[5]) { botones[5].classList.remove('text-gray-400'); botones[5].classList.add('text-white', 'bg-white/10'); }
+            else if (pestana === 'dashboard' && botones[6]) { botones[6].classList.remove('text-gray-400'); botones[6].classList.add('text-emerald-400', 'bg-white/10'); }
+            else if (pestana === 'encuestas' && botones[7]) { botones[7].classList.remove('text-gray-400'); botones[7].classList.add('text-white', 'bg-white/10'); }
+        }  
+        
+        if (pestana === 'historial-dpto') {
+            if(botonesDpto && botonesDpto[1]) botonesDpto[1].classList.add('bg-white/10', 'text-white'); 
         }
-        else if (pestana === 'entregados') { botones[5].classList.remove('text-gray-400'); botones[5].classList.add('text-white', 'bg-white/10'); }
-        else if (pestana === 'dashboard') { botones[6].classList.remove('text-gray-400'); botones[6].classList.add('text-emerald-400', 'bg-white/10'); }
-        else if (pestana === 'encuestas') { botones[7].classList.remove('text-gray-400'); botones[7].classList.add('text-white', 'bg-white/10'); }
-    } 
-    
-    if (pestana === 'historial-dpto') {
-        if(botonesDpto && botonesDpto[1]) botonesDpto[1].classList.add('bg-white/10', 'text-white'); 
+    } catch (e) {
+        console.warn("Aviso en el decorado de botones de navegación:", e);
     }
 
-    // 🔥 2. EL APAGADO BLINDADO: Apagamos todo de forma segura
-    const cajasA_Apagar = [
+    // 2. Apagar absolutamente todas las pantallas de forma segura antes de activar la nueva
+    const elementosOcultar = [
         'contenedorLogistica', 'contenedorTarjetas', 'contenedorTabla', 
         'contenedorAgenda', 'contenedorEntregados', 'contenedorDashboard', 
         'contenedorEncuestas', 'contenedorHistorialDpto', 'filtrosVisuales', 
         'controlesVistaExcel', 'botonesLogistica', 'botonesAgenda'
     ];
 
-    cajasA_Apagar.forEach(id => {
-        let caja = document.getElementById(id);
-        if (caja) caja.style.display = 'none'; // Solo la apaga si realmente existe
+    elementosOcultar.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none'; // Solo altera el estilo si el div existe realmente
     });
+    
+    // El buscador superior vuelve a estar visible por defecto
+    const buscador = document.getElementById('buscadorInput');
+    if (buscador) buscador.style.display = 'block';
 
-    let buscador = document.getElementById('buscadorInput');
-    if (buscador) buscador.style.display = 'block'; // Encendido por defecto
-
-    // 3. EL ENCENDIDO SELECTIVO: Encendemos solo lo que toca
-    if (pestana === 'logistica') {
-        let c = document.getElementById('contenedorLogistica'); if(c) c.style.display = 'grid';
-        let b = document.getElementById('botonesLogistica'); if(b) b.style.display = 'flex'; 
-    } else if (pestana === 'todos') {
-        let c = document.getElementById('controlesVistaExcel'); if(c) c.style.display = 'flex';
-        let f = document.getElementById('filtrosVisuales'); if(f) f.style.display = 'flex';
-        if(typeof window.cambiarModoVisualizacion === 'function') window.cambiarModoVisualizacion(modoVistaActual);
-    } else if (pestana === 'global-taller' || pestana === 'global-recambios') {
-        let c = document.getElementById('contenedorTarjetas'); if(c) c.style.display = 'grid';
-    } else if (pestana === 'agenda') {
-        let c = document.getElementById('contenedorAgenda'); if(c) c.style.display = 'block';
-        if(buscador) buscador.style.display = 'none';
-        let b = document.getElementById('botonesAgenda'); if(b) b.style.display = 'flex'; 
-    } else if (pestana === 'entregados') {
-        let c = document.getElementById('contenedorEntregados'); if(c) c.style.display = 'block';
-        if(buscador) buscador.style.display = 'none';
-        if(typeof window.renderEntregados === 'function') window.renderEntregados();
-    } else if (pestana === 'dashboard') {
-        let c = document.getElementById('contenedorDashboard'); if(c) c.style.display = 'block';
-        if(buscador) buscador.style.display = 'none';
-        if(typeof window.renderizarDashboard === 'function') window.renderizarDashboard();
-    } else if (pestana === 'encuestas') { 
-        let c = document.getElementById('contenedorEncuestas'); if(c) c.style.display = 'block';
-        if(buscador) buscador.style.display = 'none';
-        if(typeof window.renderEncuestas === 'function') window.renderEncuestas();
-    } else if (pestana === 'historial-dpto') {
-        let c = document.getElementById('contenedorHistorialDpto'); if(c) c.style.display = 'flex';
-        if(buscador) buscador.style.display = 'none';
-        if(typeof window.cargarUltimosHistorialDpto === 'function') window.cargarUltimosHistorialDpto();
+    // 3. Encender la pantalla correspondiente de forma aislada e independiente
+    try {
+        if (pestana === 'logistica') {
+            const c = document.getElementById('contenedorLogistica'); if (c) c.style.display = 'grid';
+            const b = document.getElementById('botonesLogistica'); if (b) b.style.display = 'flex'; 
+        } else if (pestana === 'todos') {
+            const c = document.getElementById('controlesVistaExcel'); if (c) c.style.display = 'flex';
+            const f = document.getElementById('filtrosVisuales'); if (f) f.style.display = 'flex';
+            if (typeof window.cambiarModoVisualizacion === 'function') window.cambiarModoVisualizacion(modoVistaActual);
+        } else if (pestana === 'global-taller' || pestana === 'global-recambios') {
+            const c = document.getElementById('contenedorTarjetas'); if (c) c.style.display = 'grid';
+        } else if (pestana === 'agenda') {
+            const c = document.getElementById('contenedorAgenda'); if (c) c.style.display = 'block';
+            if (buscador) buscador.style.display = 'none';
+            const b = document.getElementById('botonesAgenda'); if (b) b.style.display = 'flex'; 
+        } else if (pestana === 'entregados') {
+            const c = document.getElementById('contenedorEntregados'); if (c) c.style.display = 'block';
+            if (buscador) buscador.style.display = 'none';
+            if (typeof window.renderEntregados === 'function') window.renderEntregados();
+        } else if (pestana === 'dashboard') {
+            const c = document.getElementById('contenedorDashboard'); if (c) c.style.display = 'block';
+            if (buscador) buscador.style.display = 'none';
+            if (typeof window.renderizarDashboard === 'function') window.renderizarDashboard();
+        } else if (pestana === 'encuestas') { 
+            const c = document.getElementById('contenedorEncuestas'); if (c) c.style.display = 'block';
+            if (buscador) buscador.style.display = 'none';
+            if (typeof window.renderEncuestas === 'function') window.renderEncuestas();
+        } else if (pestana === 'historial-dpto') {
+            const c = document.getElementById('contenedorHistorialDpto'); 
+            if (c) {
+                c.style.display = 'flex';
+            } else {
+                console.warn("Aviso: 'contenedorHistorialDpto' no existe en el HTML.");
+            }
+            if (buscador) buscador.style.display = 'none';
+            if (typeof window.cargarUltimosHistorialDpto === 'function') window.cargarUltimosHistorialDpto();
+        }
+    } catch (e) {
+        console.error("Error crítico al encender la pestaña solicitada:", e);
     }
     
-    // 4. LÓGICA FINAL
-    if(pestana !== 'dashboard' && pestana !== 'encuestas' && pestana !== 'historial-dpto') window.cargar();
-    window.aplicarPermisosPorRol();
+    // 4. Refrescar la base de datos si no estamos en secciones estáticas especiales
+    if (pestana !== 'dashboard' && pestana !== 'encuestas' && pestana !== 'historial-dpto') {
+        if (typeof window.cargar === 'function') window.cargar();
+    }
+    
+    if (typeof window.aplicarPermisosPorRol === 'function') window.aplicarPermisosPorRol();
 };
 window.actualizarContadores = function() {
    let pendientes = 0, concita = 0, taller = 0, recambios = 0, total = 0;
