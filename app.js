@@ -579,6 +579,10 @@ window.filtrarCoches = function() {
 // 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS)
 // ==========================================
 
+// ==========================================
+// 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS)
+// ==========================================
+
 window.cargarUltimosHistorialDpto = async function() {
     const tbody = document.getElementById('tablaResultadosDpto');
     if (!tbody) {
@@ -596,10 +600,10 @@ window.cargarUltimosHistorialDpto = async function() {
             let c = doc.data();
             c.fila = doc.id;
             
-            // Filtramos rigurosamente según el departamento conectado
-            if (window.rolActivo === 'taller' && (c.finTaller === true || c.finTaller === "true")) {
+            // 🔥 FILTRO CORREGIDO: Ahora acepta fechas, textos o booleanos
+            if (window.rolActivo === 'taller' && c.finTaller) {
                 cochesFinalizados.push(c);
-            } else if (window.rolActivo === 'recambios' && (c.finRecambios === true || c.finRecambios === "true")) {
+            } else if (window.rolActivo === 'recambios' && c.finRecambios) {
                 cochesFinalizados.push(c);
             }
         });
@@ -608,7 +612,9 @@ window.cargarUltimosHistorialDpto = async function() {
         cochesFinalizados.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
         
         // Enviamos los datos al dibujante
-        window.renderizarTablaHistorialDpto(cochesFinalizados);
+        if(typeof window.renderizarTablaHistorialDpto === 'function') {
+            window.renderizarTablaHistorialDpto(cochesFinalizados);
+        }
 
     } catch (error) {
         console.error("Error al descargar historial de Firebase:", error);
