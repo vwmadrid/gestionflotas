@@ -576,6 +576,71 @@ window.filtrarCoches = function() {
   document.querySelectorAll('.fila-coche').forEach(el => { el.style.display = el.innerText.toLowerCase().includes(t) ? '' : 'none'; });
 };
 // ==========================================
+// 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS)
+// ==========================================
+
+window.cargarUltimosHistorialDpto = async function() {
+    const tbody = document.getElementById('tablaResultadosDpto');
+    if (!tbody) {
+        console.warn("No se encontró la tabla de historial en el HTML.");
+        return;
+    }
+
+    tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-sm text-[#001e50] font-bold animate-pulse"><i class="ph-bold ph-spinner-gap text-xl animate-spin"></i> Descargando historial finalizado...</td></tr>';
+
+    try {
+        const querySnapshot = await window.getDocs(window.collection(window.db, "vehiculos"));
+        let cochesFinalizados = [];
+
+        querySnapshot.forEach((doc) => {
+            let c = doc.data();
+            c.fila = doc.id;
+            
+            // Filtramos rigurosamente según el departamento conectado
+            if (window.rolActivo === 'taller' && (c.finTaller === true || c.finTaller === "true")) {
+                cochesFinalizados.push(c);
+            } else if (window.rolActivo === 'recambios' && (c.finRecambios === true || c.finRecambios === "true")) {
+                cochesFinalizados.push(c);
+            }
+        });
+
+        // Ordenamos los coches para que los más recientes salgan primero
+        cochesFinalizados.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
+        
+        // Enviamos los datos al dibujante
+        window.renderizarTablaHistorialDpto(cochesFinalizados);
+
+    } catch (error) {
+        console.error("Error al descargar historial de Firebase:", error);
+        tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-sm text-red-500 font-bold"><i class="ph-bold ph-warning"></i> Fallo de conexión con la base de datos.</td></tr>';
+    }
+};
+
+window.renderizarTablaHistorialDpto = function(coches) {
+    const tbody = document.getElementById('tablaResultadosDpto');
+    if (!tbody) return;
+
+    if (coches.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-12 text-center text-gray-400 font-bold text-base"><i class="ph-bold ph-archive text-3xl mb-2 block"></i>Tu departamento no tiene vehículos finalizados en el historial.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = coches.map(c => {
+        // Adaptamos la información mostrada dependiendo de quién la mira
+        let fechaCierre = window.rolActivo === 'taller' ? (c.fechaTaller || '-') : (c.fechaRecambios || '-');
+        let infoDpto = window.rolActivo === 'taller' ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
+
+        return `
+        <tr class="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+            <td class="p-4 text-xs font-bold text-gray-500 tracking-wider">${c.bastidor || c.A || '-'}</td>
+            <td class="p-4 text-sm font-black text-[#001e50]">${c.matricula || c.B || 'S/M'}</td>
+            <td class="p-4 text-xs font-bold text-gray-700 uppercase">${c.modelo || c.C || '-'}</td>
+            <td class="p-4 text-xs font-bold text-amber-600 bg-amber-50 rounded-lg px-3">${infoDpto}</td>
+            <td class="p-4 text-xs font-bold text-emerald-600"><i class="ph-bold ph-check-circle text-base align-middle mr-1"></i> ${fechaCierre}</td>
+        </tr>`;
+    }).join('');
+};
+// ==========================================
 // 💬 MÓDULO INTEGRAL DE CHAT INTERNO (M2 CODE SYSTEMS)
 // ==========================================
 
