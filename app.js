@@ -579,10 +579,6 @@ window.filtrarCoches = function() {
 // 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS)
 // ==========================================
 
-// ==========================================
-// 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS)
-// ==========================================
-
 window.cargarUltimosHistorialDpto = async function() {
     const tbody = document.getElementById('tablaResultadosDpto');
     if (!tbody) {
