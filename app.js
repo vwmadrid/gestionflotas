@@ -603,78 +603,7 @@ window.filtrarCoches = function() {
   const t = document.getElementById('buscadorInput').value.toLowerCase();
   document.querySelectorAll('.fila-coche').forEach(el => { el.style.display = el.innerText.toLowerCase().includes(t) ? '' : 'none'; });
 };
-// ==========================================
-// 📜 MOTOR DEL HISTORIAL (TALLER Y RECAMBIOS) - CORREGIDO
-// ==========================================
 
-window.cargarUltimosHistorialDpto = function() {
-    // 1. Buscamos el cajón (el contenedor)
-    const contenedor = document.getElementById('contenedorHistorialDpto');
-    if (!contenedor) {
-        console.warn("No se encuentra el 'contenedorHistorialDpto' en el HTML.");
-        return; 
-    }
-
-    // 2. Comprobamos si tenemos coches en la memoria global
-    if (!todosLosCoches || todosLosCoches.length === 0) {
-        contenedor.innerHTML = '<div class="w-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg"><i class="ph-bold ph-spinner-gap animate-spin"></i> Esperando sincronización de datos...</p></div>';
-        return;
-    }
-
-    // 3. Filtramos coches
-    let cochesFinalizados = [];
-    todosLosCoches.forEach(c => {
-        if (window.rolActivo === 'taller' && c.finTaller) {
-            cochesFinalizados.push(c);
-        } else if (window.rolActivo === 'recambios' && c.finRecambios) {
-            cochesFinalizados.push(c);
-        }
-    });
-
-    // 4. Si no hay coches terminados
-    if (cochesFinalizados.length === 0) {
-        contenedor.innerHTML = `
-        <div class="w-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-4">
-            <i class="ph-bold ph-archive text-4xl text-gray-300 mb-3 block"></i>
-            <p class="text-gray-500 font-bold text-lg">Tu departamento no tiene vehículos finalizados.</p>
-        </div>`;
-        return;
-    }
-
-    // 5. Generamos las filas
-    let filasHTML = cochesFinalizados.map(c => {
-        let fechaCierre = window.rolActivo === 'taller' ? (c.fechaTaller || '-') : (c.fechaRecambios || '-');
-        let infoDpto = window.rolActivo === 'taller' ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
-        
-        return `
-        <tr class="border-b border-gray-100 hover:bg-blue-50 transition-colors">
-            <td class="p-4 text-xs font-bold text-gray-500 tracking-wider">${c.bastidor || c.A || '-'}</td>
-            <td class="p-4 text-sm font-black text-[#001e50]">${c.matricula || c.B || 'S/M'}</td>
-            <td class="p-4 text-xs font-bold text-gray-700 uppercase">${c.modelo || c.C || '-'}</td>
-            <td class="p-4 text-xs font-bold text-amber-600 bg-amber-50 rounded-lg px-3">${infoDpto}</td>
-            <td class="p-4 text-xs font-bold text-emerald-600"><i class="ph-bold ph-check-circle text-base align-middle mr-1"></i> ${fechaCierre}</td>
-        </tr>`;
-    }).join('');
-
-    // 6. Dibujamos la tabla final
-    contenedor.innerHTML = `
-    <div class="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mt-4">
-        <table class="w-full text-left border-collapse">
-            <thead class="bg-[#efeae2] text-[#001e50]">
-                <tr>
-                    <th class="p-4 text-xs font-black uppercase">Bastidor</th>
-                    <th class="p-4 text-xs font-black uppercase">Matrícula</th>
-                    <th class="p-4 text-xs font-black uppercase">Modelo</th>
-                    <th class="p-4 text-xs font-black uppercase">Info Operación</th>
-                    <th class="p-4 text-xs font-black uppercase">Cierre</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${filasHTML}
-            </tbody>
-        </table>
-    </div>`;
-};
 window.renderizarTablaHistorialDpto = function(coches) {
     const tbody = document.getElementById('tablaResultadosDpto');
     if (!tbody) return;
