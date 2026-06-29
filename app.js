@@ -374,9 +374,18 @@ window.cambiarPestana = function(pestana) {
     document.getElementById('buscadorInput').style.display = 'none';
     if(typeof window.renderEncuestas === 'function') window.renderEncuestas();
   } else if (pestana === 'historial-dpto') {
-    document.getElementById('contenedorHistorialDpto').style.display = 'flex';
-    document.getElementById('buscadorInput').style.display = 'none';
-    if(typeof window.cargarUltimosHistorialDpto === 'function') window.cargarUltimosHistorialDpto();
+    const contHistorial = document.getElementById('contenedorHistorialDpto');
+    if (contHistorial) {
+        contHistorial.style.display = 'flex';
+    } else {
+        console.error("FALTA EL HTML: No se encuentra el div 'contenedorHistorialDpto'");
+    }
+    const buscador = document.getElementById('buscadorInput');
+    if (buscador) buscador.style.display = 'none';
+    
+    if(typeof window.cargarUltimosHistorialDpto === 'function') {
+        window.cargarUltimosHistorialDpto();
+    }
   }
   
   if(pestana !== 'dashboard' && pestana !== 'encuestas' && pestana !== 'historial-dpto') window.cargar();
