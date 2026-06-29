@@ -414,44 +414,43 @@ window.cargar = function() {
     
     todosLosCoches.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
 
-    if (window.rolActivo === 'taller' || window.rolActivo === 'recambios') {
-       if(typeof window.renderizarDepartamentos === 'function') window.renderizarDepartamentos(window.rolActivo);
+   if (window.rolActivo === 'taller' || window.rolActivo === 'recambios') {
+        if(typeof window.renderizarDepartamentos === 'function') window.renderizarDepartamentos(window.rolActivo);
         if (activeTab === 'historial-dpto') { window.cargarUltimosHistorialDpto(); }
-    }
+        
     } else if (window.rolActivo === 'entregas' || window.rolActivo === 'backoffice') {
-      if (activeTab === 'logistica') {
-          if(typeof window.renderLogistica === 'function') window.renderLogistica();
-      } else if (activeTab === 'todos') { 
-          window.actualizarContadores(); 
-          if(typeof window.renderizarVistas === 'function') window.renderizarVistas(); 
-      } else if (activeTab === 'global-taller') {
-          let cochesEnTaller = todosLosCoches.filter(c => c.enTaller && !c.finTaller && c.entregado !== true && c.entregado !== "true");
-          let div = document.getElementById('contenedorTarjetas');
-          if (cochesEnTaller.length === 0) {
-              div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay ningún vehículo en Taller actualmente.</p></div>`;
-          } else {
-              if(typeof window.renderTarjetaCompacta === 'function') div.innerHTML = cochesEnTaller.map(c => window.renderTarjetaCompacta(c)).join('');
-          }
-      } else if (activeTab === 'global-recambios') {
-          let cochesEnRecambios = todosLosCoches.filter(c => c.enRecambios && !c.finRecambios && c.entregado !== true && c.entregado !== "true");
-          let div = document.getElementById('contenedorTarjetas');
-          if (cochesEnRecambios.length === 0) {
-              div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay ningún vehículo en Recambios actualmente.</p></div>`;
-          } else {
-              if(typeof window.renderTarjetaCompacta === 'function') div.innerHTML = cochesEnRecambios.map(c => window.renderTarjetaCompacta(c)).join('');
-          }
-      } else if (activeTab === 'agenda') {
-          if(typeof window.renderAgenda === 'function') window.renderAgenda();
-      } else if (activeTab === 'entregados') {
-          if(typeof window.renderEntregados === 'function') window.renderEntregados();
-      }
-      
-      if (primeraCargaDb) {
-          primeraCargaDb = false;
-          setTimeout(() => { if(typeof window.sincronizarCitasSilencioso === 'function') window.sincronizarCitasSilencioso(); }, 1500); 
-      }
+        if (activeTab === 'logistica') {
+            if(typeof window.renderLogistica === 'function') window.renderLogistica();
+        } else if (activeTab === 'todos') { 
+            window.actualizarContadores(); 
+            if(typeof window.renderizarVistas === 'function') window.renderizarVistas(); 
+        } else if (activeTab === 'global-taller') {
+            let cochesEnTaller = todosLosCoches.filter(c => c.enTaller && !c.finTaller && c.entregado !== true && c.entregado !== "true");
+            let div = document.getElementById('contenedorTarjetas');
+            if (cochesEnTaller.length === 0) {
+                div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay ningún vehículo en Taller actualmente.</p></div>`;
+            } else {
+                if(typeof window.renderTarjetaCompacta === 'function') div.innerHTML = cochesEnTaller.map(c => window.renderTarjetaCompacta(c)).join('');
+            }
+        } else if (activeTab === 'global-recambios') {
+            let cochesEnRecambios = todosLosCoches.filter(c => c.enRecambios && !c.finRecambios && c.entregado !== true && c.entregado !== "true");
+            let div = document.getElementById('contenedorTarjetas');
+            if (cochesEnRecambios.length === 0) {
+                div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay ningún vehículo en Recambios actualmente.</p></div>`;
+            } else {
+                if(typeof window.renderTarjetaCompacta === 'function') div.innerHTML = cochesEnRecambios.map(c => window.renderTarjetaCompacta(c)).join('');
+            }
+        } else if (activeTab === 'agenda') {
+            if(typeof window.renderAgenda === 'function') window.renderAgenda();
+        } else if (activeTab === 'entregados') {
+            if(typeof window.renderEntregados === 'function') window.renderEntregados();
+        }
+        
+        if (primeraCargaDb) {
+            primeraCargaDb = false;
+            setTimeout(() => { if(typeof window.sincronizarCitasSilencioso === 'function') window.sincronizarCitasSilencioso(); }, 1500); 
+        }
     }
-
     window.aplicarPermisosPorRol();
 
   }, (error) => {
