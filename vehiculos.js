@@ -291,20 +291,59 @@ window.renderActivaDpto = function(c, pre, obj, tipo) {
 window.abrirLectorPDF = function() { document.getElementById('inputUploadPDF').click(); };
 window.procesarPDFs = function(event) { Swal.fire('En Desarrollo', 'La subida múltiple estará disponible próximamente.', 'info'); };
 
-window.editarRentingAgencia = async function(id, rentingActual, agenciaActual) {
-    const { value: formValues } = await Swal.fire({
-        title: 'Renting y Agencia',
+window.editarRentingAgencia = function(fila, rentingActual, agenciaActual) {
+    // Limpiamos los valores por si vienen vacíos o como texto "undefined"
+    let valRenting = (rentingActual && rentingActual !== 'undefined' && rentingActual !== 'null') ? rentingActual : '';
+    let valAgencia = (agenciaActual && agenciaActual !== 'undefined' && agenciaActual !== 'null') ? agenciaActual : '';
+
+    Swal.fire({
+        title: '🏢 Editar Operador y Agencia',
         html: `
-            <input id="edit-renting" class="swal2-input !w-[80%] !m-0 !mb-4 text-center uppercase" value="${rentingActual}">
-            <input id="edit-agencia" class="swal2-input !w-[80%] !m-0 text-center uppercase" value="${agenciaActual}">
+            <div class="flex flex-col gap-4 text-left mt-2">
+                <!-- Caja para Renting -->
+                <div>
+                    <label class="block text-xs font-bold text-[#001e50] mb-1 uppercase tracking-wide">Empresa de Renting</label>
+                    <input id="swal-input-renting" type="text" class="swal2-input m-0 w-full text-sm border-gray-300 focus:border-[#00b0f0]" placeholder="Ej: ALD, Arval, LeasePlan..." value="${valRenting}">
+                </div>
+                
+                <!-- Caja para Agencia -->
+                <div>
+                    <label class="block text-xs font-bold text-[#001e50] mb-1 uppercase tracking-wide">Agencia de Transporte</label>
+                    <input id="swal-input-agencia" type="text" class="swal2-input m-0 w-full text-sm border-gray-300 focus:border-[#00b0f0]" placeholder="Ej: Tradisa, Setram, Sintra..." value="${valAgencia}">
+                </div>
+            </div>
         `,
-        showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Guardar',
-        preConfirm: () => ({ renting: document.getElementById('edit-renting').value.toUpperCase().trim(), agencia: document.getElementById('edit-agencia').value.toUpperCase().trim() })
+        showCancelButton: true,
+        confirmButtonText: '<i class="ph-bold ph-floppy-disk mr-1"></i> Guardar Cambios',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#001e50',
+        cancelButtonColor: '#9ca3af',
+        preConfirm: () => {
+            return {
+                renting: document.getElementById('swal-input-renting').value.trim(),
+                agencia: document.getElementById('swal-input-agencia').value.trim()
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Guardamos los datos directamente en Firebase
+            window.updateDoc(window.doc(window.db, "vehiculos", fila), {
+                renting: result.value.renting,
+                agencia: result.value.agencia
+            }).then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Actualizado!',
+                    text: 'Los datos logísticos se han guardado correctamente.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }).catch(error => {
+                console.error("Error guardando Renting/Agencia:", error);
+                Swal.fire('Error', 'No se pudo conectar con la base de datos.', 'error');
+            });
+        }
     });
-    if (formValues) {
-        await window.updateDoc(window.doc(window.db, "vehiculos", id), formValues);
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Guardado', showConfirmButton: false, timer: 1500 });
-    }
 };
 
 window.anadirVehiculoManual = async function() {
