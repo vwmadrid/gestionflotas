@@ -217,38 +217,6 @@
           </div>
       </div>
       </div>
-          
-          <div class="flex gap-2 mb-6">
-              <input type="text" id="inputBuscarHistorialDpto" onkeyup="if(event.key === 'Enter') window.ejecutarBusquedaDpto()" placeholder="Buscar por Matrícula o Bastidor..." class="flex-1 p-3 border border-gray-300 rounded-lg text-base font-black text-center uppercase outline-none focus:ring-2 focus:ring-[#00b0f0] shadow-inner text-[#001e50]">
-              <button onclick="window.ejecutarBusquedaDpto()" class="bg-[#001e50] text-white px-6 py-3 rounded-lg font-black hover:bg-blue-900 transition-colors shadow-sm text-xs flex items-center gap-1">
-                  <i class="ph-bold ph-magnifying-glass"></i> BUSCAR
-              </button>
-          </div>
-
-          <div class="overflow-y-auto flex-1 custom-scrollbar border border-gray-200 rounded-lg">
-              <table class="tabla-excel w-full">
-                  <thead class="sticky top-0 bg-[#001e50] z-10">
-                      <tr>
-                          <th>Vehículo</th>
-                          <th>Matrícula / VIN</th>
-                          <th>Nº Orden/Pedido</th>
-                          <th>Entrada</th>
-                          <th>Salida</th>
-                          <th>Motivo / Instrucción</th>
-                          <th>Acta (PDF)</th>
-                      </tr>
-                  </thead>
-                  <tbody id="tablaResultadosDpto">
-                      </tbody>
-              </table>
-          </div>
-      </div>   
-        <div class="flex justify-between items-center mb-6">
-              <h2 class="text-xl font-black text-[#001e50]">Encuestas de Clientes</h2>
-              <button onclick="window.print()" class="bg-[#001e50] text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-900 transition-colors shadow-sm">
-                <i class="ph-bold ph-printer"></i> Imprimir Informe
-              </button>
-          </div>
           <div id="tablaEncuestas" class="overflow-x-auto"></div>
       </div>
 
