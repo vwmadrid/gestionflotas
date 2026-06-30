@@ -933,3 +933,25 @@ window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda
         }
     }
 };
+// ==========================================
+// 🗂️ CONTROLADOR DEL HISTORIAL DE DEPARTAMENTOS
+// ==========================================
+window.cargarUltimosHistorialDpto = function() {
+    let finalizados = [];
+    
+    // 1. Buscamos los coches terminados según tu departamento activo
+    if (window.rolActivo === 'taller') {
+        finalizados = todosLosCoches.filter(c => c.finTaller === true || c.finTaller === "true");
+    } else if (window.rolActivo === 'recambios') {
+        finalizados = todosLosCoches.filter(c => c.finRecambios === true || c.finRecambios === "true");
+    } else {
+        finalizados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
+    }
+
+    // 2. Le pasamos los coches encontrados a la función que dibuja la tabla HTML
+    if (typeof window.renderizarTablaHistorialDpto === 'function') {
+        window.renderizarTablaHistorialDpto(finalizados);
+    } else {
+        console.error("⚠️ Error: No se encuentra la función renderizarTablaHistorialDpto");
+    }
+};
