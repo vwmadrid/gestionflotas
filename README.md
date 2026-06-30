@@ -1,6 +1,6 @@
 # Suite GesCar OS - Ecosistema Integral de Automoción
 
-**Desarrollado por:** M2 Code Systems (Manuel Arjona y Miriam)
+**Desarrollado por:** M2 Code Systems (Manuel Arjona Carrera y Miriam Olmo Fernández)
 **Versión:** 1.0.0
 **Año:** 2026
 
