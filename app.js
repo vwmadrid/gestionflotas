@@ -508,7 +508,7 @@ window.actualizarContadores = function() {
    if(document.getElementById('c-recambios')) document.getElementById('c-recambios').innerText = recambios;
 };
 window.renderLogistica = function() {
-   let logistica = todosLosCoches.filter(c => c.pasoAInventario === false && c.entregado !== true && c.entregado !== "true");
+   let logistica = todosLosCoches.filter(c => c.pasoAInventario !== true && c.pasoAInventario !== "true" && c.entregado !== true && c.entregado !== "true");
    let div = document.getElementById('contenedorLogistica');
    
    if (logistica.length === 0) {
