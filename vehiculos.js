@@ -293,18 +293,34 @@ window.abrirLectorPDF = function() { document.getElementById('inputUploadPDF').c
 window.procesarPDFs = function(event) { Swal.fire('En Desarrollo', 'La subida múltiple estará disponible próximamente.', 'info'); };
 
 window.editarRentingAgencia = async function(id, rentingActual, agenciaActual) {
+    // Limpiamos los valores por si vienen con los textos genéricos o nulos
+    let valRenting = (rentingActual === 'Renting' || rentingActual === 'null' || rentingActual === 'undefined') ? '' : rentingActual;
+    let valAgencia = (agenciaActual === 'Agencia' || agenciaActual === 'null' || agenciaActual === 'undefined') ? '' : agenciaActual;
+
     const { value: formValues } = await Swal.fire({
         title: 'Renting y Agencia',
         html: `
-            <input id="edit-renting" class="swal2-input !w-[80%] !m-0 !mb-4 text-center uppercase" value="${rentingActual}">
-            <input id="edit-agencia" class="swal2-input !w-[80%] !m-0 text-center uppercase" value="${agenciaActual}">
+            <div class="text-left px-4 mt-2">
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Compañía de Renting</label>
+                <input id="edit-renting" class="swal2-input !w-full !m-0 !mb-4 text-center uppercase border border-gray-300 rounded-lg shadow-inner focus:ring-2 focus:ring-[#001e50]" placeholder="Ej: ARVAL, ALD, LEASEPLAN..." value="${valRenting}">
+                
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Agencia de Transporte</label>
+                <input id="edit-agencia" class="swal2-input !w-full !m-0 text-center uppercase border border-gray-300 rounded-lg shadow-inner focus:ring-2 focus:ring-[#001e50]" placeholder="Ej: TRADISA, SINTAX, GRÚA..." value="${valAgencia}">
+            </div>
         `,
-        showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Guardar',
-        preConfirm: () => ({ renting: document.getElementById('edit-renting').value.toUpperCase().trim(), agencia: document.getElementById('edit-agencia').value.toUpperCase().trim() })
+        showCancelButton: true, 
+        confirmButtonColor: '#001e50', 
+        confirmButtonText: 'Guardar Datos',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => ({ 
+            renting: document.getElementById('edit-renting').value.toUpperCase().trim(), 
+            agencia: document.getElementById('edit-agencia').value.toUpperCase().trim() 
+        })
     });
+
     if (formValues) {
         await window.updateDoc(window.doc(window.db, "vehiculos", id), formValues);
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Guardado', showConfirmButton: false, timer: 1500 });
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Datos actualizados', showConfirmButton: false, timer: 1500 });
     }
 };
 
