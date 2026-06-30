@@ -293,34 +293,43 @@ window.abrirLectorPDF = function() { document.getElementById('inputUploadPDF').c
 window.procesarPDFs = function(event) { Swal.fire('En Desarrollo', 'La subida múltiple estará disponible próximamente.', 'info'); };
 
 window.editarRentingAgencia = async function(id, rentingActual, agenciaActual) {
-    // Limpiamos los valores por si vienen con los textos genéricos o nulos
-    let valRenting = (rentingActual === 'Renting' || rentingActual === 'null' || rentingActual === 'undefined') ? '' : rentingActual;
-    let valAgencia = (agenciaActual === 'Agencia' || agenciaActual === 'null' || agenciaActual === 'undefined') ? '' : agenciaActual;
+    // 1. Limpiamos los textos automáticos para que las cajas salgan vacías si no hay datos reales
+    let valRenting = (!rentingActual || rentingActual === 'Renting' || rentingActual === 'null') ? '' : rentingActual;
+    let valAgencia = (!agenciaActual || agenciaActual === 'Agencia' || agenciaActual === 'null') ? '' : agenciaActual;
 
+    // 2. Lanzamos la ventana con un diseño HTML súper simple que no rompa SweetAlert
     const { value: formValues } = await Swal.fire({
         title: 'Renting y Agencia',
         html: `
-            <div class="text-left px-4 mt-2">
-                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Compañía de Renting</label>
-                <input id="edit-renting" class="swal2-input !w-full !m-0 !mb-4 text-center uppercase border border-gray-300 rounded-lg shadow-inner focus:ring-2 focus:ring-[#001e50]" placeholder="Ej: ARVAL, ALD, LEASEPLAN..." value="${valRenting}">
+            <div style="text-align: left; padding: 0 10%; margin-top: 10px;">
+                <p style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Compañía de Renting:</p>
+                <input id="edit-renting" class="swal2-input !w-full !m-0 !mb-4 text-center uppercase" placeholder="Ej: ARVAL, ALD, LEASEPLAN..." value="${valRenting}">
                 
-                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Agencia de Transporte</label>
-                <input id="edit-agencia" class="swal2-input !w-full !m-0 text-center uppercase border border-gray-300 rounded-lg shadow-inner focus:ring-2 focus:ring-[#001e50]" placeholder="Ej: TRADISA, SINTAX, GRÚA..." value="${valAgencia}">
+                <p style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Agencia de Transporte:</p>
+                <input id="edit-agencia" class="swal2-input !w-full !m-0 text-center uppercase" placeholder="Ej: TRADISA, SINTAX..." value="${valAgencia}">
             </div>
         `,
         showCancelButton: true, 
         confirmButtonColor: '#001e50', 
-        confirmButtonText: 'Guardar Datos',
+        confirmButtonText: 'Guardar',
         cancelButtonText: 'Cancelar',
-        preConfirm: () => ({ 
-            renting: document.getElementById('edit-renting').value.toUpperCase().trim(), 
-            agencia: document.getElementById('edit-agencia').value.toUpperCase().trim() 
-        })
+        preConfirm: () => {
+            return { 
+                renting: document.getElementById('edit-renting').value.toUpperCase().trim(), 
+                agencia: document.getElementById('edit-agencia').value.toUpperCase().trim() 
+            };
+        }
     });
 
+    // 3. Guardamos en Firebase si el usuario le dio a "Guardar"
     if (formValues) {
         await window.updateDoc(window.doc(window.db, "vehiculos", id), formValues);
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Datos actualizados', showConfirmButton: false, timer: 1500 });
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Guardado', showConfirmButton: false, timer: 1500 });
+        
+        // Refrescamos las tarjetas para que el cambio se vea al instante
+        if (typeof window.renderizarVistas === 'function') {
+            setTimeout(() => window.renderizarVistas(), 400);
+        }
     }
 };
 
