@@ -1,7 +1,0 @@
-Copyright (c) 2026 Manuel Arjona Carrera y Miriam Olmo Fernández
-Equipo de desarrollo: M2 Code Systems
-
-Todos los derechos reservados sobre la suite GesCar OS, App Clientes y Portal de Renting.
-El código fuente, algoritmos, bases de datos subyacentes, diseño e interfaces son propiedad intelectual exclusiva de Manuel Arjona Carrera y Miriam Olmo Fernández.
-
-Queda estrictamente prohibida la copia, reproducción, distribución, modificación, comercialización o uso no autorizado de cualquier parte de este repositorio sin el consentimiento expreso, previo y por escrito de los autores legítimos.
