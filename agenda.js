@@ -584,6 +584,118 @@
             }
         }
     };
+// ========================================================
+// 📅 GESTOR DE BLOQUEOS Y VACACIONES (ANTONIO Y MANUEL)
+// ========================================================
+window.abrirGestorVacaciones = async function() {
+    const { value: formValues } = await Swal.fire({
+        title: '🔒 Bloquear Fechas / Horas',
+        html: `
+            <div style="text-align: left; padding: 0 5%; font-family: 'Inter', sans-serif;">
+                <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Tipo de Bloqueo:</label>
+                <select id="bv-tipo" onchange="window.toggleBloqueoForm(this.value)" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:45px; font-weight:bold; color:#001e50;">
+                    <option value="vacaciones">Vacaciones / Rango Completo</option>
+                    <option value="hora_suelta">Horas Sueltas (Día Determinado)</option>
+                </select>
+
+                <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Fecha Inicio / Día:</label>
+                <input type="date" id="bv-fecha-inicio" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:40px;">
+
+                <div id="bv-fecha-fin-container">
+                    <label id="bv-fecha-fin-label" style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Fecha Fin (Inclusive):</label>
+                    <input type="date" id="bv-fecha-fin" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:40px;">
+                </div>
+
+                <div id="bv-hora-container" style="display: none; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 10px;">
+                        <div style="flex: 1;">
+                            <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Desde:</label>
+                            <input type="time" id="bv-hora-inicio" class="swal2-input" style="width:100%; margin:0; height:40px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Hasta:</label>
+                            <input type="time" id="bv-hora-fin" class="swal2-input" style="width:100%; margin:0; height:40px;">
+                        </div>
+                    </div>
+                </div>
+
+                <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Motivo del Bloqueo:</label>
+                <input type="text" id="bv-motivo" class="swal2-input" style="width:100%; margin:0; height:40px; text-transform:uppercase;" placeholder="Ej: VACACIONES MANUEL, REUNIÓN, ETC...">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#001e50',
+        confirmButtonText: 'Aplicar Bloqueo',
+        cancelButtonText: 'Cancelar',
+        didOpen: () => {
+            // Sobrescribimos temporalmente la función visual para que actúe sobre los divs de SweetAlert
+            window.toggleBloqueoForm = function(val) {
+                const campoFechaFin = document.getElementById('bv-fecha-fin-container');
+                const contenedorHoras = document.getElementById('bv-hora-container');
+                if (val === 'hora_suelta') {
+                    if (campoFechaFin) campoFechaFin.style.display = 'none';
+                    if (contenedorHoras) contenedorHoras.style.display = 'block';
+                } else {
+                    if (campoFechaFin) campoFechaFin.style.display = 'block';
+                    if (contenedorHoras) contenedorHoras.style.display = 'none';
+                }
+            };
+        },
+        preConfirm: () => {
+            const tipo = document.getElementById('bv-tipo').value;
+            const fechaInicio = document.getElementById('bv-fecha-inicio').value;
+            const motivo = document.getElementById('bv-motivo').value.toUpperCase().trim();
+
+            if (!fechaInicio || !motivo) {
+                return Swal.showValidationMessage('Por favor, rellena la fecha y el motivo del bloqueo.');
+            }
+
+            let datosBloqueo = {
+                tipo: tipo,
+                fechaInicio: fechaInicio,
+                motivo: motivo,
+                creadoPor: window.usuarioActivo,
+                timestamp: new Date().getTime()
+            };
+
+            if (tipo === 'vacaciones') {
+                const fechaFin = document.getElementById('bv-fecha-fin').value;
+                if (!fechaFin) return Swal.showValidationMessage('Falta la fecha de fin de las vacaciones.');
+                datosBloqueo.fechaFin = fechaFin;
+            } else {
+                const horaInicio = document.getElementById('bv-hora-inicio').value;
+                const horaFin = document.getElementById('bv-hora-fin').value;
+                if (!horaInicio || !horaFin) return Swal.showValidationMessage('Debes especificar el rango de horas.');
+                datosBloqueo.horaInicio = horaInicio;
+                datosBloqueo.horaFin = horaFin;
+            }
+
+            return datosBloqueo;
+        }
+    });
+
+    // 4. Guardamos en Firebase (En la colección "bloqueos_agenda" o vuestra colección de citas)
+    if (formValues) {
+        try {
+            Swal.fire({ title: 'Guardando bloqueo...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            
+            // Generamos una ID única para el bloqueo
+            const idBloqueo = "bloqueo_" + new Date().getTime();
+            
+            // Guardamos el documento en Cloud Firestore
+            await window.setDoc(window.doc(window.db, "bloqueos_agenda", idBloqueo), formValues);
+            
+            Swal.fire('¡Bloqueado!', 'El calendario ha sido actualizado con las fechas protegidas.', 'success');
+            
+            // Forzamos el refresco de la agenda para pintar el bloqueo al instante
+            if (typeof window.renderAgenda === 'function') window.renderAgenda();
+
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'No se pudo registrar el bloqueo en la base de datos.', 'error');
+        }
+    }
+};
 // ==========================================
 // ➕ CREACIÓN DE CITA MANUAL INTELIGENTE (ENTREGAS / DEVOLUCIONES)
 // ==========================================
