@@ -738,7 +738,7 @@ window.crearCitaManual = async function() {
 
     const esDevolucion = paso1.isDenied;
     
-    // 2. Construcción de los formularios dinámicos con todos tus campos requeridos
+    // 2. Construcción de los formularios dinámicos
     let htmlCampos = '';
     
     if (esDevolucion) {
@@ -812,6 +812,7 @@ window.crearCitaManual = async function() {
             <div class="text-left">
                 <label class="text-xs font-bold text-gray-500 uppercase">Hora Cita</label>
                 <select id="n-hor" class="swal2-select !w-full !m-0 !mt-1">
+                    <option value="" disabled selected>Elige hora...</option>
                     <option value="10:00">10:00</option> <option value="11:00">11:00</option>
                     <option value="12:00">12:00</option> <option value="13:00">13:00</option>
                     <option value="16:00">16:00</option> <option value="17:00">17:00</option>
@@ -837,7 +838,7 @@ window.crearCitaManual = async function() {
         `;
     }
 
-    // 3. Lanzar formulario con la inteligencia de escucha en tiempo real (Radares)
+    // 3. Lanzar formulario con la inteligencia de escucha en tiempo real
     const { value: formValues } = await Swal.fire({
         title: esDevolucion ? '🔄 Programar Devolución (V2)' : '🚗 Programar Entrega (V2)',
         html: htmlCampos,
@@ -853,7 +854,7 @@ window.crearCitaManual = async function() {
                 let mat = inputMat.value.replace(/\s/g, '').toUpperCase();
                 if (mat.length < 4) return; 
 
-                let citaExistente = window.datosAgenda.find(cita => 
+                let citaExistente = window.datosAgenda && window.datosAgenda.find(cita => 
                     cita.matricula && cita.matricula.replace(/\s/g, '').toUpperCase() === mat
                 );
                 const divAviso = document.getElementById('aviso-cita-duplicada');
@@ -882,16 +883,55 @@ window.crearCitaManual = async function() {
                 }
             });
         },
-        preConfirm: () => {
+        // 🔥 AQUÍ ESTÁ EL RADAR DE BLOQUEOS (preConfirm ahora es async)
+        preConfirm: async () => {
             const mat = document.getElementById('n-mat').value.toUpperCase().trim();
             const cli = document.getElementById('n-cli').value.toUpperCase().trim();
             const fec = document.getElementById('n-fec').value;
             const hor = document.getElementById('n-hor').value;
 
-            if (!mat || !cli || !fec) {
-                Swal.showValidationMessage('La matrícula, el nombre y la fecha son campos obligatorios.');
+            if (!mat || !cli || !fec || !hor) {
+                Swal.showValidationMessage('Matrícula, nombre, fecha y hora son obligatorios.');
                 return false;
             }
+
+            // Identificamos quién es el agente para la cita
+            const agenteAsignado = esDevolucion ? 'MANUEL' : document.getElementById('n-age').value;
+
+            // ⛔ VERIFICACIÓN DE BLOQUEOS EN FIREBASE ⛔
+            try {
+                const bloqueosSnapshot = await window.getDocs(window.collection(window.db, "bloqueos_agenda"));
+                let conflicto = null;
+
+                bloqueosSnapshot.forEach(doc => {
+                    const b = doc.data();
+                    // Si el bloqueo aplica al agente asignado o a ambos
+                    if (b.operarioAfectado === "AMBOS" || b.operarioAfectado === agenteAsignado) {
+                        
+                        if (b.tipo === "vacaciones") {
+                            // ¿La fecha de la cita cae dentro del rango de vacaciones?
+                            if (fec >= b.fechaInicio && fec <= b.fechaFin) {
+                                conflicto = `⛔ ${agenteAsignado} está bloqueado/a: ${b.motivo}`;
+                            }
+                        } else if (b.tipo === "hora_suelta") {
+                            // ¿Es el mismo día y la hora cae en el tramo bloqueado?
+                            if (fec === b.fechaInicio) {
+                                if (hor >= b.horaInicio && hor <= b.horaFin) {
+                                    conflicto = `⛔ ${agenteAsignado} no está disponible a las ${hor}: ${b.motivo}`;
+                                }
+                            }
+                        }
+                    }
+                });
+
+                if (conflicto) {
+                    Swal.showValidationMessage(conflicto);
+                    return false; // Bloquea la creación de la cita
+                }
+            } catch (err) {
+                console.error("Error al consultar bloqueos", err);
+            }
+            // FIN DE VERIFICACIÓN DE BLOQUEOS
 
             let resultadoFormat = {
                 matricula: mat,
