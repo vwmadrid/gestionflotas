@@ -476,29 +476,35 @@ window.cargar = function() {
         window.mostrarErrorFirebase(error, 'Error al cargar vehículos');
     });
 };
+// ==========================================
+// 🧮 CALCULADORA DE CONTADORES SUPERIORES
+// ==========================================
 window.actualizarContadores = function() {
    let pendientes = 0, concita = 0, taller = 0, recambios = 0, total = 0;
+   
    todosLosCoches.forEach(c => {
-      let enInventario = c.pasoAInventario !== false; 
+      let enInventario = c.pasoAInventario === true || c.pasoAInventario === "true"; 
       let estaEntregado = c.entregado === true || c.entregado === "true";
+      
       if(!estaEntregado && enInventario) {
           total++;
           let enT = c.enTaller && !c.finTaller; 
           let enR = c.enRecambios && !c.finRecambios;
           let tieneCita = !!c.fechaCita;
+          
           if (enT) { taller++; }
           else if (enR) { recambios++; }
           else if (tieneCita) { concita++; }
           else { pendientes++; }
       }
    });
+   
    if(document.getElementById('c-todos')) document.getElementById('c-todos').innerText = total; 
    if(document.getElementById('c-pendientes')) document.getElementById('c-pendientes').innerText = pendientes;
    if(document.getElementById('c-concita')) document.getElementById('c-concita').innerText = concita;
    if(document.getElementById('c-taller')) document.getElementById('c-taller').innerText = taller; 
    if(document.getElementById('c-recambios')) document.getElementById('c-recambios').innerText = recambios;
 };
-
 window.renderLogistica = function() {
    let logistica = todosLosCoches.filter(c => c.pasoAInventario === false && c.entregado !== true && c.entregado !== "true");
    let div = document.getElementById('contenedorLogistica');
