@@ -479,19 +479,29 @@ window.renderizarTablaHistorialDpto = function(coches) {
         return;
     }
 
-    // Dibujamos únicamente filas (<tr>), que es lo que exige el navegador
+    // Dibujamos únicamente filas (<tr>)
     tbody.innerHTML = coches.map(c => {
-        let fechaEntrada = window.rolActivo === 'taller' ? (c.fechaEntradaTaller || 'Sin registro') : (c.fechaEntradaRecambios || 'Sin registro');
-        let fechaSalida = window.rolActivo === 'taller' ? (c.fechaFinTaller || c.fechaTaller || 'Sin registro') : (c.fechaFinRecambios || c.fechaRecambios || 'Sin registro');
-        let infoDpto = window.rolActivo === 'taller' ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
+        let esTaller = window.rolActivo === 'taller';
+        let fechaEntrada = esTaller ? (c.fechaEntradaTaller || 'Sin registro') : (c.fechaEntradaRecambios || 'Sin registro');
+        let fechaSalida = esTaller ? (c.fechaFinTaller || c.fechaTaller || 'Sin registro') : (c.fechaFinRecambios || c.fechaRecambios || 'Sin registro');
+        let infoDpto = esTaller ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
+        
+        // Etiquetas dinámicas
+        let labelEntrada = esTaller ? 'Entrada Taller' : 'Entrada Recambios';
+        let labelSalida = esTaller ? 'Salida Taller' : 'Salida Recambios';
 
-        // Formateador de Fechas avanzado
+        // Formateador de Fechas avanzado (DD/MM/YYYY)
         const formatearFechaHora = (fechaString) => {
-            if (!fechaString || fechaString === 'Sin registro' || fechaString === '-') return fechaString;
+            if (!fechaString || fechaString === 'Sin registro' || fechaString === '-') return 'S/D';
             try {
-                if (fechaString.includes('T')) {
+                if (fechaString.includes('-') || fechaString.includes('T')) {
                     let f = new Date(fechaString);
-                    return f.toLocaleDateString() + ' ' + f.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    if (!isNaN(f.getTime())) {
+                        let dia = String(f.getDate()).padStart(2, '0');
+                        let mes = String(f.getMonth() + 1).padStart(2, '0');
+                        let anio = f.getFullYear();
+                        return `${dia}/${mes}/${anio}`;
+                    }
                 }
                 return fechaString; 
             } catch(e) {
@@ -505,8 +515,14 @@ window.renderizarTablaHistorialDpto = function(coches) {
             <td class="p-4 text-sm font-black text-[#001e50]">${c.matricula || c.B || 'S/M'}</td>
             <td class="p-4 text-xs font-bold text-gray-700 uppercase">${c.modelo || c.C || '-'}</td>
             <td class="p-4 text-xs font-bold text-amber-600 bg-amber-50 rounded-lg px-3">${infoDpto}</td>
-            <td class="p-4 text-xs font-bold text-blue-600"><i class="ph-bold ph-arrow-right text-base align-middle mr-1"></i> ${formatearFechaHora(fechaEntrada)}</td>
-            <td class="p-4 text-xs font-bold text-emerald-600"><i class="ph-bold ph-check-circle text-base align-middle mr-1"></i> ${formatearFechaHora(fechaSalida)}</td>
+            <td class="p-4 text-xs font-bold text-blue-600">
+                <div class="mb-0.5 text-gray-400 text-[9px] uppercase tracking-widest">${labelEntrada}</div>
+                <i class="ph-bold ph-arrow-right text-base align-middle mr-1"></i> ${formatearFechaHora(fechaEntrada)}
+            </td>
+            <td class="p-4 text-xs font-bold text-emerald-600">
+                <div class="mb-0.5 text-gray-400 text-[9px] uppercase tracking-widest">${labelSalida}</div>
+                <i class="ph-bold ph-check-circle text-base align-middle mr-1"></i> ${formatearFechaHora(fechaSalida)}
+            </td>
         </tr>`;
     }).join('');
 };
