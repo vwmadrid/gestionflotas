@@ -924,10 +924,12 @@ window.crearCitaManual = async function() {
                     }
                 });
 
-                if (conflicto) {
-                    Swal.showValidationMessage(conflicto);
-                    return false; // Bloquea la creación de la cita
-                }
+               if (conflicto) {
+    // EL CHIVATO: Avisamos a M2 de que hemos salvado una catástrofe
+    if(typeof window.registrarMetricaM2 === 'function') window.registrarMetricaM2('choques_agenda_evitados');
+    Swal.showValidationMessage(conflicto);
+    return false; // Bloquea la creación de la cita
+}
             } catch (err) {
                 console.error("Error al consultar bloqueos", err);
             }
