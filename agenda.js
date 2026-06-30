@@ -584,55 +584,212 @@
             }
         }
     };
-// SUSTITUYE TU FUNCIÓN crearCitaManual ACTUAL POR ESTA:
+// ==========================================
+// ➕ CREACIÓN DE CITA MANUAL INTELIGENTE (ENTREGAS / DEVOLUCIONES)
+// ==========================================
 window.crearCitaManual = async function() {
-    // Si tuvieras campos prellenados o una búsqueda, adáptalo a lo que ya tenías.
-    // Esta es la versión estándar con la validación de roles.
+    // 1. Selector inicial de la operativa
+    const paso1 = await Swal.fire({
+        title: 'Programar Nueva Cita (V2)',
+        text: '¿Qué tipo de gestión vas a realizar?',
+        icon: 'question',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '🚗 Entrega',
+        denyButtonText: '🔄 Devolución',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#001e50',
+        denyButtonColor: '#64748b'
+    });
+
+    if (!paso1.isConfirmed && !paso1.isDenied) return; 
+
+    const esDevolucion = paso1.isDenied;
+    
+    // 2. Construcción de los formularios dinámicos con todos tus campos requeridos
+    let htmlCampos = '';
+    
+    if (esDevolucion) {
+        htmlCampos = `
+            <div class="mb-3 text-left">
+                <label class="text-xs font-bold text-gray-500 uppercase">Matrícula</label>
+                <input id="n-mat" class="swal2-input !w-full !m-0 !mt-1" placeholder="Ej: 1234ABC">
+                <div id="aviso-cita-duplicada" class="text-[10px] text-red-600 font-black mt-1 hidden animate-pulse">⚠️ ALERTA: Esta matrícula ya tiene una cita activa en la agenda.</div>
+            </div>
+            <div class="mb-3 text-left">
+                <label class="text-xs font-bold text-gray-500 uppercase">Nombre Conductor / Cliente</label>
+                <input id="n-cli" class="swal2-input !w-full !m-0 !mt-1" placeholder="Nombre completo">
+            </div>
+            <div class="mb-3 text-left">
+                <label class="text-xs font-bold text-gray-500 uppercase">Teléfono Conductor</label>
+                <input id="n-tlf" type="tel" class="swal2-input !w-full !m-0 !mt-1" placeholder="Ej: 600000000">
+            </div>
+            <div class="mb-3 text-left">
+                <label class="text-xs font-bold text-gray-500 uppercase">Empresa Renting</label>
+                <input id="n-renting" class="swal2-input !w-full !m-0 !mt-1" placeholder="Ej: Arval, LeasePlan...">
+            </div>
+        `;
+    } else {
+        htmlCampos = `
+            <div class="mb-3 text-left">
+                <label class="text-xs font-bold text-gray-500 uppercase">Matrícula</label>
+                <input id="n-mat" class="swal2-input !w-full !m-0 !mt-1" placeholder="Ej: 1234ABC">
+                <div id="aviso-cita-duplicada" class="text-[10px] text-red-600 font-black mt-1 hidden animate-pulse">⚠️ ALERTA: Esta matrícula ya tiene una cita activa en la agenda.</div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div class="text-left">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Nombre Cliente</label>
+                    <input id="n-cli" class="swal2-input !w-full !m-0 !mt-1" placeholder="Nombre completo">
+                </div>
+                <div class="text-left">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Modelo del Vehículo</label>
+                    <input id="n-mod" class="swal2-input !w-full !m-0 !mt-1" placeholder="Ej: Golf, Tiguan...">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div class="text-left">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Email</label>
+                    <input id="n-email" type="email" class="swal2-input !w-full !m-0 !mt-1" placeholder="correo@ejemplo.com">
+                </div>
+                <div class="text-left">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Teléfono</label>
+                    <input id="n-tlf" type="tel" class="swal2-input !w-full !m-0 !mt-1" placeholder="600000000">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div class="text-left">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Número Bastidor</label>
+                    <input id="n-bas" class="swal2-input !w-full !m-0 !mt-1" placeholder="17 caracteres">
+                </div>
+                <div class="text-left">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Empresa Renting</label>
+                    <input id="n-renting" class="swal2-input !w-full !m-0 !mt-1" placeholder="Ej: Alphabet...">
+                </div>
+            </div>
+            <div class="mb-3 text-left flex items-center gap-2 bg-blue-50/50 p-3 rounded-lg border border-blue-200 select-none">
+                <input type="checkbox" id="n-devuelve" class="w-4 h-4 accent-[#001e50] cursor-pointer">
+                <label for="n-devuelve" class="text-xs font-black text-gray-700 cursor-pointer uppercase tracking-wider">¿El cliente devuelve vehículo?</label>
+            </div>
+        `;
+    }
+
+    // Tiempos comunes a ambas operativas
+    htmlCampos += `
+        <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="text-left"><label class="text-xs font-bold text-gray-500 uppercase">Fecha Cita</label><input type="date" id="n-fec" class="swal2-input !w-full !m-0 !mt-1"></div>
+            <div class="text-left">
+                <label class="text-xs font-bold text-gray-500 uppercase">Hora Cita</label>
+                <select id="n-hor" class="swal2-select !w-full !m-0 !mt-1">
+                    <option value="10:00">10:00</option> <option value="11:00">11:00</option>
+                    <option value="12:00">12:00</option> <option value="13:00">13:00</option>
+                    <option value="16:00">16:00</option> <option value="17:00">17:00</option>
+                    <option value="18:00">18:00</option> <option value="19:00">19:00</option>
+                </select>
+            </div>
+        </div>
+    `;
+
+    if (!esDevolucion) {
+        htmlCampos += `
+            <div class="text-left mb-3">
+                <label class="text-xs font-bold text-gray-500 uppercase">Entregador Asignado</label>
+                <select id="n-age" class="swal2-select !w-full !m-0 !mt-1">
+                    <option value="MANUEL">MANUEL</option>
+                    <option value="ANTONIO">ANTONIO</option>
+                </select>
+            </div>
+            <div class="text-left mb-1">
+                <label class="text-xs font-bold text-gray-500 uppercase">Notas Adicionales</label>
+                <textarea id="n-not" class="swal2-textarea !w-full !m-0 !mt-1 text-sm p-3" style="min-height: 60px;" placeholder="Detalles de preparación, lavado, etc..."></textarea>
+            </div>
+        `;
+    }
+
+    // 3. Lanzar formulario con la inteligencia de escucha en tiempo real (Radares)
     const { value: formValues } = await Swal.fire({
-        title: 'Programar Nueva Cita',
-        html: `
-            <input id="n-mat" class="swal2-input" placeholder="Matrícula / Bastidor">
-            <input id="n-cli" class="swal2-input" placeholder="Nombre Cliente">
-            <input id="n-mod" class="swal2-input" placeholder="Modelo del Coche">
-            <input type="date" id="n-fec" class="swal2-input">
-            <select id="n-hor" class="swal2-select">
-                <option value="10:00">10:00</option>
-                <option value="11:00">11:00</option>
-                <option value="12:00">12:00</option>
-                <option value="13:00">13:00</option>
-                <option value="16:00">16:00</option>
-                <option value="17:00">17:00</option>
-                <option value="18:00">18:00</option>
-                <option value="19:00">19:00</option>
-            </select>
-            <select id="n-age" class="swal2-select">
-                <option value="MANUEL">MANUEL</option>
-                <option value="ANTONIO">ANTONIO</option>
-            </select>
-        `,
+        title: esDevolucion ? '🔄 Programar Devolución (V2)' : '🚗 Programar Entrega (V2)',
+        html: htmlCampos,
+        width: '650px',
         focusConfirm: false,
         confirmButtonText: 'Guardar Cita',
+        confirmButtonColor: '#001e50',
+        didOpen: () => {
+            const inputMat = document.getElementById('n-mat');
+            if (!inputMat) return;
+
+            inputMat.addEventListener('input', () => {
+                let mat = inputMat.value.replace(/\s/g, '').toUpperCase();
+                if (mat.length < 4) return; 
+
+                let citaExistente = window.datosAgenda.find(cita => 
+                    cita.matricula && cita.matricula.replace(/\s/g, '').toUpperCase() === mat
+                );
+                const divAviso = document.getElementById('aviso-cita-duplicada');
+                if (divAviso) {
+                    if (citaExistente) divAviso.classList.remove('hidden');
+                    else divAviso.classList.add('hidden');
+                }
+
+                let cocheExistente = todosLosCoches.find(c => 
+                    c.B && c.B.replace(/\s/g, '').toUpperCase() === mat
+                );
+
+                if (cocheExistente) {
+                    if (document.getElementById('n-cli') && !document.getElementById('n-cli').value) {
+                        document.getElementById('n-cli').value = cocheExistente.cliente || '';
+                    }
+                    if (document.getElementById('n-mod') && !document.getElementById('n-mod').value) {
+                        document.getElementById('n-mod').value = cocheExistente.C || '';
+                    }
+                    if (document.getElementById('n-renting') && !document.getElementById('n-renting').value) {
+                        document.getElementById('n-renting').value = cocheExistente.renting || '';
+                    }
+                    if (document.getElementById('n-bas') && !document.getElementById('n-bas').value) {
+                        document.getElementById('n-bas').value = cocheExistente.A || '';
+                    }
+                }
+            });
+        },
         preConfirm: () => {
-            return {
-                matricula: document.getElementById('n-mat').value.toUpperCase(),
-                cliente: document.getElementById('n-cli').value.toUpperCase(),
-                modelo: document.getElementById('n-mod').value.toUpperCase(),
-                fecha: document.getElementById('n-fec').value,
-                hora: document.getElementById('n-hor').value,
-                agente: document.getElementById('n-age').value
+            const mat = document.getElementById('n-mat').value.toUpperCase().trim();
+            const cli = document.getElementById('n-cli').value.toUpperCase().trim();
+            const fec = document.getElementById('n-fec').value;
+            const hor = document.getElementById('n-hor').value;
+
+            if (!mat || !cli || !fec) {
+                Swal.showValidationMessage('La matrícula, el nombre y la fecha son campos obligatorios.');
+                return false;
             }
+
+            let resultadoFormat = {
+                matricula: mat,
+                cliente: cli,
+                fecha: fec,
+                hora: hor,
+                telefono: document.getElementById('n-tlf') ? document.getElementById('n-tlf').value.trim() : '',
+                renting: document.getElementById('n-renting') ? document.getElementById('n-renting').value.toUpperCase().trim() : ''
+            };
+
+            if (esDevolucion) {
+                resultadoFormat.modelo = 'DEVOLUCIÓN' + (resultadoFormat.renting ? ` - ${resultadoFormat.renting}` : '');
+                resultadoFormat.agente = 'MANUEL'; 
+            } else {
+                resultadoFormat.modelo = document.getElementById('n-mod').value.toUpperCase().trim();
+                resultadoFormat.email = document.getElementById('n-email').value.trim();
+                resultadoFormat.bastidor = document.getElementById('n-bas').value.toUpperCase().trim();
+                resultadoFormat.devuelveVehiculo = document.getElementById('n-devuelve').checked ? 'SÍ' : 'NO';
+                resultadoFormat.agente = document.getElementById('n-age').value;
+                resultadoFormat.notas = document.getElementById('n-not').value.trim();
+            }
+
+            return resultadoFormat;
         }
     });
 
     if (formValues) {
-        if(!formValues.matricula || !formValues.fecha) return Swal.fire('Error', 'Faltan datos obligatorios', 'error');
-        
-        // 🔥 EL CEREBRO DE LA OPERACIÓN: Asignar estado según quién lo crea
         const estadoAsignado = window.rolActivo === "backoffice" ? "pendiente" : "confirmada";
 
         try {
-            // Se asume que usas collection de "citas_agenda" (o "agenda", como lo tuvieras configurado).
-            // Usamos setDoc con un doc() nuevo autogenerado (equivalente a addDoc).
             const nuevaRef = window.doc(window.collection(window.db, "citas_agenda"));
             await window.setDoc(nuevaRef, {
                 matricula: formValues.matricula,
@@ -641,17 +798,23 @@ window.crearCitaManual = async function() {
                 fecha: formValues.fecha,
                 hora: formValues.hora,
                 agente: formValues.agente,
+                telefono: formValues.telefono || "",
+                email: formValues.email || "",
+                bastidor: formValues.bastidor || "",
+                renting: formValues.renting || "",
+                entregaVO: formValues.devuelveVehiculo || "NO", 
+                notas: formValues.notas || "",
                 creadoPor: window.usuarioActivo,
-                estado: estadoAsignado // <-- Clave para que se dibuje naranja o normal
+                estado: estadoAsignado 
             });
 
             if (estadoAsignado === "pendiente") {
-                Swal.fire('Solicitud Enviada', 'La cita se ha guardado como PENDIENTE. El equipo de Entregas deberá confirmarla.', 'info');
+                Swal.fire('Solicitud de Cita', 'Guardada como PENDIENTE. Entregas revisará el hueco en el cuadrante.', 'info');
             } else {
-                Swal.fire('Guardado', 'Cita agendada correctamente', 'success');
+                Swal.fire('¡Agendada!', 'La cita se ha guardado de forma segura en tiempo real.', 'success');
             }
         } catch (error) {
-            Swal.fire('Error', 'No se pudo guardar la cita', 'error');
+            Swal.fire('Fallo del Sistema', 'No se ha podido conectar con los radares de Firebase.', 'error');
         }
     }
 };
