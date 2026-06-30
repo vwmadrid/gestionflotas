@@ -726,9 +726,14 @@ window.renderizarContactos = function() {
 
     let htmlGenerado = "";
 
+    // 2. Recorremos cada departamento usando un bucle
     for (const [nombreDpto, usuarios] of Object.entries(departamentos)) {
+        
+        // A) Dibujamos la cabecera del departamento
         htmlGenerado += `<div class="bg-gray-200 text-[#001e50] text-[10px] font-black p-1.5 pl-3 uppercase tracking-widest mt-2 first:mt-0 shadow-inner">${nombreDpto}</div>`;
         
+        // B) Dibujamos el botón especial para enviar mensajes a todo el grupo.
+        // Convertimos el nombre a minúsculas ('taller', 'entregas') para que coincida con los roles de tu base de datos.
         let rolDestino = nombreDpto.toLowerCase(); 
         htmlGenerado += `
         <div class="p-3 border-b border-gray-300 bg-blue-50 hover:bg-blue-100 cursor-pointer text-xs font-black flex items-center gap-3 text-[#001e50] transition-colors" onclick="window.abrirChatEspecifico('${rolDestino}')">
@@ -738,6 +743,7 @@ window.renderizarContactos = function() {
             GRUPO ${nombreDpto}
         </div>`;
 
+        // C) Dibujamos a los usuarios individuales pertenecientes a este departamento
         usuarios.forEach(contacto => {
             htmlGenerado += `
             <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer text-xs font-bold flex items-center gap-3 text-gray-700 transition-colors" onclick="window.abrirChatEspecifico('${contacto}')">
@@ -747,6 +753,7 @@ window.renderizarContactos = function() {
         });
     }
 
+    // 3. Inyectamos todo el HTML construido de golpe en la pantalla
     contenedor.innerHTML = htmlGenerado;
 };
 
