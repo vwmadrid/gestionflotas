@@ -641,6 +641,7 @@ window.filtrarCoches = function() {
 window.mensajesGlobalesCache = [];
 
 window.enviarMensajeInterno = async function(destino, texto) {
+    if(typeof window.registrarMetricaM2 === 'function') window.registrarMetricaM2('mensajes_chat_interno_enviados');
     if (!texto.trim() || !destino) return;
     const idMensaje = "msg_" + new Date().getTime();
     const nuevoMensaje = { remitente: window.usuarioActivo, departamentoRemitente: window.rolActivo, destinatario: destino, texto: texto, timestamp: new Date().getTime(), leido: false };
