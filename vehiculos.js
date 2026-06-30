@@ -22,6 +22,7 @@ window.calcularProgreso = function(c) {
 
 window.renderizarVistas = function() {
    let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
+    let inventario = todosLosCoches.filter(c => (c.pasoAInventario === true || c.pasoAInventario === "true") && (c.entregado !== true && c.entregado !== "true"));
    let filtrados = activos.filter(c => {
       let enT = c.enTaller && !c.finTaller; 
       let enR = c.enRecambios && !c.finRecambios;
