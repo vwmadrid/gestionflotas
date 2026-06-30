@@ -611,56 +611,6 @@ window.filtrarCoches = function() {
   const t = document.getElementById('buscadorInput').value.toLowerCase();
   document.querySelectorAll('.fila-coche').forEach(el => { el.style.display = el.innerText.toLowerCase().includes(t) ? '' : 'none'; });
 };
-
-// ==========================================
-// 🗃️ TABLA DE HISTORIAL (TALLER Y RECAMBIOS)
-// ==========================================
-window.renderizarTablaHistorialDpto = function(coches) {
-    const tbody = document.getElementById('tablaResultadosDpto');
-    if (!tbody) return;
-
-    if (coches.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-12 text-center text-gray-400 font-bold text-base"><i class="ph-bold ph-archive text-3xl mb-2 block"></i>Tu departamento no tiene vehículos finalizados en el historial.</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = coches.map(c => {
-        // 1. Extraemos las fechas según el departamento que esté mirando la pantalla
-        let fechaEntrada = window.rolActivo === 'taller' ? (c.fechaEntradaTaller || 'Sin registro') : (c.fechaEntradaRecambios || 'Sin registro');
-        let fechaSalida = window.rolActivo === 'taller' ? (c.fechaTaller || 'Sin registro') : (c.fechaRecambios || 'Sin registro');
-        
-        let infoDpto = window.rolActivo === 'taller' ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
-
-        // 2. Pequeño formateador por si la fecha viene en formato ISO desde Firebase
-        const formatearFechaHora = (fechaString) => {
-            if (fechaString === 'Sin registro' || fechaString === '-') return fechaString;
-            try {
-                if (fechaString.includes('T')) {
-                    let f = new Date(fechaString);
-                    // Devuelve algo como: "30/06/2026 10:30"
-                    return f.toLocaleDateString() + ' ' + f.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                }
-                return fechaString; // Si ya estaba escrita a mano, se queda tal cual
-            } catch(e) {
-                return fechaString;
-            }
-        };
-
-        let entradaLimpia = formatearFechaHora(fechaEntrada);
-        let salidaLimpia = formatearFechaHora(fechaSalida);
-
-        // 3. Pintamos la fila con 6 columnas (Entrada en azul, Salida en verde)
-        return `
-        <tr class="border-b border-gray-100 hover:bg-blue-50 transition-colors">
-            <td class="p-4 text-xs font-bold text-gray-500 tracking-wider">${c.bastidor || c.A || '-'}</td>
-            <td class="p-4 text-sm font-black text-[#001e50]">${c.matricula || c.B || 'S/M'}</td>
-            <td class="p-4 text-xs font-bold text-gray-700 uppercase">${c.modelo || c.C || '-'}</td>
-            <td class="p-4 text-xs font-bold text-amber-600 bg-amber-50 rounded-lg px-3">${infoDpto}</td>
-            <td class="p-4 text-xs font-bold text-blue-600"><i class="ph-bold ph-arrow-right text-base align-middle mr-1"></i> ${entradaLimpia}</td>
-            <td class="p-4 text-xs font-bold text-emerald-600"><i class="ph-bold ph-check-circle text-base align-middle mr-1"></i> ${salidaLimpia}</td>
-        </tr>`;
-    }).join('');
-};
 // ==========================================
 // 💬 MÓDULO INTEGRAL DE CHAT INTERNO
 // ==========================================
@@ -933,25 +883,4 @@ window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda
         }
     }
 };
-// ==========================================
-// 🗂️ CONTROLADOR DEL HISTORIAL DE DEPARTAMENTOS
-// ==========================================
-window.cargarUltimosHistorialDpto = function() {
-    let finalizados = [];
-    
-    // 1. Buscamos los coches terminados según tu departamento activo
-    if (window.rolActivo === 'taller') {
-        finalizados = todosLosCoches.filter(c => c.finTaller === true || c.finTaller === "true");
-    } else if (window.rolActivo === 'recambios') {
-        finalizados = todosLosCoches.filter(c => c.finRecambios === true || c.finRecambios === "true");
-    } else {
-        finalizados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
-    }
 
-    // 2. Le pasamos los coches encontrados a la función que dibuja la tabla HTML
-    if (typeof window.renderizarTablaHistorialDpto === 'function') {
-        window.renderizarTablaHistorialDpto(finalizados);
-    } else {
-        console.error("⚠️ Error: No se encuentra la función renderizarTablaHistorialDpto");
-    }
-};
