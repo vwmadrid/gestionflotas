@@ -319,114 +319,61 @@
 </div>
 
 
-  <!-- ========================================== -->
-  <!-- 💬 WIDGET DE CHAT GLOBAL (M2 Code Systems) -->
-  <!-- ========================================== -->
-  
-  <!-- Ventana de Chat (Oculta por defecto) -->
- <div id="chatGlobalWidget" class="flex flex-col items-end shadow-2xl transition-all" style="display: none; position: fixed !important; bottom: 84px !important; right: 24px !important; z-index: 99999 !important;">
-      <div class="w-80 bg-[#001e50] rounded-t-xl text-white flex justify-between items-center p-3 cursor-pointer shadow-md" onclick="window.minimizarChatGlobal()">
-          <div class="flex items-center gap-2">
-              <i class="ph-bold ph-chats text-xl text-[#00b0f0]"></i>
-              <span class="font-black text-sm uppercase tracking-wider">Chat Interno</span>
-          </div>
-          <i class="ph-bold ph-caret-down hover:text-gray-300"></i>
-      </div>
-      
-      <div class="w-80 h-[400px] bg-gray-50 border-x border-b border-gray-300 rounded-b-xl flex flex-col overflow-hidden">
-          
-          <div class="p-3 border-b border-gray-200 bg-white shadow-sm z-10">
-              <select id="chatGlobalDestino" class="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-bold text-[#001e50] outline-none focus:ring-2 focus:ring-[#00b0f0]">
-                  <option value="" disabled selected>Selecciona destinatario...</option>
-                  
-                  <optgroup label="📢 Difusión por Departamentos">
-                      <option value="taller">Todo Taller</option>
-                      <option value="recambios">Todo Recambios</option>
-                      <option value="entregas">Todo Entregas</option>
-                      <option value="backoffice">Todo Back Office</option>
-                  </optgroup>
-                  
-                  <optgroup label="👤 Entregas">
-                      <option value="MANUEL.ARJONA">Manuel Arjona</option>
-                      <option value="ANTONIO.BERMEJO">Antonio Bermejo</option>
-                  </optgroup>
+ <!-- ========================================== -->
+<!-- 💬 WIDGET DE CHAT INTERNO (M2 CODE SYSTEMS) -->
+<!-- ========================================== -->
 
-                  <optgroup label="🔧 Taller">
-                      <option value="MANUEL.LOPEZ">Manuel López</option>
-                      <option value="ALVARO.BELTRAN">Álvaro Beltrán</option>
-                  </optgroup>
-
-                  <optgroup label="📦 Recambios">
-                      <option value="SERGIO.CABALLERO">Sergio Caballero</option>
-                      <option value="FERNANDO.CRESPO">Fernando Crespo</option>
-                      <option value="JAIME.JORGE">Jaime Jorge</option>
-                      <option value="FERNANDO.REMON">Fernando Remón</option>
-                      <option value="ABRAHAM.CANIZARES">Abraham Cañizares</option>
-                  </optgroup>
-
-                  <optgroup label="🏢 Back Office">
-                      <option value="FATIMA.GARCIA">Fátima García</option>
-                      <option value="GEMA.GOMEZ">Gema Gómez</option>
-                      <option value="ALBERTO.GUTIERREZ">Alberto Gutiérrez</option>
-                      <option value="RABAB.JAADAR">Rabab Jaadar</option>
-                      <option value="RUBEN.GARCIA">Rubén García</option>
-                  </optgroup>
-              </select>
-          </div>
-          
-          <div id="chatGlobalMensajes" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-[#efeae2]">
-              <div class="text-[10px] text-center font-bold text-gray-400 uppercase tracking-widest bg-white/60 p-1 rounded-full mx-auto w-3/4">
-                  Selecciona un chat
-              </div>
-          </div>
-          
-          <div class="p-3 bg-white border-t border-gray-200 flex gap-2 items-center">
-              <input type="text" id="chatGlobalInput" placeholder="Escribe un mensaje..." class="flex-1 px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-full outline-none text-xs font-medium focus:border-[#001e50]">
-              <button onclick="window.enviarMensajeGlobalUI()" class="w-10 h-10 bg-[#001e50] text-white rounded-full flex items-center justify-center shadow-sm hover:bg-blue-900 transition-colors">
-                  <i class="ph-fill ph-paper-plane-right text-base"></i>
-              </button>
-          </div>
-      </div>
-  </div>
-
- <button id="btnAbrirChatGlobal" onclick="window.abrirChatGlobal()" class="bg-[#001e50] text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:bg-blue-900 transition-transform hover:scale-110 border-2 border-white" style="position: fixed !important; bottom: 24px !important; right: 24px !important; z-index: 99998 !important;">
-    <i class="ph-bold ph-chats text-2xl"></i>
-    <span id="contadorChatGlobal" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm" style="display: none;">0</span>
+<!-- 1. BOTÓN FLOTANTE PARA ABRIR EL CHAT -->
+<button id="btnAbrirChatGlobal" onclick="window.abrirChatGlobal()" style="position: fixed; bottom: 24px; right: 24px; z-index: 99998;" class="w-14 h-14 bg-[#001e50] text-white rounded-full flex items-center justify-center shadow-2xl hover:bg-blue-900 transition-all">
+    <i class="ph-bold ph-chats text-3xl"></i>
+    <!-- Globito de notificaciones de mensajes nuevos -->
+    <span id="contadorChatGlobal" style="display: none;" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">0</span>
 </button>
 
-<div id="chatGlobalWidget" class="fixed bottom-6 right-6 w-80 h-[500px] bg-gray-100 rounded-2xl shadow-2xl z-50 flex-col overflow-hidden border border-gray-300" style="display: none;">
+<!-- 2. VENTANA DEL CHAT CON PESTAÑAS -->
+<div id="chatGlobalWidget" class="flex flex-col items-end shadow-2xl transition-all" style="display: none; position: fixed !important; bottom: 84px !important; right: 24px !important; z-index: 99999 !important;">
     
-    <div class="bg-[#001e50] p-3 text-white flex justify-between items-center shrink-0 shadow-md z-10">
+    <!-- Cabecera de la ventana -->
+    <div class="w-80 bg-[#001e50] rounded-t-xl text-white flex justify-between items-center p-3 cursor-pointer shadow-md" onclick="window.minimizarChatGlobal()">
         <div class="flex items-center gap-2">
             <i class="ph-bold ph-chats text-xl text-[#00b0f0]"></i>
-            <span class="font-black text-sm tracking-widest uppercase">Chat Interno</span>
+            <span class="font-black text-sm uppercase tracking-wider">Chat Interno</span>
         </div>
-        <button onclick="window.minimizarChatGlobal()" class="text-white hover:text-gray-300 transition-colors">
-            <i class="ph-bold ph-x text-lg"></i>
-        </button>
+        <i class="ph-bold ph-caret-down hover:text-gray-300"></i>
     </div>
-
-    <div class="flex bg-white border-b border-gray-200 shrink-0 shadow-sm" id="chatTabs">
-        <button id="tab-lista" onclick="window.mostrarChatTab('lista')" class="flex-1 py-2 text-xs font-bold text-[#001e50] border-b-2 border-[#001e50] transition-colors">Chats Activos</button>
-        <button id="tab-contactos" onclick="window.mostrarChatTab('contactos')" class="flex-1 py-2 text-xs font-bold text-gray-400 border-b-2 border-transparent hover:text-gray-600 transition-colors">Directorio</button>
+    
+    <!-- Pestañas de Navegación -->
+    <div class="w-80 flex bg-white border-x border-gray-200">
+        <button id="tab-lista" onclick="window.mostrarChatTab('lista')" class="flex-1 py-2 text-xs font-bold text-[#001e50] border-b-2 border-[#001e50]">CHATS</button>
+        <button id="tab-contactos" onclick="window.mostrarChatTab('contactos')" class="flex-1 py-2 text-xs font-bold text-gray-400 border-b-2 border-transparent">CONTACTOS</button>
     </div>
-
-    <div class="flex-1 overflow-y-auto custom-scrollbar relative bg-gray-50">
-        <div id="view-lista" class="w-full h-full" style="display: block;"></div>
-        <div id="view-contactos" class="w-full h-full" style="display: none;"></div>
-        <div id="view-chat-activo" class="w-full h-full bg-[#e5ddd5] flex-col absolute top-0 left-0 bg-opacity-95 z-20" style="display: none;">
-            <div class="bg-white p-2.5 border-b border-gray-200 flex items-center gap-2 shrink-0 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm" onclick="window.mostrarChatTab('lista')">
-                <i class="ph-bold ph-arrow-left text-[#001e50] text-lg"></i>
-                <span class="text-xs font-black text-[#001e50] uppercase tracking-wider">Atrás</span>
+    
+    <!-- Contenedor Principal Dinámico -->
+    <div class="w-80 h-[400px] bg-gray-50 border-x border-b border-gray-300 rounded-b-xl flex flex-col overflow-hidden">
+        
+        <!-- Vista 1: Lista de Chats Activos -->
+        <div id="view-lista" class="flex-1 overflow-y-auto hidden"></div>
+        
+        <!-- Vista 2: Directorio de Contactos -->
+        <div id="view-contactos" class="flex-1 overflow-y-auto p-2 hidden"></div>
+        
+        <!-- Vista 3: Chat Abierto con un Contacto -->
+        <div id="view-chat-activo" class="hidden flex-col h-full bg-[#efeae2]">
+            <div class="p-2 bg-gray-200 text-xs font-bold flex items-center gap-2 cursor-pointer border-b border-gray-300" onclick="window.mostrarChatTab('lista')">
+                <i class="ph-bold ph-arrow-left"></i> Volver
             </div>
-            <div id="chatGlobalMensajes" class="flex-1 overflow-y-auto p-3 flex flex-col custom-scrollbar bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] bg-opacity-50"></div>
-            <div class="bg-gray-100 p-2 flex items-center gap-2 shrink-0 border-t border-gray-200">
-                <input type="text" id="chatGlobalInput" class="flex-1 rounded-full border border-gray-300 px-4 py-2 text-xs focus:ring-2 focus:ring-[#00b0f0] focus:border-transparent outline-none shadow-sm transition-all" placeholder="Escribe tu mensaje aquí...">
-                <button onclick="window.enviarMensajeGlobalUI()" class="w-9 h-9 rounded-full bg-[#00b0f0] text-white flex items-center justify-center hover:bg-[#001e50] shadow-sm flex-shrink-0 transition-colors">
-                    <i class="ph-fill ph-paper-plane-right text-base"></i>
+            <!-- Aquí se inyectan los mensajes (burbujas) -->
+            <div id="chatGlobalMensajes" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3"></div>
+            
+            <!-- Zona inferior para escribir -->
+            <div class="p-3 bg-white border-t border-gray-200 flex gap-2 items-center">
+                <input type="text" id="chatGlobalInput" placeholder="Escribe un mensaje..." class="flex-1 px-3 py-2 bg-gray-100 rounded-full text-xs outline-none focus:ring-2 focus:ring-[#00b0f0]">
+                <button onclick="window.enviarMensajeGlobalUI()" class="w-8 h-8 bg-[#001e50] text-white rounded-full flex items-center justify-center hover:bg-blue-900 transition-colors">
+                    <i class="ph-fill ph-paper-plane-right"></i>
                 </button>
             </div>
         </div>
+        
     </div>
 </div>
 
