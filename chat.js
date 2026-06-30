@@ -1,3 +1,19 @@
+/**
+ * ============================================================================
+ * PROYECTO: GesCar OS
+ * COMPONENTES: GesCar OS Core, App GesCar OS Clientes, GesCar OS Renting
+ * AUTORES: Manuel Arjona Carrera y Miriam Olmo Fernández (M2 Code Systems)
+ * AÑO: 2026
+ * ============================================================================
+ * 
+ * Todos los derechos reservados.
+ * Este código fuente es propiedad intelectual de M2 Code Systems.
+ * Queda estrictamente prohibida su copia, distribución, modificación 
+ * o uso no autorizado, total o parcial, sin el consentimiento expreso 
+ * de los autores originales.
+ * 
+ * ============================================================================
+ */
 // ==========================================
 // 💬 SISTEMA DE CHAT Y ALERTAS EN TIEMPO REAL
 // ==========================================
