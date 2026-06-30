@@ -1,6 +1,6 @@
 # Licencia de Software - GesCar OS
 
-**Copyright (c) 2026 M2 Code Systems (Manuel Arjona Carrea y Miriam Olmo Fernández)**
+**Copyright (c) 2026 M2 Code Systems (Manuel Arjona Carrera y Miriam Olmo Fernández)**
 
 Todos los derechos reservados.
 
