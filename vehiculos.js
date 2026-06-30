@@ -1,3 +1,19 @@
+/**
+ * ============================================================================
+ * PROYECTO: GesCar OS
+ * COMPONENTES: GesCar OS Core, App GesCar OS Clientes, GesCar OS Renting
+ * AUTORES: Manuel Arjona Carrera y Miriam Olmo Fernández (M2 Code Systems)
+ * AÑO: 2026
+ * ============================================================================
+ * 
+ * Todos los derechos reservados.
+ * Este código fuente es propiedad intelectual de M2 Code Systems.
+ * Queda estrictamente prohibida su copia, distribución, modificación 
+ * o uso no autorizado, total o parcial, sin el consentimiento expreso 
+ * de los autores originales.
+ * 
+ * ============================================================================
+ */
 // ==========================================
 // 🚗 GESTIÓN DE VEHÍCULOS, TARJETAS Y LOGÍSTICA
 // ==========================================
@@ -22,7 +38,7 @@ window.calcularProgreso = function(c) {
 
 window.renderizarVistas = function() {
    let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
-    let inventario = todosLosCoches.filter(c => (c.pasoAInventario === true || c.pasoAInventario === "true") && (c.entregado !== true && c.entregado !== "true"));
+   let inventario = todosLosCoches.filter(c => (c.pasoAInventario === true || c.pasoAInventario === "true") && (c.entregado !== true && c.entregado !== "true"));
    let filtrados = activos.filter(c => {
       let enT = c.enTaller && !c.finTaller; 
       let enR = c.enRecambios && !c.finRecambios;
@@ -46,8 +62,25 @@ window.renderizarVistas = function() {
    } else {
        window.renderTablaModoExcel(filtrados);
    }
-};
 
+   // 🔥 NUEVO: DESBLOQUEO FORZADO PARA BACKOFFICE
+   // Si el usuario es de backoffice, reactivamos los botones de peticiones
+   if (window.rolActivo === 'backoffice' || window.rolActivo === 'admin') {
+       // Usamos un pequeño retardo para asegurar que el navegador ya ha terminado de pintar los botones
+       setTimeout(() => {
+           // Buscamos cualquier botón o celda de tabla que contenga la llamada a "pedirInst"
+           const botonesBloqueados = document.querySelectorAll('button[onclick*="pedirInst"], td[onclick*="pedirInst"]');
+           
+           botonesBloqueados.forEach(btn => {
+               btn.disabled = false;               // Quitamos el estado deshabilitado del navegador
+               btn.style.pointerEvents = 'auto';   // Permitimos que el clic funcione
+               btn.style.cursor = 'pointer';       // Restauramos el cursor de la manita
+               btn.style.opacity = '1';            // Le devolvemos el color original si estaba atenuado
+               btn.classList.remove('cursor-not-allowed', 'opacity-50'); // Limpiamos clases de bloqueo de Tailwind si las hubiera
+           });
+       }, 50);
+   }
+};
 window.renderTarjetaCompacta = function(c) {
   let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27"); 
   let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
@@ -374,39 +407,97 @@ window.borrarVehiculo = async function(id, modelo) {
     if (result.isConfirmed) { await window.deleteDoc(window.doc(window.db, "vehiculos", id)); Swal.fire('Borrado', 'Eliminado.', 'success'); }
 };
 
+// ==========================================
+// 🚀 FUNCIÓN DE ENTREGA Y WHATSAPP AUTOMÁTICO
+// ==========================================
 window.marcarComoEntregado = function(id) {
+    // 1. Buscamos el coche en nuestra memoria local
     let coche = todosLosCoches.find(c => c.fila === id);
-    if (!coche) return Swal.fire('Error', 'Vehículo no encontrado.', 'error');
-    let cita = window.datosAgenda.find(cita => (cita.matricula && coche.B && String(cita.matricula).replace(/\s/g, '') === String(coche.B).replace(/\s/g, '')));
-    let nombre = cita ? cita.cliente : (coche.cliente || "Familia");
+    if (!coche) return Swal.fire('Error', 'Vehículo no encontrado en el sistema.', 'error');
+    
+    // 2. Buscamos el teléfono en la agenda cruzando la matrícula
+    let cita = window.datosAgenda && window.datosAgenda.find(cita => (cita.matricula && coche.B && String(cita.matricula).replace(/\s/g, '') === String(coche.B).replace(/\s/g, '')));
     let tlf = cita ? cita.telefono : "";
 
+    // 3. Desplegamos el formulario
     Swal.fire({
         title: '¿Completar Entrega?',
-        html: `<p class="text-sm text-gray-600">El coche pasará al historial. Sube una foto opcional:</p><input type="file" id="fileFotos" accept="image/*" class="swal2-file text-sm w-full"><div class="mt-4"><input type="checkbox" id="pedirResena" checked> <label for="pedirResena">Solicitar reseña en Google</label></div>`,
-        icon: 'question', showCancelButton: true, confirmButtonColor: '#10b981', confirmButtonText: 'Entregar'
+        html: `
+            <div style="text-align: left; font-family: 'Inter', sans-serif;">
+                <p class="text-sm text-gray-600 mb-3 font-bold">El vehículo pasará al historial de GesCar OS. Sube una foto opcional de la entrega:</p>
+                <input type="file" id="fileFotos" accept="image/*" class="swal2-file text-sm w-full mb-3">
+                <div class="mt-4 flex items-center gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <input type="checkbox" id="pedirResena" checked class="w-4 h-4 accent-[#001e50] cursor-pointer"> 
+                    <label for="pedirResena" class="text-xs font-bold text-gray-700 uppercase cursor-pointer">Solicitar reseña en Google</label>
+                </div>
+            </div>
+        `,
+        icon: 'question', 
+        showCancelButton: true, 
+        confirmButtonColor: '#10b981', 
+        confirmButtonText: 'Procesar Entrega',
+        cancelButtonText: 'Cancelar'
     }).then(async (result) => {
         if (result.isConfirmed) {
-            let { fileFotos, pedirResena } = document.getElementById('fileFotos').files[0] ? { archivoFoto: document.getElementById('fileFotos').files[0], pedirResena: document.getElementById('pedirResena').checked } : { archivoFoto: null, pedirResena: document.getElementById('pedirResena').checked };
+            let inputFoto = document.getElementById('fileFotos').files[0];
+            let pedirResena = document.getElementById('pedirResena').checked;
             
+            // Función interna para cerrar el proceso y lanzar WhatsApp de forma segura
             const finalizar = async (urlFoto) => {
-                await window.updateDoc(window.doc(window.db, "vehiculos", id), { entregado: true, fechaEntrega: new Date().toLocaleDateString('es-ES') });
+                // A. Actualizamos el estado en la base de datos
+                await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
+                    entregado: true, 
+                    fechaEntrega: new Date().toLocaleDateString('es-ES') 
+                });
+                
+                // B. Construimos el mensaje dinámico
                 let msg = `¡Hola! Un placer entregarte tu ${coche.C}. `;
-                if(urlFoto) msg += `Foto: ${urlFoto} `;
-                if(pedirResena) msg += `Reseña Google: https://search.google.com/local/writereview?placeid=ChIJc6vL3fIvQg0RGT8iQzPAenc`;
-                window.open(`https://wa.me/34${tlf.replace(/\s/g, '')}?text=${encodeURIComponent(msg)}`, "_blank");
-                Swal.fire('¡Entregado!', 'Vehículo archivado.', 'success');
+                if (urlFoto) msg += `Aquí tienes un recuerdo de tu entrega: ${urlFoto} `;
+                if (pedirResena) msg += `Te agradeceríamos mucho si nos dejas una pequeña reseña en Google: https://search.google.com/local/writereview?placeid=ChIJc6vL3fIvQg0RGT8iQzPAenc`;
+                
+                let enlaceWhatsApp = `https://wa.me/34${tlf.replace(/\s/g, '')}?text=${encodeURIComponent(msg)}`;
+
+                // C. Mostramos el botón manual para EVITAR el bloqueo del navegador
+                Swal.fire({
+                    title: '¡Operación Registrada!',
+                    text: 'El vehículo ya está en el historial de finalizados.',
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonColor: '#25D366',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: '<i class="ph-bold ph-whatsapp-logo text-lg"></i> Enviar WhatsApp',
+                    cancelButtonText: 'Cerrar sin enviar'
+                }).then((waResult) => {
+                    if (waResult.isConfirmed) {
+                        window.open(enlaceWhatsApp, "_blank");
+                    }
+                    // Refrescamos la pantalla al final de todo el proceso
+                    if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+                });
             };
 
-            let inputFoto = document.getElementById('fileFotos').files[0];
+            // 4. Si hay foto, la subimos primero a Apps Script
             if (inputFoto) {
-                Swal.fire({ title: 'Subiendo...', didOpen: () => Swal.showLoading() });
-                const reader = new FileReader(); reader.readAsDataURL(inputFoto);
+                Swal.fire({ title: 'Procesando fotografía...', text: 'Subiendo a la nube, por favor espera.', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+                const reader = new FileReader(); 
+                reader.readAsDataURL(inputFoto);
                 reader.onload = async () => {
-                    const res = await fetch('https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec', { method: 'POST', body: JSON.stringify({ base64: reader.result, fileName: inputFoto.name, mimeType: inputFoto.type }) });
-                    const data = await res.json(); await finalizar(data.url);
+                    try {
+                        const res = await fetch('https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec', { 
+                            method: 'POST', 
+                            body: JSON.stringify({ base64: reader.result, fileName: inputFoto.name, mimeType: inputFoto.type }) 
+                        });
+                        const data = await res.json(); 
+                        await finalizar(data.url); // Llamamos a finalizar con la URL de Drive
+                    } catch (e) {
+                        console.error(e);
+                        Swal.fire('Error', 'Hubo un problema al subir la fotografía a Drive.', 'error');
+                    }
                 };
-            } else { await finalizar(null); }
+            } else { 
+                // Si no hay foto, pasamos directamente
+                await finalizar(null); 
+            }
         }
     });
 };
@@ -443,15 +534,49 @@ window.ejecutarDpto = async function(tipo, id, fin) {
   Swal.fire({ icon: 'success', title: fin ? 'Finalizado' : 'Guardado', showConfirmButton: false, timer: 1000 });
 };
 
+// ==========================================
+// 🛠️ AUTORIZACIÓN DE ENVÍOS (MODO DIAGNÓSTICO)
+// ==========================================
 window.pedirInst = function(btn, id, depto) {
-  Swal.fire({ title: 'Enviar a ' + depto, html: `<input type="text" id="ins" class="swal2-input" placeholder="Instrucción..."><br><input type="file" id="fileInput" class="mt-4 text-sm w-3/4">`, showCancelButton: true }).then((res) => {
-    if (res.isConfirmed) {
-        let ins = document.getElementById('ins').value; let file = document.getElementById('fileInput').files[0];
-        if(file) { window.subirYEnviar(id, depto, ins, file); } 
-        else { window.mandarSinArchivo(id, depto, ins); }
-        if(fin && typeof window.registrarMetricaM2 === 'function') window.registrarMetricaM2('operaciones_taller_recambios_finalizadas');
-    }
-  });
+    // Imprimimos en consola los datos exactos que está recibiendo el sistema
+    console.log("🛠️ Intentando abrir departamento:", depto);
+    console.log("👤 Rol detectado en el sistema:", window.rolActivo);
+
+    // Lanzamos la ventana de petición directamente, sin restricciones de rol temporales
+    Swal.fire({ 
+        title: 'Enviar a ' + String(depto).toUpperCase(), 
+        html: `
+            <div style="text-align:left; font-family:sans-serif; font-size:12px; color:#666;">
+                <p class="mb-2 font-bold uppercase">Escribe la orden de trabajo o recambio:</p>
+                <input type="text" id="ins" class="swal2-input !w-full !m-0" placeholder="Ej: Revisión general, chapa, etc...">
+                <p class="mt-4 mb-2 font-bold uppercase">Adjuntar documento / Acta (Opcional):</p>
+                <input type="file" id="fileInput" class="text-sm w-full bg-gray-50 p-2 rounded border">
+            </div>
+        `, 
+        showCancelButton: true,
+        confirmButtonColor: '#001e50',
+        confirmButtonText: 'Registrar Petición',
+        cancelButtonText: 'Cancelar'
+    }).then((res) => {
+        if (res.isConfirmed) {
+            let ins = document.getElementById('ins').value.trim(); 
+            let file = document.getElementById('fileInput').files[0];
+            let departamento = String(depto).toLowerCase().trim();
+            
+            try {
+                // Ejecutamos la subida a Firebase
+                if(file) { 
+                    window.subirYEnviar(id, departamento, ins, file); 
+                } else { 
+                    window.mandarSinArchivo(id, departamento, ins); 
+                }
+                console.log("✅ Función de guardado lanzada con éxito.");
+            } catch (error) {
+                console.error("❌ Fallo crítico al intentar guardar:", error);
+                Swal.fire('Error interno', 'El proceso se ha roto al intentar guardar. Revisa la consola.', 'error');
+            }
+        }
+    });
 };
 
 window.subirYEnviar = async function(id, depto, ins, file) {

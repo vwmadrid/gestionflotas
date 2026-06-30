@@ -1,3 +1,19 @@
+/**
+ * ============================================================================
+ * PROYECTO: GesCar OS
+ * COMPONENTES: GesCar OS Core, App GesCar OS Clientes, GesCar OS Renting
+ * AUTORES: Manuel Arjona Carrera y Miriam Olmo Fernández (M2 Code Systems)
+ * AÑO: 2026
+ * ============================================================================
+ * 
+ * Todos los derechos reservados.
+ * Este código fuente es propiedad intelectual de M2 Code Systems.
+ * Queda estrictamente prohibida su copia, distribución, modificación 
+ * o uso no autorizado, total o parcial, sin el consentimiento expreso 
+ * de los autores originales.
+ * 
+ * ============================================================================
+ */
 // ==========================================
 // ⚙️ NÚCLEO DE LA APLICACIÓN (APP.JS)
 // ==========================================
@@ -664,17 +680,22 @@ window.cargarChatGlobal = function() {
     window.onSnapshot(chatRef, (snapshot) => {
         let mensajes = [];
         let noLeidos = 0;
+        
+        // 1. Recopilar mensajes para la vista
         snapshot.forEach((doc) => {
             let msg = doc.data(); msg.id = doc.id;
             if (msg.remitente === window.usuarioActivo || msg.destinatario === window.usuarioActivo || msg.destinatario === window.rolActivo) {
                 mensajes.push(msg);
-                if (msg.remitente !== window.usuarioActivo && msg.timestamp > window.ultimaFechaLecturaGlobal) noLeidos++;
+                if (msg.remitente !== window.usuarioActivo && msg.timestamp > window.ultimaFechaLecturaGlobal) {
+                    noLeidos++;
+                }
             }
         });
         mensajes.sort((a, b) => a.timestamp - b.timestamp);
         window.mensajesGlobalesCache = mensajes; 
         window.actualizarVistaChat();
         
+        // 2. Gestionar el globo (badge) del menú
         const globo = document.getElementById('contadorChatGlobal');
         const chatWidget = document.getElementById('chatGlobalWidget');
         if (globo) {
@@ -684,6 +705,45 @@ window.cargarChatGlobal = function() {
                 else { globo.style.display = 'none'; }
             }
         }
+
+        // 3. 🔥 NUEVO: Detectar los mensajes que acaban de entrar y lanzar la alerta visual
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added") {
+                let msgNuevo = change.doc.data();
+                
+                let meTocaAMi = (msgNuevo.destinatario === window.usuarioActivo || msgNuevo.destinatario === window.rolActivo);
+                let esMio = (msgNuevo.remitente === window.usuarioActivo);
+                let esNuevo = (msgNuevo.timestamp > window.ultimaFechaLecturaGlobal);
+                let chatCerrado = (!chatWidget || chatWidget.style.display === 'none');
+
+                // Solo avisamos si el mensaje es para nosotros, no lo hemos enviado nosotros, es reciente y tenemos el chat cerrado
+                if (meTocaAMi && !esMio && esNuevo && chatCerrado) {
+                    
+                    // Formateamos el nombre (convierte "FATIMA.GARCIA" en "Fatima Garcia")
+                    let remitenteBonito = msgNuevo.remitente.replace('.', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+                    
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'info',
+                        iconColor: '#00b0f0',
+                        title: `💬 Mensaje de ${remitenteBonito}`,
+                        text: msgNuevo.texto,
+                        showConfirmButton: true,
+                        confirmButtonColor: '#001e50',
+                        confirmButtonText: 'Abrir Chat',
+                        timer: 6000,
+                        timerProgressBar: true
+                    }).then((result) => {
+                        // Si el usuario hace clic en el botón de la alerta, abrimos el chat y seleccionamos al compañero
+                        if (result.isConfirmed) {
+                            window.abrirChatGlobal();
+                            setTimeout(() => window.abrirChatEspecifico(msgNuevo.remitente), 300);
+                        }
+                    });
+                }
+            }
+        });
     });
 };
 
@@ -697,19 +757,46 @@ window.mostrarChatTab = function(vista) {
     if (vista === 'contactos') window.renderizarContactos();
 };
 
+// ==========================================
+// 📝 DIBUJADO DE LA LISTA DE CHATS CON INDICADOR DE NO LEÍDO
+// ==========================================
 window.renderizarListaChats = function() {
     const contenedor = document.getElementById('view-lista');
     const chats = {};
+    
+    // Cargamos la memoria de conversaciones leídas (si no existe, creamos una vacía)
+    if (!window.conversacionesLeidas) {
+        window.conversacionesLeidas = JSON.parse(localStorage.getItem('vw_conv_leidas_' + window.usuarioActivo) || '{}');
+    }
+    
     window.mensajesGlobalesCache.forEach(msg => {
         let otro = (msg.remitente === window.usuarioActivo) ? msg.destinatario : msg.remitente;
-        if (!chats[otro] || msg.timestamp > chats[otro].timestamp) chats[otro] = msg;
+        if (!chats[otro] || msg.timestamp > chats[otro].timestamp) {
+            chats[otro] = msg;
+        }
     });
+    
     contenedor.innerHTML = Object.values(chats).sort((a,b) => b.timestamp - a.timestamp).map(msg => {
         let otro = (msg.remitente === window.usuarioActivo) ? msg.destinatario : msg.remitente;
-        return `<div class="p-3 border-b border-gray-200 hover:bg-white cursor-pointer flex items-center gap-3" onclick="window.abrirChatEspecifico('${otro}')">
-                    <div class="w-10 h-10 rounded-full bg-[#00b0f0] text-white flex items-center justify-center font-black text-sm">${otro.substring(0,2)}</div>
-                    <div class="flex-1 overflow-hidden"><p class="text-xs font-black text-gray-800">${otro}</p><p class="text-[10px] text-gray-500 truncate">${msg.texto}</p></div>
-                </div>`;
+        
+        // 🔥 NUEVA DETECCIÓN: Comparamos el mensaje con la hora de ESTE contacto
+        let tiempoLecturaContacto = window.conversacionesLeidas[otro] || 0;
+        let esNoLeido = (msg.remitente !== window.usuarioActivo && msg.timestamp > tiempoLecturaContacto);
+        
+        let indicadorRojo = esNoLeido ? `<div class="w-3 h-3 bg-red-500 rounded-full border-2 border-white absolute top-0 right-0 animate-pulse shadow-sm"></div>` : '';
+        let estiloTexto = esNoLeido ? 'font-black text-gray-900' : 'font-medium text-gray-500';
+
+        return `
+        <div class="p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer flex items-center gap-3 transition-colors" onclick="window.abrirChatEspecifico('${otro}')">
+            <div class="w-10 h-10 rounded-full bg-[#00b0f0] text-white flex items-center justify-center font-black text-sm relative shadow-sm">
+                ${otro.substring(0,2)}
+                ${indicadorRojo}
+            </div>
+            <div class="flex-1 overflow-hidden">
+                <p class="text-xs font-black text-gray-800">${otro}</p>
+                <p class="text-[10px] ${estiloTexto} truncate transition-all">${msg.texto}</p>
+            </div>
+        </div>`;
     }).join('');
 };
 
@@ -758,7 +845,19 @@ window.renderizarContactos = function() {
 };
 
 window.abrirChatEspecifico = function(usuario) {
-    window.chatDestinoActual = usuario; window.mostrarChatTab('chat'); window.actualizarVistaChat();
+    window.chatDestinoActual = usuario; 
+    
+    // 🔥 NUEVO: Guardar la hora exacta a la que abres este chat concreto
+    let leidas = JSON.parse(localStorage.getItem('vw_conv_leidas_' + window.usuarioActivo) || '{}');
+    leidas[usuario] = new Date().getTime();
+    localStorage.setItem('vw_conv_leidas_' + window.usuarioActivo, JSON.stringify(leidas));
+    window.conversacionesLeidas = leidas;
+
+    window.mostrarChatTab('chat'); 
+    window.actualizarVistaChat();
+    
+    // Repintamos la lista en segundo plano para que el punto rojo desaparezca al instante al entrar
+    if(typeof window.renderizarListaChats === 'function') window.renderizarListaChats();
 };
 
 window.actualizarVistaChat = function() {
@@ -772,24 +871,63 @@ window.actualizarVistaChat = function() {
     window.renderizarMensajesGlobales(mensajesFiltrados);
 };
 
+// ==========================================
+// 🎨 RENDERIZADO VISUAL DEL CHAT (ESTILO WHATSAPP)
+// ==========================================
 window.renderizarMensajesGlobales = function(listaMensajes) {
     const contenedor = document.getElementById('chatGlobalMensajes');
     if (!contenedor) return;
+    
+    // Si el chat está vacío
     if (listaMensajes.length === 0) {
-        contenedor.innerHTML = '<div class="text-[10px] text-center font-bold text-gray-400 uppercase tracking-widest bg-white/60 p-1 rounded-full mx-auto w-3/4 mt-4">No hay mensajes</div>';
+        contenedor.innerHTML = '<div class="text-[10px] text-center font-bold text-gray-400 uppercase tracking-widest bg-white/60 p-1 rounded-full mx-auto w-3/4 mt-4 shadow-sm">No hay mensajes. ¡Escribe el primero!</div>';
         return;
     }
+    
+    // Dibujamos los mensajes
     contenedor.innerHTML = listaMensajes.map(msg => {
         let horaFormateada = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // Lógica: ¿El mensaje es mío o de otra persona?
         let soyYo = msg.remitente === window.usuarioActivo;
         let iniciales = msg.remitente.substring(0, 2).toUpperCase();
+        
+        // Limpiamos el nombre para que quede estético (Ej: de "JUAN.PEREZ" a "Juan Perez")
+        let nombreRemitente = msg.remitente.replace('.', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+
         if (soyYo) {
-            return `<div class="flex flex-col items-end w-full animate-fade-in mb-2"><div class="bg-[#001e50] text-white px-4 py-2 rounded-2xl rounded-tr-none shadow-sm max-w-[85%] text-xs">${msg.texto}</div><span class="text-[9px] text-gray-400 font-bold mt-1 pr-1">${horaFormateada}</span></div>`;
+            // 🟢 MIS MENSAJES (Alineados a la DERECHA, fondo verde)
+            return `
+            <div class="flex flex-col items-end w-full animate-fade-in mb-3">
+                <div class="bg-[#dcf8c6] text-gray-900 border border-[#bfe89f] px-4 py-2.5 rounded-2xl rounded-tr-none shadow-sm max-w-[85%] relative">
+                    <span class="text-xs font-medium">${msg.texto}</span>
+                    <span class="text-[9px] text-green-700 font-bold ml-3 inline-block relative top-1">${horaFormateada} <i class="ph-bold ph-check-all"></i></span>
+                </div>
+            </div>`;
         } else {
-            return `<div class="flex items-end gap-2 w-full animate-fade-in mb-3"><div class="w-8 h-8 rounded-full bg-[#00b0f0] text-white flex items-center justify-center font-black text-xs shadow-sm flex-shrink-0">${iniciales}</div><div class="flex flex-col items-start w-full"><span class="text-[10px] text-gray-600 font-black mb-0.5 ml-1 uppercase">${msg.remitente}</span><div class="bg-white text-[#001e50] border border-gray-200 px-4 py-2 rounded-2xl rounded-tl-none shadow-sm max-w-[85%] text-xs font-medium">${msg.texto}</div><span class="text-[9px] text-gray-400 font-bold mt-1 ml-1">${horaFormateada}</span></div></div>`;
+            // 🔵 MENSAJES RECIBIDOS (Alineados a la IZQUIERDA, fondo blanco con remitente)
+            return `
+            <div class="flex items-end gap-2 w-full animate-fade-in mb-4">
+                <div class="w-8 h-8 rounded-full bg-[#00b0f0] text-white flex items-center justify-center font-black text-xs shadow-sm flex-shrink-0">
+                    ${iniciales}
+                </div>
+                <div class="flex flex-col items-start w-full">
+                    <div class="bg-white text-gray-800 border border-gray-200 px-4 py-2.5 rounded-2xl rounded-tl-none shadow-sm max-w-[85%] relative">
+                        <!-- Aquí imprimimos el nombre del remitente en azul corporativo -->
+                        <span class="text-[10px] text-[#00b0f0] font-black block mb-1 uppercase tracking-wider">${nombreRemitente}</span>
+                        <!-- Aquí va el texto del mensaje -->
+                        <span class="text-xs font-medium block">${msg.texto}</span>
+                        <span class="text-[9px] text-gray-400 font-bold block text-right mt-1">${horaFormateada}</span>
+                    </div>
+                </div>
+            </div>`;
         }
     }).join('');
-    contenedor.scrollTop = contenedor.scrollHeight;
+    
+    // Forzamos el scroll automático hasta el último mensaje
+    setTimeout(() => {
+        contenedor.scrollTop = contenedor.scrollHeight;
+    }, 50);
 };
 
 window.abrirChatGlobal = function() {
@@ -908,4 +1046,3 @@ window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda
         }
     }
 };
-
