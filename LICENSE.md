@@ -5,7 +5,7 @@
 Todos los derechos reservados.
 
 ## 1. Propiedad Intelectual
-El presente código fuente, diseño, interfaces, bases de datos y algoritmos asociados a los proyectos **GesCar OS**, **App Clientes** y **Web Renting** son propiedad exclusiva de M2 Code Systems. 
+El presente código fuente, diseño, interfaces, bases de datos y algoritmos asociados a los proyectos **GesCar OS**, **GesCar OS Clientes** y **GesCar Renting** son propiedad exclusiva de M2 Code Systems. 
 
 ## 2. Restricciones de Uso
 Queda estrictamente prohibida la copia, reproducción, distribución, publicación, modificación, alteración, ingeniería inversa o venta, total o parcial, del presente software sin el consentimiento previo, expreso y por escrito de los titulares de los derechos (M2 Code Systems).
