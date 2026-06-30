@@ -296,7 +296,31 @@ window.toggleSubmenu = function(menuId, btnElement) {
         chevron.style.transform = 'rotate(0deg)'; 
     }
 };
+// ==========================================
+// 🕵️ ANALÍTICA SILENCIOSA (M2 CODE SYSTEMS)
+// ==========================================
+window.registrarMetricaM2 = async function(campo) {
+    try {
+        // Apuntamos a un documento oculto exclusivo para vosotros
+        const docRef = window.doc(window.db, "m2_estadisticas", "global");
+        
+        let updateData = {};
+        updateData[campo] = window.increment(1); // Suma +1 automáticamente
+        updateData['ultimaActualizacion'] = new Date().getTime();
 
+        try {
+            await window.updateDoc(docRef, updateData);
+        } catch (e) {
+            // Si el documento no existe aún (la primera vez), lo creamos
+            let newData = { ultimaActualizacion: new Date().getTime() };
+            newData[campo] = 1;
+            await window.setDoc(docRef, newData);
+        }
+    } catch (err) {
+        // Es un proceso ninja: si falla por falta de internet, no molesta al usuario
+        console.warn("Tracker M2 Oculto:", err);
+    }
+};
 // ========================================================
 // 🔄 INTERRUPTOR DE PESTAÑAS SEGURO (M2 CODE SYSTEMS)
 // ========================================================
