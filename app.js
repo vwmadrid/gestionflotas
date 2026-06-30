@@ -13,6 +13,8 @@ let primeraCargaDb = true;
 let unsubscribeFirebase = null; 
 let todosLosCoches = []; 
 let filtroActual = 'todos';
+window.chatDestinoActual = ""; // Variable para el chat global
+
 
 // 🔥 HERRAMIENTA CLAVE: Escapar variables
 window.escapeJS = function(str) {
@@ -635,35 +637,18 @@ window.renderizarTablaHistorialDpto = function(coches) {
     }).join('');
 };
 // ==========================================
-// 💬 MÓDULO INTEGRAL DE CHAT INTERNO (M2 CODE SYSTEMS)
+// 💬 MÓDULO INTEGRAL DE CHAT INTERNO
 // ==========================================
-
-// Memoria caché para guardar los mensajes sin machacar Firebase constantemente
 window.mensajesGlobalesCache = [];
 
-// 1. Motor de envío a Firebase
 window.enviarMensajeInterno = async function(destino, texto) {
     if (!texto.trim() || !destino) return;
     const idMensaje = "msg_" + new Date().getTime();
-    
-    const nuevoMensaje = {
-        remitente: window.usuarioActivo,
-        departamentoRemitente: window.rolActivo,
-        destinatario: destino,
-        texto: texto,
-        timestamp: new Date().getTime(),
-        leido: false
-    };
-
-    try {
-        await window.setDoc(window.doc(window.db, "chat_concesionario", idMensaje), nuevoMensaje);
-    } catch (error) {
-        console.error("Error enviando mensaje interno:", error);
-        Swal.fire({ icon: 'error', title: 'Fallo de conexión', text: 'No se pudo enviar el mensaje.' });
-    }
+    const nuevoMensaje = { remitente: window.usuarioActivo, departamentoRemitente: window.rolActivo, destinatario: destino, texto: texto, timestamp: new Date().getTime(), leido: false };
+    try { await window.setDoc(window.doc(window.db, "chat_concesionario", idMensaje), nuevoMensaje);
+    } catch (error) { Swal.fire({ icon: 'error', title: 'Fallo de conexión', text: 'No se pudo enviar.' }); }
 };
 
-// 2. Control del estado de lectura
 window.marcarChatGlobalComoLeido = function() {
     const ahora = new Date().getTime();
     window.ultimaFechaLecturaGlobal = ahora;
@@ -672,7 +657,6 @@ window.marcarChatGlobalComoLeido = function() {
     if (globo) globo.style.display = 'none';
 };
 
-// 3. Escuchador maestro de base de datos
 window.cargarChatGlobal = function() {
     const chatRef = window.collection(window.db, "chat_concesionario");
     window.ultimaFechaLecturaGlobal = localStorage.getItem('vw_chat_leido_' + window.usuarioActivo) || 0;
@@ -680,179 +664,143 @@ window.cargarChatGlobal = function() {
     window.onSnapshot(chatRef, (snapshot) => {
         let mensajes = [];
         let noLeidos = 0;
-        
         snapshot.forEach((doc) => {
-            let msg = doc.data();
-            msg.id = doc.id;
-            
-            if (msg.remitente === window.usuarioActivo || 
-                msg.destinatario === window.usuarioActivo || 
-                msg.destinatario === window.rolActivo) {
-                
+            let msg = doc.data(); msg.id = doc.id;
+            if (msg.remitente === window.usuarioActivo || msg.destinatario === window.usuarioActivo || msg.destinatario === window.rolActivo) {
                 mensajes.push(msg);
-                if (msg.remitente !== window.usuarioActivo && msg.timestamp > window.ultimaFechaLecturaGlobal) {
-                    noLeidos++;
-                }
+                if (msg.remitente !== window.usuarioActivo && msg.timestamp > window.ultimaFechaLecturaGlobal) noLeidos++;
             }
         });
-
         mensajes.sort((a, b) => a.timestamp - b.timestamp);
-        
-        // Guardamos TODOS los mensajes en la memoria interna
         window.mensajesGlobalesCache = mensajes; 
-        
-        // Llamamos al filtro para que pinte solo los del canal seleccionado
         window.actualizarVistaChat();
         
         const globo = document.getElementById('contadorChatGlobal');
         const chatWidget = document.getElementById('chatGlobalWidget');
-        
         if (globo) {
-            if (chatWidget && chatWidget.style.display === 'flex') {
-                window.marcarChatGlobalComoLeido();
-            } else {
-                if (noLeidos > 0) {
-                    globo.innerText = noLeidos > 99 ? '99+' : noLeidos;
-                    globo.style.display = 'flex';
-                } else {
-                    globo.style.display = 'none';
-                }
+            if (chatWidget && chatWidget.style.display === 'flex') window.marcarChatGlobalComoLeido();
+            else {
+                if (noLeidos > 0) { globo.innerText = noLeidos > 99 ? '99+' : noLeidos; globo.style.display = 'flex'; } 
+                else { globo.style.display = 'none'; }
             }
         }
     });
 };
 
-// 🔥 4. NUEVO FILTRO: Separa las conversaciones por canales
-window.actualizarVistaChat = function() {
-    const destinoSeleccionado = document.getElementById('chatGlobalDestino').value;
-    const contenedor = document.getElementById('chatGlobalMensajes');
+window.mostrarChatTab = function(vista) {
+    document.getElementById('view-lista').style.display = vista === 'lista' ? 'block' : 'none';
+    document.getElementById('view-contactos').style.display = vista === 'contactos' ? 'block' : 'none';
+    document.getElementById('view-chat-activo').style.display = vista === 'chat' ? 'flex' : 'none';
+    document.getElementById('tab-lista').className = `flex-1 py-2 text-xs font-bold ${vista === 'lista' ? 'text-[#001e50] border-b-2 border-[#001e50]' : 'text-gray-400 border-b-2 border-transparent'}`;
+    document.getElementById('tab-contactos').className = `flex-1 py-2 text-xs font-bold ${vista === 'contactos' ? 'text-[#001e50] border-b-2 border-[#001e50]' : 'text-gray-400 border-b-2 border-transparent'}`;
+    if (vista === 'lista') window.renderizarListaChats();
+    if (vista === 'contactos') window.renderizarContactos();
+};
 
-    if (!destinoSeleccionado) {
-        if (contenedor) contenedor.innerHTML = '<div class="text-[10px] text-center font-bold text-gray-400 uppercase tracking-widest bg-white/60 p-1 rounded-full mx-auto w-3/4">Selecciona un chat en el desplegable superior</div>';
-        return;
+window.renderizarListaChats = function() {
+    const contenedor = document.getElementById('view-lista');
+    const chats = {};
+    window.mensajesGlobalesCache.forEach(msg => {
+        let otro = (msg.remitente === window.usuarioActivo) ? msg.destinatario : msg.remitente;
+        if (!chats[otro] || msg.timestamp > chats[otro].timestamp) chats[otro] = msg;
+    });
+    contenedor.innerHTML = Object.values(chats).sort((a,b) => b.timestamp - a.timestamp).map(msg => {
+        let otro = (msg.remitente === window.usuarioActivo) ? msg.destinatario : msg.remitente;
+        return `<div class="p-3 border-b border-gray-200 hover:bg-white cursor-pointer flex items-center gap-3" onclick="window.abrirChatEspecifico('${otro}')">
+                    <div class="w-10 h-10 rounded-full bg-[#00b0f0] text-white flex items-center justify-center font-black text-sm">${otro.substring(0,2)}</div>
+                    <div class="flex-1 overflow-hidden"><p class="text-xs font-black text-gray-800">${otro}</p><p class="text-[10px] text-gray-500 truncate">${msg.texto}</p></div>
+                </div>`;
+    }).join('');
+};
+
+window.renderizarContactos = function() {
+    const contenedor = document.getElementById('view-contactos');
+    
+    // 1. Estructuramos a los usuarios por sus departamentos correspondientes
+    const departamentos = {
+        "ENTREGAS": ["MANUEL.ARJONA", "ANTONIO.BERMEJO"],
+        "TALLER": ["MANUEL.LOPEZ", "ALVARO.BELTRAN"],
+        "RECAMBIOS": ["SERGIO.CABALLERO", "FERNANDO.CRESPO", "JAIME.JORGE", "FERNANDO.REMON", "ABRAHAM.CANIZARES"],
+        "BACKOFFICE": ["FATIMA.GARCIA", "GEMA.GOMEZ", "ALBERTO.GUTIERREZ", "RABAB.JAADAR", "RUBEN.GARCIA"]
+    };
+
+    let htmlGenerado = "";
+
+    for (const [nombreDpto, usuarios] of Object.entries(departamentos)) {
+        htmlGenerado += `<div class="bg-gray-200 text-[#001e50] text-[10px] font-black p-1.5 pl-3 uppercase tracking-widest mt-2 first:mt-0 shadow-inner">${nombreDpto}</div>`;
+        
+        let rolDestino = nombreDpto.toLowerCase(); 
+        htmlGenerado += `
+        <div class="p-3 border-b border-gray-300 bg-blue-50 hover:bg-blue-100 cursor-pointer text-xs font-black flex items-center gap-3 text-[#001e50] transition-colors" onclick="window.abrirChatEspecifico('${rolDestino}')">
+            <div class="w-8 h-8 rounded-full bg-[#001e50] flex items-center justify-center text-white text-sm shadow-sm">
+                <i class="ph-bold ph-users"></i>
+            </div>
+            GRUPO ${nombreDpto}
+        </div>`;
+
+        usuarios.forEach(contacto => {
+            htmlGenerado += `
+            <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer text-xs font-bold flex items-center gap-3 text-gray-700 transition-colors" onclick="window.abrirChatEspecifico('${contacto}')">
+                <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[#001e50] text-[9px] font-black shadow-sm">${contacto.substring(0,2)}</div>
+                ${contacto}
+            </div>`;
+        });
     }
 
-    // Filtramos la memoria matemática para separar los canales
-    let mensajesFiltrados = window.mensajesGlobalesCache.filter(msg => {
-        // ¿Es un grupo de departamento?
-        if (['taller', 'recambios', 'entregas', 'backoffice'].includes(destinoSeleccionado)) {
-            return msg.destinatario === destinoSeleccionado;
-        } else {
-            // ¿Es un chat privado de persona a persona?
-            let enviadoPorMiAEl = msg.remitente === window.usuarioActivo && msg.destinatario === destinoSeleccionado;
-            let enviadoPorElAMi = msg.remitente === destinoSeleccionado && msg.destinatario === window.usuarioActivo;
-            return enviadoPorMiAEl || enviadoPorElAMi;
-        }
-    });
+    contenedor.innerHTML = htmlGenerado;
+};
 
+window.abrirChatEspecifico = function(usuario) {
+    window.chatDestinoActual = usuario; window.mostrarChatTab('chat'); window.actualizarVistaChat();
+};
+
+window.actualizarVistaChat = function() {
+    const contenedor = document.getElementById('chatGlobalMensajes');
+    if (!contenedor || !window.chatDestinoActual) return;
+    let mensajesFiltrados = window.mensajesGlobalesCache.filter(msg => 
+        (msg.remitente === window.chatDestinoActual && msg.destinatario === window.usuarioActivo) || 
+        (msg.remitente === window.usuarioActivo && msg.destinatario === window.chatDestinoActual) ||
+        (msg.destinatario === window.chatDestinoActual) 
+    );
     window.renderizarMensajesGlobales(mensajesFiltrados);
 };
 
-// 5. Dibujado de burbujas en la interfaz
 window.renderizarMensajesGlobales = function(listaMensajes) {
     const contenedor = document.getElementById('chatGlobalMensajes');
     if (!contenedor) return;
-
     if (listaMensajes.length === 0) {
-        contenedor.innerHTML = '<div class="text-[10px] text-center font-bold text-gray-400 uppercase tracking-widest bg-white/60 p-1 rounded-full mx-auto w-3/4 mt-4">No hay mensajes en esta conversación</div>';
+        contenedor.innerHTML = '<div class="text-[10px] text-center font-bold text-gray-400 uppercase tracking-widest bg-white/60 p-1 rounded-full mx-auto w-3/4 mt-4">No hay mensajes</div>';
         return;
     }
-
     contenedor.innerHTML = listaMensajes.map(msg => {
-        let fecha = new Date(msg.timestamp);
-        let horaFormateada = fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let horaFormateada = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         let soyYo = msg.remitente === window.usuarioActivo;
-        
+        let iniciales = msg.remitente.substring(0, 2).toUpperCase();
         if (soyYo) {
-            return `
-            <div class="flex flex-col items-end w-full animate-fade-in">
-                <div class="bg-[#001e50] text-white px-3 py-2 rounded-xl rounded-tr-none shadow-sm max-w-[85%] text-xs">
-                    ${msg.texto}
-                </div>
-                <span class="text-[9px] text-gray-400 font-bold mt-1 pr-1">${horaFormateada}</span>
-            </div>`;
+            return `<div class="flex flex-col items-end w-full animate-fade-in mb-2"><div class="bg-[#001e50] text-white px-4 py-2 rounded-2xl rounded-tr-none shadow-sm max-w-[85%] text-xs">${msg.texto}</div><span class="text-[9px] text-gray-400 font-bold mt-1 pr-1">${horaFormateada}</span></div>`;
         } else {
-            let etiquetaDestino = msg.destinatario === window.rolActivo ? `<span class="bg-amber-100 text-amber-700 px-1 rounded text-[8px] ml-1">@${window.rolActivo.toUpperCase()}</span>` : '';
-            return `
-            <div class="flex flex-col items-start w-full animate-fade-in">
-                <span class="text-[9px] text-gray-500 font-bold mb-1 pl-1">${msg.remitente} ${etiquetaDestino}</span>
-                <div class="bg-white text-[#001e50] border border-gray-200 px-3 py-2 rounded-xl rounded-tl-none shadow-sm max-w-[85%] text-xs font-medium">
-                    ${msg.texto}
-                </div>
-                <span class="text-[9px] text-gray-400 font-bold mt-1 pl-1">${horaFormateada}</span>
-            </div>`;
+            return `<div class="flex items-end gap-2 w-full animate-fade-in mb-3"><div class="w-8 h-8 rounded-full bg-[#00b0f0] text-white flex items-center justify-center font-black text-xs shadow-sm flex-shrink-0">${iniciales}</div><div class="flex flex-col items-start w-full"><span class="text-[10px] text-gray-600 font-black mb-0.5 ml-1 uppercase">${msg.remitente}</span><div class="bg-white text-[#001e50] border border-gray-200 px-4 py-2 rounded-2xl rounded-tl-none shadow-sm max-w-[85%] text-xs font-medium">${msg.texto}</div><span class="text-[9px] text-gray-400 font-bold mt-1 ml-1">${horaFormateada}</span></div></div>`;
         }
     }).join('');
-
     contenedor.scrollTop = contenedor.scrollHeight;
 };
 
-// 6. Gestión del botón abrir y cerrar
 window.abrirChatGlobal = function() {
-    document.getElementById('chatGlobalWidget').style.display = 'flex';
-    document.getElementById('btnAbrirChatGlobal').style.display = 'none';
-    window.marcarChatGlobalComoLeido();
-    window.actualizarVistaChat(); // Refrescamos la vista al abrir
+    document.getElementById('chatGlobalWidget').style.display = 'flex'; document.getElementById('btnAbrirChatGlobal').style.display = 'none';
+    window.marcarChatGlobalComoLeido(); window.mostrarChatTab('lista'); 
 };
 
 window.minimizarChatGlobal = function() {
-    document.getElementById('chatGlobalWidget').style.display = 'none';
-    document.getElementById('btnAbrirChatGlobal').style.display = 'flex';
+    document.getElementById('chatGlobalWidget').style.display = 'none'; document.getElementById('btnAbrirChatGlobal').style.display = 'flex';
     window.marcarChatGlobalComoLeido();
 };
 
-// 7. Captura de la UI al hacer clic en enviar
 window.enviarMensajeGlobalUI = function() {
-    const destino = document.getElementById('chatGlobalDestino').value;
     const input = document.getElementById('chatGlobalInput');
     const texto = input.value;
-    
-    if (!destino) {
-        return Swal.fire({ 
-            icon: 'warning', 
-            title: 'Atención', 
-            text: 'Debes seleccionar un destinatario en el desplegable superior.',
-            toast: true,
-            position: 'bottom-end',
-            showConfirmButton: false,
-            timer: 3000
-        });
-    }
-    
-    if (texto.trim() && typeof window.enviarMensajeInterno === 'function') {
-        window.enviarMensajeInterno(destino, texto);
-        input.value = "";
-    }
+    if (!window.chatDestinoActual) return Swal.fire('Selecciona un chat', 'Debes hacer clic en un contacto.', 'info');
+    if (texto.trim()) { window.enviarMensajeInterno(window.chatDestinoActual, texto); input.value = ""; }
 };
-
-// 8. ESCUCHADOR DE PROTECCIÓN Y EVENTOS DEL DOM
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        if (typeof window.cargarChatGlobal === 'function' && window.usuarioActivo) {
-            window.cargarChatGlobal();
-        }
-    }, 2000);
-
-    const widget = document.getElementById('chatGlobalWidget');
-    const boton = document.getElementById('btnAbrirChatGlobal');
-    if (widget) document.body.appendChild(widget);
-    if (boton) document.body.appendChild(boton);
-
-    const inputChat = document.getElementById('chatGlobalInput');
-    if (inputChat) {
-        inputChat.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                window.enviarMensajeGlobalUI();
-            }
-        });
-    }
-
-    // 🔥 VINCULAMOS EL DESPLEGABLE AL FILTRO
-    const selectDestino = document.getElementById('chatGlobalDestino');
-    if (selectDestino) {
-        selectDestino.addEventListener('change', window.actualizarVistaChat);
-    }
-});
 // ==========================================
 // 🛡️ ESCUDO ANTIMONSTRUOS: Bloqueo forzoso del Historial
 // ==========================================
