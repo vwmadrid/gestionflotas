@@ -18,7 +18,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, getDoc, arrayUnion, deleteDoc, getDocs, increment } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
     import { getAuth, signInWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
     
     const firebaseConfig = {
@@ -39,6 +39,7 @@
     window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; 
     window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; 
     window.arrayUnion = arrayUnion; window.deleteDoc = deleteDoc; window.getDocs = getDocs;
+    window.increment = increment;
 
     const btnLogin = document.getElementById('btnLoginAction');
     if (btnLogin) {
