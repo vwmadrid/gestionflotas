@@ -208,56 +208,17 @@
           <div id="tablaEncuestas" class="overflow-x-auto"></div>
       </div>
 
-    <!-- ========================================== -->
-<!-- 🗃️ VISTA HISTORIAL TALLER / RECAMBIOS       -->
-<!-- ========================================== -->
-<div id="contenedorHistorialDpto" class="w-full flex-col gap-4 p-6" style="display: none;">
-    <div class="flex items-center gap-2 mb-4">
-        <i class="ph-bold ph-archive text-3xl text-[#001e50]"></i>
-        <div>
-            <h2 class="text-xl font-black text-[#001e50] uppercase tracking-wider">Historial de Operaciones</h2>
-            <p class="text-xs font-bold text-gray-500">Registro de vehículos finalizados por el departamento</p>
-        </div>
-    </div>
-    
-    <!-- Aquí es donde tu JavaScript inyectará su propio buscador y su tabla -->
-    <div id="tablaResultadosDpto" class="w-full"></div>
-</div>
-        </div>
-        
-        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between mb-4">
-            <div class="flex items-center gap-3 w-1/3">
-                <div class="relative w-full">
-                    <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    <input type="text" id="buscadorinput" placeholder="Buscar Bastidor o Matrícula..." class="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-xs focus:ring-[#001e50] focus:border-[#001e50] outline-none w-full shadow-inner bg-gray-50">
-                </div>
-            </div>
-            <span class="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-[10px] font-black tracking-widest border border-gray-200 shadow-sm uppercase">
-                Operaciones Registradas
-            </span>
-        </div>
-        
-        <div class="overflow-x-auto bg-white rounded-xl border border-gray-200 shadow-sm mb-4">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-[#001e50] text-white text-[10px] uppercase tracking-widest font-black">
-                        <th class="p-4">Bastidor / VIN</th>
-                        <th class="p-4">Matrícula</th>
-                        <th class="p-4">Vehículo</th>
-                        <th class="p-4">Ref. Operación</th>
-                        <th class="p-4 text-blue-300"><i class="ph-bold ph-arrow-right"></i> Ingreso</th>
-                        <th class="p-4 text-emerald-400"><i class="ph-bold ph-check-circle"></i> Finalizado</th>
-                    </tr>
-                </thead>
-                <tbody id="tablaResultadosDpto" class="divide-y divide-gray-100 text-sm font-medium text-gray-700 bg-white">
-                </tbody>
-            </table>
-        </div>
-
-        <button class="w-full bg-white border border-gray-200 text-[#001e50] font-black text-xs py-4 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-colors shadow-sm flex items-center justify-center gap-2">
-            <i class="ph-bold ph-plus-circle text-lg"></i> CARGAR OPERACIONES ANTERIORES
-        </button>
-    </div>
+      <div id="contenedorHistorialDpto" class="w-full flex-col gap-4 p-6" style="display: none;">
+          <div class="flex items-center gap-2 mb-4">
+              <i class="ph-bold ph-archive text-3xl text-[#001e50]"></i>
+              <div>
+                  <h2 class="text-xl font-black text-[#001e50] uppercase tracking-wider">Historial de Operaciones</h2>
+                  <p class="text-xs font-bold text-gray-500">Registro de vehículos finalizados por el departamento</p>
+              </div>
+          </div>
+          
+          <div id="visorHistorialDinamico" class="w-full"></div>
+      </div>
 
       <div id="contenedorDashboard" class="hidden max-w-6xl mx-auto w-full space-y-6">
         
@@ -309,7 +270,7 @@
             </div>
         </div>
       </div>
-  </main>
+</div> ```
 
   <input type="file" id="inputUploadPDF" accept=".pdf" multiple class="hidden" onchange="window.procesarPDFs(event)">
 
