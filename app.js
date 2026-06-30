@@ -847,3 +847,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputChat = document.getElementById('chatGlobalInput');
     if (inputChat) inputChat.addEventListener('keypress', function (e) { if (e.key === 'Enter') window.enviarMensajeGlobalUI(); });
 });
+// 🔥 Función mejorada para Entregas y Reagendamientos (Soporta Agenda y Tarjetas)
+window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda, fechaAgenda, horaAgenda) {
+    let cocheC, cocheB, cocheA;
+    let esDeAgendaSinDb = (fila === 'no_db');
+
+    // 1. Identificamos los datos dependiendo de si viene del Inventario o de una cita sin DB
+    if (!esDeAgendaSinDb) {
+        let coche = todosLosCoches.find(c => c.fila === fila);
+        if (!coche) return;
+        cocheC = coche.C;
+        cocheB = coche.B;
+        cocheA = coche.A;
+    } else {
+        cocheC = modeloAgenda || 'Vehículo de Agenda';
+        cocheB = matriculaAgenda || 'S/M';
+        cocheA = 'S/B';
+    }
+
+    // 2. Lanzamos la pregunta
+    const accion = await Swal.fire({
+        title: '¿Qué ha pasado con este vehículo?',
+        html: `<b class="text-lg text-[#001e50]">${cocheC}</b><br>Matrícula: <b>${cocheB}</b><br><br>Su fecha de entrega planificada ya ha llegado o ha pasado.`,
+        icon: 'question',
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: '<i class="ph-bold ph-check"></i> Sí, Entregado',
+        denyButtonText: '<i class="ph-bold ph-calendar"></i> Reagendar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#10b981', 
+        denyButtonColor: '#f59e0b',  
+    });
+
+    // 3. Acciones de Respuesta
+    if (accion.isConfirmed) {
+        try {
+            if (!esDeAgendaSinDb) {
+                // Actualizamos la base de datos
+                await window.updateDoc(window.doc(window.db, "vehiculos", fila), {
+                    entregado: true,
+                    fechaEntrega: new Date().toISOString()
+                });
+                if(typeof window.cargar === 'function') window.cargar(); 
+                Swal.fire('¡Éxito!', 'Vehículo marcado como entregado.', 'success');
+            } else {
+                // Si era una cita manual sin coche asignado, le avisamos de que lo borre de la agenda
+                Swal.fire('Cita Externa', 'Este vehículo no está en el inventario activo. Para confirmar su entrega, haz clic en la cita de la agenda y dale a Eliminar.', 'info');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'No se pudo actualizar el estado.', 'error');
+        }
+    } else if (accion.isDenied) {
+        // Reagendar
+        if (!esDeAgendaSinDb) {
+            if(typeof window.editarVehiculoBasico === 'function') {
+                window.editarVehiculoBasico(fila, window.escapeJS(cocheA), window.escapeJS(cocheB), window.escapeJS(cocheC));
+            }
+        } else {
+            Swal.fire('Reagendar Cita', 'Para cambiar la fecha, haz clic directamente sobre la tarjeta de la cita en la agenda.', 'info');
+        }
+    }
+};
