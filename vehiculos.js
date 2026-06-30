@@ -455,6 +455,9 @@ window.mandarSinArchivo = async function(id, depto, ins) {
 window.cochesHistorialMemoria = [];
 window.limiteHistorial = 20; // Cargamos de 20 en 20 para que vaya rapidísimo
 
+// ==========================================
+// 🗂️ CONTROLADOR DEL HISTORIAL DE DEPARTAMENTOS (AVANZADO)
+// ==========================================
 window.cargarUltimosHistorialDpto = function() {
     const contenedor = document.getElementById('tablaResultadosDpto');
     if (!contenedor) return;
@@ -466,8 +469,8 @@ window.cargarUltimosHistorialDpto = function() {
 
     // 1. Filtramos y guardamos todos los terminados en la memoria rápida
     window.cochesHistorialMemoria = todosLosCoches.filter(c => {
-        if (window.rolActivo === 'taller') return c.finTaller;
-        if (window.rolActivo === 'recambios') return c.finRecambios;
+        if (window.rolActivo === 'taller') return c.finTaller === true || c.finTaller === "true";
+        if (window.rolActivo === 'recambios') return c.finRecambios === true || c.finRecambios === "true";
         return false;
     });
 
@@ -498,17 +501,17 @@ window.cargarUltimosHistorialDpto = function() {
     
     <div class="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <table class="w-full text-left border-collapse">
-            <thead class="bg-[#efeae2] text-[#001e50]">
+            <thead class="bg-[#001e50] text-white">
                 <tr>
-                    <th class="p-4 text-xs font-black uppercase w-1/4">Vehículo</th>
-                    <th class="p-4 text-xs font-black uppercase">Operación</th>
-                    <th class="p-4 text-xs font-black uppercase w-1/3">Notas y Adjuntos</th>
-                    <th class="p-4 text-xs font-black uppercase text-center">Chat</th>
-                    <th class="p-4 text-xs font-black uppercase text-right">Cierre</th>
+                    <th class="p-4 text-[10px] tracking-widest font-black uppercase w-1/5">Vehículo</th>
+                    <th class="p-4 text-[10px] tracking-widest font-black uppercase">Operación</th>
+                    <th class="p-4 text-[10px] tracking-widest font-black uppercase">Fechas</th>
+                    <th class="p-4 text-[10px] tracking-widest font-black uppercase w-1/3">Notas y Adjuntos</th>
+                    <th class="p-4 text-[10px] tracking-widest font-black uppercase text-center">Chat</th>
                 </tr>
             </thead>
-            <tbody id="cuerpoTablaHistorial">
-                </tbody>
+            <tbody id="cuerpoTablaHistorial" class="divide-y divide-gray-100">
+            </tbody>
         </table>
         <div id="btnCargarMasContainer" class="p-4 bg-gray-50 border-t border-gray-200 text-center transition-colors hover:bg-gray-100 cursor-pointer" onclick="window.cargarMasHistorial()">
             <button class="text-[#001e50] font-black text-xs flex items-center justify-center gap-1 mx-auto uppercase tracking-widest"><i class="ph-bold ph-plus-circle text-base"></i> Cargar operaciones anteriores</button>
@@ -532,17 +535,28 @@ window.pintarFilasHistorial = function(lista) {
     }
 
     tbody.innerHTML = lista.map(c => {
-        let fechaCierre = window.rolActivo === 'taller' ? (c.fechaTaller || '-') : (c.fechaRecambios || '-');
+        // Formateador de Fechas
+        const formatear = (str) => {
+            if (!str || str === '-' || str === 'Sin registro') return 'S/D';
+            try {
+                if (str.includes('T')) {
+                    let f = new Date(str);
+                    return f.toLocaleDateString() + ' ' + f.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
+                return str;
+            } catch(e) { return str; }
+        };
+
+        let fEntrada = window.rolActivo === 'taller' ? (c.fechaEntradaTaller || '-') : (c.fechaEntradaRecambios || '-');
+        let fCierre = window.rolActivo === 'taller' ? (c.fechaTaller || '-') : (c.fechaRecambios || '-');
         let infoDpto = window.rolActivo === 'taller' ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
         
-        // 💬 Botón de Chat (Exactamente igual que en las tarjetas)
         let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27"); 
         let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
         let maS = encodeURIComponent(c.B || '').replace(/'/g, "%27");
         let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
         let btnChat = `<button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 mx-auto relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>`;
 
-        // 📎 Historial de Notas y Documentos (PDFs)
         let arrPeticiones = window.rolActivo === 'taller' ? 
             (c.peticionesTaller || (c.instruccionTaller ? [{fecha: c.fechaEntradaTaller||'-', motivo: c.instruccionTaller, url: c.urlParte}] : [])) :
             (c.peticionesRecambios || (c.instruccionRecambios ? [{fecha: c.fechaEntradaRecambios||'-', motivo: c.instruccionRecambios, url: c.urlParte}] : []));
@@ -553,7 +567,7 @@ window.pintarFilasHistorial = function(lista) {
         }).join('') || '<span class="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-1 rounded">No hay notas adjuntas</span>';
 
         return `
-        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+        <tr class="hover:bg-blue-50 transition-colors">
             <td class="p-4">
                 <div class="font-black text-[#001e50] uppercase text-sm">${c.modelo || c.C || '-'}</div>
                 <div class="text-[10px] font-bold text-gray-400 tracking-wider mt-1">VIN: ${c.bastidor || c.A || '-'} <br> MAT: ${c.matricula || c.B || 'S/M'}</div>
@@ -561,19 +575,41 @@ window.pintarFilasHistorial = function(lista) {
             <td class="p-4">
                 <span class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">${infoDpto}</span>
             </td>
+            <td class="p-4 text-xs font-bold whitespace-nowrap">
+                <div class="text-blue-600 mb-1"><i class="ph-bold ph-arrow-right"></i> In: ${formatear(fEntrada)}</div>
+                <div class="text-emerald-600"><i class="ph-bold ph-check-circle"></i> Out: ${formatear(fCierre)}</div>
+            </td>
             <td class="p-4">${htmlDocs}</td>
             <td class="p-4 text-center">${btnChat}</td>
-            <td class="p-4 text-xs font-black text-emerald-600 text-right"><i class="ph-bold ph-check-circle text-base align-middle mr-1"></i> ${fechaCierre}</td>
         </tr>`;
     }).join('');
 
-    // Ocultar botón de "Cargar Más" si ya hemos mostrado todos, o si estamos buscando
     let buscando = document.getElementById('buscadorHistorialLocal') && document.getElementById('buscadorHistorialLocal').value.trim() !== "";
     if (lista.length >= window.cochesHistorialMemoria.length || buscando) {
         document.getElementById('btnCargarMasContainer').style.display = 'none';
     } else {
         document.getElementById('btnCargarMasContainer').style.display = 'block';
     }
+};
+
+window.filtrarHistorialLocal = function() {
+    let texto = document.getElementById('buscadorHistorialLocal').value.toLowerCase().trim();
+    if (texto === '') {
+        window.pintarFilasHistorial(window.cochesHistorialMemoria.slice(0, window.limiteHistorial));
+        document.getElementById('contadorHistorial').innerText = window.cochesHistorialMemoria.length;
+        return;
+    }
+    let filtrados = window.cochesHistorialMemoria.filter(c => {
+        let cadenaFiltro = ((c.bastidor||'') + ' ' + (c.A||'') + ' ' + (c.matricula||'') + ' ' + (c.B||'') + ' ' + (c.modelo||'') + ' ' + (c.C||'')).toLowerCase();
+        return cadenaFiltro.includes(texto);
+    });
+    window.pintarFilasHistorial(filtrados);
+    document.getElementById('contadorHistorial').innerText = filtrados.length;
+};
+
+window.cargarMasHistorial = function() {
+    window.limiteHistorial += 20;
+    window.pintarFilasHistorial(window.cochesHistorialMemoria.slice(0, window.limiteHistorial));
 };
 
 // Buscador Inteligente
