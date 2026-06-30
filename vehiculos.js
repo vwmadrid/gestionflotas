@@ -449,6 +449,7 @@ window.pedirInst = function(btn, id, depto) {
         let ins = document.getElementById('ins').value; let file = document.getElementById('fileInput').files[0];
         if(file) { window.subirYEnviar(id, depto, ins, file); } 
         else { window.mandarSinArchivo(id, depto, ins); }
+        if(fin && typeof window.registrarMetricaM2 === 'function') window.registrarMetricaM2('operaciones_taller_recambios_finalizadas');
     }
   });
 };
