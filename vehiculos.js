@@ -449,53 +449,92 @@ window.mandarSinArchivo = async function(id, depto, ins) {
 };
 
 // ==========================================
-// 🗂️ CONTROLADOR DEL HISTORIAL DE DEPARTAMENTOS
+// 📜 HISTORIAL PREMIUM (PAGINADO, BUSCADOR Y CHAT)
 // ==========================================
+window.cochesHistorialMemoria = [];
+window.limiteHistorial = 20;
 
+// Generador de la estructura principal (Buscador + Cabecera de Tabla)
 window.cargarUltimosHistorialDpto = function() {
-    let finalizados = [];
-    
-    // 1. Buscamos los coches finalizados según tu departamento
-    if (window.rolActivo === 'taller') {
-        finalizados = todosLosCoches.filter(c => c.finTaller === true || c.finTaller === "true");
-    } else if (window.rolActivo === 'recambios') {
-        finalizados = todosLosCoches.filter(c => c.finRecambios === true || c.finRecambios === "true");
-    }
+    const contenedor = document.getElementById('visorHistorialDinamico');
+    if (!contenedor) return;
 
-    // 2. Ordenamos del más reciente al más antiguo y los guardamos en memoria
-    finalizados.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
-    window.cochesHistorialMemoria = finalizados; 
-
-    // 3. Llamamos al pintor de la tabla
-    window.renderizarTablaHistorialDpto(finalizados);
-};
-
-window.renderizarTablaHistorialDpto = function(coches) {
-    const tbody = document.getElementById('tablaResultadosDpto');
-    if (!tbody) return;
-
-    if (coches.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-12 text-center text-gray-400 font-bold text-base"><i class="ph-bold ph-archive text-3xl mb-2 block"></i>Tu departamento no tiene vehículos finalizados en el historial.</td></tr>';
+    if (!todosLosCoches || todosLosCoches.length === 0) {
+        contenedor.innerHTML = '<div class="w-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg"><i class="ph-bold ph-spinner-gap animate-spin"></i> Esperando sincronización de datos...</p></div>';
         return;
     }
 
-    // Dibujamos únicamente filas (<tr>)
-    tbody.innerHTML = coches.map(c => {
-        let esTaller = window.rolActivo === 'taller';
-        let fechaEntrada = esTaller ? (c.fechaEntradaTaller || 'Sin registro') : (c.fechaEntradaRecambios || 'Sin registro');
-        let fechaSalida = esTaller ? (c.fechaFinTaller || c.fechaTaller || 'Sin registro') : (c.fechaFinRecambios || c.fechaRecambios || 'Sin registro');
-        let infoDpto = esTaller ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
-        
-        // Etiquetas dinámicas
-        let labelEntrada = esTaller ? 'Entrada Taller' : 'Entrada Recambios';
-        let labelSalida = esTaller ? 'Salida Taller' : 'Salida Recambios';
+    // Filtrado inteligente por departamento
+    window.cochesHistorialMemoria = todosLosCoches.filter(c => {
+        if (window.rolActivo === 'taller') return c.finTaller === true || c.finTaller === "true";
+        if (window.rolActivo === 'recambios') return c.finRecambios === true || c.finRecambios === "true";
+        return false;
+    });
 
-        // Formateador de Fechas avanzado (DD/MM/YYYY)
-        const formatearFechaHora = (fechaString) => {
-            if (!fechaString || fechaString === 'Sin registro' || fechaString === '-') return 'S/D';
+    window.cochesHistorialMemoria.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
+
+    if (window.cochesHistorialMemoria.length === 0) {
+        contenedor.innerHTML = `
+        <div class="w-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-4">
+            <i class="ph-bold ph-archive text-4xl text-gray-300 mb-3 block"></i>
+            <p class="text-gray-500 font-bold text-lg">Tu departamento no tiene vehículos finalizados.</p>
+        </div>`;
+        return;
+    }
+
+    // Dibujamos la tabla COMPLETA (<table>, <thead> y <tbody>) para que el navegador no rompa el diseño
+    contenedor.innerHTML = `
+    <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-200 mt-4 mb-4 gap-4">
+        <div class="relative w-full max-w-md">
+            <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg"></i>
+            <input type="text" id="buscadorHistorialLocal" onkeyup="window.filtrarHistorialLocal()" placeholder="Buscar Bastidor, Matrícula o Modelo..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-[#001e50] focus:ring-1 focus:ring-[#001e50] transition-all">
+        </div>
+        <div class="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 whitespace-nowrap">
+            <span id="contadorHistorial" class="text-[#001e50] font-black">${window.cochesHistorialMemoria.length}</span> Operaciones Registradas
+        </div>
+    </div>
+    
+    <div class="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead class="bg-[#001e50] text-white">
+                <tr>
+                    <th class="p-4 text-[10px] tracking-widest font-black uppercase w-1/5">Vehículo</th>
+                    <th class="p-4 text-[10px] tracking-widest font-black uppercase">Operación</th>
+                    <th class="p-4 text-[10px] tracking-widest font-black uppercase">Fechas</th>
+                    <th class="p-4 text-[10px] tracking-widest font-black uppercase w-1/3">Notas y Adjuntos</th>
+                    <th class="p-4 text-[10px] tracking-widest font-black uppercase text-center">Chat</th>
+                </tr>
+            </thead>
+            <tbody id="cuerpoTablaHistorial" class="divide-y divide-gray-100">
+            </tbody>
+        </table>
+        <div id="btnCargarMasContainer" class="p-4 bg-gray-50 border-t border-gray-200 text-center transition-colors hover:bg-gray-100 cursor-pointer" onclick="window.cargarMasHistorial()">
+            <button class="text-[#001e50] font-black text-xs flex items-center justify-center gap-1 mx-auto uppercase tracking-widest"><i class="ph-bold ph-plus-circle text-base"></i> Cargar operaciones anteriores</button>
+        </div>
+    </div>`;
+
+    window.limiteHistorial = 20;
+    window.pintarFilasHistorial(window.cochesHistorialMemoria.slice(0, window.limiteHistorial));
+};
+
+// Pintor de Filas y Fechas
+window.pintarFilasHistorial = function(lista) {
+    const tbody = document.getElementById('cuerpoTablaHistorial');
+    if (!tbody) return;
+
+    if (lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-12 text-center text-gray-400 font-bold text-base"><i class="ph-bold ph-magnifying-glass text-3xl mb-2 block"></i>No hay resultados para esta búsqueda.</td></tr>';
+        document.getElementById('btnCargarMasContainer').style.display = 'none';
+        return;
+    }
+
+    tbody.innerHTML = lista.map(c => {
+        // Formateador robusto a Español (DD/MM/YYYY)
+        const formatear = (str) => {
+            if (!str || str === '-' || str === 'Sin registro') return 'S/D';
             try {
-                if (fechaString.includes('-') || fechaString.includes('T')) {
-                    let f = new Date(fechaString);
+                if (str.includes('-') || str.includes('T')) {
+                    let f = new Date(str);
                     if (!isNaN(f.getTime())) {
                         let dia = String(f.getDate()).padStart(2, '0');
                         let mes = String(f.getMonth() + 1).padStart(2, '0');
@@ -503,53 +542,84 @@ window.renderizarTablaHistorialDpto = function(coches) {
                         return `${dia}/${mes}/${anio}`;
                     }
                 }
-                return fechaString; 
-            } catch(e) {
-                return fechaString;
-            }
+                return str;
+            } catch(e) { return str; }
         };
 
+        let esTaller = window.rolActivo === 'taller';
+        let fEntrada = esTaller ? (c.fechaEntradaTaller || '-') : (c.fechaEntradaRecambios || '-');
+        let fCierre = esTaller ? (c.fechaFinTaller || c.fechaTaller || '-') : (c.fechaFinRecambios || c.fechaRecambios || '-');
+        let infoDpto = esTaller ? `OR: ${c.ordenTaller || '-'}` : `Ped: ${c.ordenRecambios || '-'}`;
+        
+        let labelEntrada = esTaller ? 'Entrada Taller' : 'Entrada Recambios';
+        let labelSalida = esTaller ? 'Salida Taller' : 'Salida Recambios';
+
+        let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27"); 
+        let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
+        let maS = encodeURIComponent(c.B || '').replace(/'/g, "%27");
+        let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
+        let btnChat = `<button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 mx-auto relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>`;
+
+        let arrPeticiones = esTaller ? 
+            (c.peticionesTaller || (c.instruccionTaller ? [{fecha: c.fechaEntradaTaller||'-', motivo: c.instruccionTaller, url: c.urlParte}] : [])) :
+            (c.peticionesRecambios || (c.instruccionRecambios ? [{fecha: c.fechaEntradaRecambios||'-', motivo: c.instruccionRecambios, url: c.urlParte}] : []));
+        
+        let htmlDocs = arrPeticiones.map(p => {
+            let adjunto = p.url ? `<a href="${p.url}" target="_blank" class="text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-0.5 rounded text-[10px] ml-1 font-black"><i class="ph-bold ph-paperclip"></i> PDF</a>` : '';
+            return `<div class="text-[11px] text-gray-600 mb-1.5 leading-tight bg-gray-50 p-2 rounded border border-gray-100"><b class="text-[#001e50]">${formatear(p.fecha)}:</b> ${p.motivo} ${adjunto}</div>`;
+        }).join('') || '<span class="text-[10px] text-gray-400 font-bold bg-gray-50 px-2 py-1 rounded">No hay notas adjuntas</span>';
+
         return `
-        <tr class="border-b border-gray-100 hover:bg-blue-50 transition-colors">
-            <td class="p-4 text-xs font-bold text-gray-500 tracking-wider">${c.bastidor || c.A || '-'}</td>
-            <td class="p-4 text-sm font-black text-[#001e50]">${c.matricula || c.B || 'S/M'}</td>
-            <td class="p-4 text-xs font-bold text-gray-700 uppercase">${c.modelo || c.C || '-'}</td>
-            <td class="p-4 text-xs font-bold text-amber-600 bg-amber-50 rounded-lg px-3">${infoDpto}</td>
-            <td class="p-4 text-xs font-bold text-blue-600">
-                <div class="mb-0.5 text-gray-400 text-[9px] uppercase tracking-widest">${labelEntrada}</div>
-                <i class="ph-bold ph-arrow-right text-base align-middle mr-1"></i> ${formatearFechaHora(fechaEntrada)}
+        <tr class="hover:bg-blue-50 transition-colors border-b border-gray-100">
+            <td class="p-4">
+                <div class="font-black text-[#001e50] uppercase text-sm">${c.modelo || c.C || '-'}</div>
+                <div class="text-[10px] font-bold text-gray-400 tracking-wider mt-1">VIN: ${c.bastidor || c.A || '-'} <br> MAT: ${c.matricula || c.B || 'S/M'}</div>
             </td>
-            <td class="p-4 text-xs font-bold text-emerald-600">
-                <div class="mb-0.5 text-gray-400 text-[9px] uppercase tracking-widest">${labelSalida}</div>
-                <i class="ph-bold ph-check-circle text-base align-middle mr-1"></i> ${formatearFechaHora(fechaSalida)}
+            <td class="p-4">
+                <span class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">${infoDpto}</span>
             </td>
+            <td class="p-4 text-xs font-bold whitespace-nowrap">
+                <div class="text-blue-600 mb-1.5">
+                    <span class="text-gray-400 text-[9px] uppercase tracking-widest block mb-0.5">${labelEntrada}</span>
+                    <i class="ph-bold ph-arrow-right"></i> ${formatear(fEntrada)}
+                </div>
+                <div class="text-emerald-600">
+                    <span class="text-gray-400 text-[9px] uppercase tracking-widest block mb-0.5">${labelSalida}</span>
+                    <i class="ph-bold ph-check-circle"></i> ${formatear(fCierre)}
+                </div>
+            </td>
+            <td class="p-4">${htmlDocs}</td>
+            <td class="p-4 text-center">${btnChat}</td>
         </tr>`;
     }).join('');
+
+    let buscando = document.getElementById('buscadorHistorialLocal') && document.getElementById('buscadorHistorialLocal').value.trim() !== "";
+    if (lista.length >= window.cochesHistorialMemoria.length || buscando) {
+        document.getElementById('btnCargarMasContainer').style.display = 'none';
+    } else {
+        document.getElementById('btnCargarMasContainer').style.display = 'block';
+    }
 };
 
-// ==========================================
-// 🔍 ACTIVACIÓN DEL BUSCADOR LOCAL
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-    const buscadorInput = document.getElementById('buscadorinput');
-    if(buscadorinput) {
-        buscadorinput.addEventListener('keyup', function() {
-            let texto = this.value.toLowerCase().trim();
-            if (!window.cochesHistorialMemoria) return;
-            
-            if (texto === '') {
-                window.renderizarTablaHistorialDpto(window.cochesHistorialMemoria);
-                return;
-            }
-
-            let filtrados = window.cochesHistorialMemoria.filter(c => {
-                let cadena = ((c.A||'') + ' ' + (c.B||'') + ' ' + (c.C||'')).toLowerCase();
-                return cadena.includes(texto);
-            });
-            window.renderizarTablaHistorialDpto(filtrados);
-        });
+window.filtrarHistorialLocal = function() {
+    let texto = document.getElementById('buscadorHistorialLocal').value.toLowerCase().trim();
+    if (texto === '') {
+        window.pintarFilasHistorial(window.cochesHistorialMemoria.slice(0, window.limiteHistorial));
+        document.getElementById('contadorHistorial').innerText = window.cochesHistorialMemoria.length;
+        return;
     }
-});
+    let filtrados = window.cochesHistorialMemoria.filter(c => {
+        let cadenaFiltro = ((c.bastidor||'') + ' ' + (c.A||'') + ' ' + (c.matricula||'') + ' ' + (c.B||'') + ' ' + (c.modelo||'') + ' ' + (c.C||'')).toLowerCase();
+        return cadenaFiltro.includes(texto);
+    });
+    window.pintarFilasHistorial(filtrados);
+    document.getElementById('contadorHistorial').innerText = filtrados.length;
+};
+
+window.cargarMasHistorial = function() {
+    window.limiteHistorial += 20;
+    window.pintarFilasHistorial(window.cochesHistorialMemoria.slice(0, window.limiteHistorial));
+};
 
 window.renderEntregados = function() {
    let div = document.getElementById('contenedorEntregados');
