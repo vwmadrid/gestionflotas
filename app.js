@@ -833,3 +833,10 @@ window.cambiarPestana = function(pestana) {
         document.body.classList.remove('viendo-historial');
     }
 };
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => { if (typeof window.cargarChatGlobal === 'function' && window.usuarioActivo) window.cargarChatGlobal(); }, 2000);
+    const widget = document.getElementById('chatGlobalWidget'); const boton = document.getElementById('btnAbrirChatGlobal');
+    if (widget) document.body.appendChild(widget); if (boton) document.body.appendChild(boton);
+    const inputChat = document.getElementById('chatGlobalInput');
+    if (inputChat) inputChat.addEventListener('keypress', function (e) { if (e.key === 'Enter') window.enviarMensajeGlobalUI(); });
+});
