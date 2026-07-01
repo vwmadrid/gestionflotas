@@ -254,12 +254,23 @@ window.mostrarPopupAtrasados = function() {
                 let cM = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].MANUEL : null;
                 let cA = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].ANTONIO : null;
 
-                function obtenerBloqueo(agenteAbuscar) {
+               function obtenerBloqueo(agenteAbuscar) {
                     if (!window.datosVacaciones) return null;
                     return window.datosVacaciones.find(b => {
-                        if(b.agente !== agenteAbuscar && b.agente !== 'AMBOS') return false;
-                        if(b.tipo === 'dia_completo') return dateKey >= b.fechaInicio && dateKey <= b.fechaFin;
-                        if(b.tipo === 'hora_suelta') return b.fecha === dateKey && b.hora === (hora + ':00');
+                        // 1. Buscamos por el nombre de variable correcto: operarioAfectado
+                        if(b.operarioAfectado !== agenteAbuscar && b.operarioAfectado !== 'AMBOS') return false;
+                        
+                        // 2. Si son vacaciones (días completos)
+                        if(b.tipo === 'vacaciones') {
+                            return dateKey >= b.fechaInicio && dateKey <= b.fechaFin;
+                        }
+                        
+                        // 3. Si es un bloqueo de horas sueltas (rango de inicio a fin)
+                        if(b.tipo === 'hora_suelta') {
+                            let horaCeldaActual = hora + ':00'; // Añadimos los ceros para comparar bien (ej. 16:00)
+                            return dateKey === b.fechaInicio && horaCeldaActual >= b.horaInicio && horaCeldaActual <= b.horaFin;
+                        }
+                        
                         return false;
                     });
                 }
