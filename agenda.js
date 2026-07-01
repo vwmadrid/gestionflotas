@@ -890,10 +890,32 @@ window.crearCitaManual = async function() {
     });
 
     if (formValues) {
-        // 1. Limpiamos el texto del rol para evitar fallos por mayúsculas o espacios
+        // 🔥 1. RADAR DE COLISIONES: Comprobamos si el hueco ya está ocupado
+        let fechaElegida = formValues.fecha;
+        let horaElegida = formValues.hora;
+        let agenteElegido = formValues.agente;
+        
+        let huecoOcupado = window.datosAgenda.find(c => 
+            c.fechaHora.includes(`${fechaElegida}T${horaElegida}`) && 
+            c.agente === agenteElegido &&
+            !c.isBlock && 
+            c.matricula !== "---" 
+        );
+
+        if (huecoOcupado) {
+            Swal.fire({
+                icon: 'error',
+                title: '¡Hueco Ocupado!',
+                html: `Ya existe una cita para <b>${agenteElegido}</b> a las <b>${horaElegida}h</b>.<br><br>Coche asignado: <b class="text-[#001e50]">${huecoOcupado.modelo} (${huecoOcupado.matricula || 'S/M'})</b><br><br>Por favor, elige otra hora u otro asesor de entregas.`,
+                confirmButtonColor: '#001e50'
+            });
+            return; // 🛑 Frenazo en seco: detenemos el código aquí y no guardamos nada en Firebase
+        }
+
+        // 2. Limpiamos el texto del rol para evitar fallos por mayúsculas o espacios
         let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
         
-        // 2. Asignamos el estado correcto
+        // 3. Asignamos el estado correcto
         const estadoAsignado = (rolLimpio === "backoffice" || rolLimpio === "administracion") ? "pendiente" : "confirmada";
         
         try {
@@ -904,7 +926,7 @@ window.crearCitaManual = async function() {
                 telefono: formValues.telefono || "", email: formValues.email || "", bastidor: formValues.bastidor || "",
                 renting: formValues.renting || "", entregaVO: formValues.devuelveVehiculo || "NO", 
                 notas: formValues.notas || "", creadoPor: window.usuarioActivo, 
-                estado: estadoAsignado // <-- Se inyecta el estado correcto
+                estado: estadoAsignado 
             });
 
             // 🔥 DISPARADOR DE CORREO: Solo enviamos si NO es pendiente
@@ -922,7 +944,6 @@ window.crearCitaManual = async function() {
             Swal.fire('Fallo', 'Error al conectar con Firebase.', 'error'); 
         }
     }
-}; // <-- Fin de la función crearCitaManual
 }; // <-- Fin de la función crearCitaManual
     window.generarListadoDiario = async function() {
     const { value: fechaSeleccionada } = await Swal.fire({
