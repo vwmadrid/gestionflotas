@@ -187,12 +187,11 @@ window.aplicarPermisosPorRol = function() {
             botonesInternos.forEach(btn => {
                 const clickAccion = (btn.getAttribute('onclick') || '').toLowerCase();
                 
-                // 🔥 AQUÍ ESTÁ LA MAGIA: Hemos añadido 'pedirinst' al salvoconducto de seguridad
+                // 🔥 SALVOCONDUCTO: Añadimos pedirinst para que Back Office pueda hacer clic
                 if (!clickAccion.includes('abrirchat') && 
                     !clickAccion.includes('nota') && 
                     !clickAccion.includes('crearcitamanual') &&
-                    !clickAccion.includes('pedirinst')) { // <-- NUEVO SALVOCONDUCTO
-                    
+                    !clickAccion.includes('pedirinst')) {
                     btn.disabled = true;
                     btn.style.opacity = '0.4';
                     btn.style.cursor = 'not-allowed';
@@ -202,7 +201,6 @@ window.aplicarPermisosPorRol = function() {
         });
     }
 };
-
 window.iniciarAppDirectamente = function(rol, usuario) {
     window.rolActivo = rol;
     window.userRole = rol; 
