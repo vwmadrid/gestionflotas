@@ -123,9 +123,13 @@ window.renderTarjetaCompacta = function(c) {
       <div class="flex gap-1 flex-shrink-0">
          <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
          <button onclick="window.editarVehiculoBasico('${c.fila}', '${escA}', '${escB}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info"><i class="ph-bold ph-pencil-simple text-lg"></i></button>
-         <button onclick="window.marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors"><i class="ph-bold ph-key text-lg"></i></button>
+         <button onclick="window.marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors" title="Entregar Vehículo"><i class="ph-bold ph-key text-lg"></i></button>
+         
+         <!-- 🔥 NUEVO BOTÓN: Revertir a logística -->
+         <button onclick="window.revertirLogistica('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-amber-500 hover:text-white shadow-sm transition-colors" title="Devolver a Logística (En Tránsito)"><i class="ph-bold ph-arrow-u-up-left text-lg"></i></button>
+         
          <button onclick="window.gestionarTraslado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white shadow-sm transition-colors" title="Traslado a Concesionario"><i class="ph-bold ph-airplane-takeoff text-lg"></i></button>
-         <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>    
+         <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>  
       </div>
     </div>
     
@@ -205,8 +209,12 @@ window.renderTablaModoExcel = function(datosFiltrados) {
          
          <td class="font-bold text-[#001e50] text-center bg-blue-50">${c.fechaCita || '-'}</td>
          <td class="text-center flex items-center justify-center gap-3 pt-2 pb-2 px-2">
-            <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="text-[#25D366] hover:scale-110 relative"><i class="ph-fill ph-whatsapp-logo text-xl"></i>${burbuja}</button>
+            <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="text-[#25D366] hover:scale-110 relative" title="Abrir Chat"><i class="ph-fill ph-whatsapp-logo text-xl"></i>${burbuja}</button>
             <button onclick="window.marcarComoEntregado('${c.fila}')" class="text-gray-400 hover:text-emerald-600" title="Entregar"><i class="ph-bold ph-key text-xl"></i></button>
+            
+            <!-- 🔥 NUEVO BOTÓN EXCEL: Revertir a logística -->
+            <button onclick="window.revertirLogistica('${c.fila}')" class="text-gray-400 hover:text-amber-500" title="Devolver a Logística"><i class="ph-bold ph-arrow-u-up-left text-xl"></i></button>
+            
             <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="text-red-400 hover:text-red-600" title="Eliminar vehículo"><i class="ph-bold ph-trash text-xl"></i></button>
          </td>
       </tr>`;
@@ -502,17 +510,98 @@ window.marcarComoEntregado = function(id) {
     });
 };
 
+// ==========================================
+// 🚛 GESTIÓN DE TRASLADOS EN GRÚA
+// ==========================================
 window.gestionarTraslado = async function(id) {
     const { value: formValues } = await Swal.fire({
-        title: 'Traslado',
-        html: `<input id="concesionario-destino" class="swal2-input !w-full !m-0 !mb-3" placeholder="Destino"><input type="file" id="acta-traslado" accept=".pdf,image/*" class="swal2-file text-sm w-full">`,
-        confirmButtonText: 'Finalizar', confirmButtonColor: '#f97316', showCancelButton: true,
-        preConfirm: () => { if(!document.getElementById('concesionario-destino').value) return Swal.showValidationMessage('Destino obligatorio'); return { dest: document.getElementById('concesionario-destino').value, file: document.getElementById('acta-traslado').files[0] }; }
+        title: 'Traslado en Grúa',
+        html: `
+            <div style="text-align:left; font-family: 'Inter', sans-serif;">
+                <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Concesionario Destino:</label>
+                <input id="concesionario-destino" class="swal2-input !w-full !m-0 !mb-4 text-center uppercase" placeholder="Ej: Castellana Wagen">
+                
+                <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Acta de Traslado (PDF/Imagen):</label>
+                <input type="file" id="acta-traslado" accept=".pdf,image/*" class="swal2-file text-sm w-full border border-gray-300 rounded p-2">
+            </div>
+        `,
+        confirmButtonText: 'Finalizar Traslado', 
+        confirmButtonColor: '#f97316', 
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => { 
+            const dest = document.getElementById('concesionario-destino').value.toUpperCase().trim();
+            const file = document.getElementById('acta-traslado').files[0];
+            
+            if(!dest) return Swal.showValidationMessage('El destino es obligatorio'); 
+            
+            return { dest, file }; 
+        }
     });
-    if(formValues) {
-        await window.updateDoc(window.doc(window.db, "vehiculos", id), { entregado: true, fechaEntrega: new Date().toLocaleDateString('es-ES'), tipoFinalizacion: 'TRASLADO', conesionarioDestino: formValues.dest });
-        Swal.fire('Registrado', 'Traslado completado.', 'success');
-        setTimeout(() => window.renderizarVistas(), 500);
+
+    if (formValues) {
+        // Función interna encargada de escribir en Firebase
+        const guardarEnBaseDeDatos = async (urlArchivo) => {
+            await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
+                entregado: true, 
+                fechaEntrega: new Date().toLocaleDateString('es-ES'), 
+                tipoFinalizacion: 'TRASLADO', 
+                concesionarioDestino: formValues.dest, // Se ha corregido el error tipográfico
+                urlActaTraslado: urlArchivo || null    // Almacenamos el enlace del PDF si se subió
+            });
+            
+            Swal.fire('Registrado', 'El traslado y el acta se han guardado en el historial.', 'success');
+            
+            // Actualizamos la vista para que el cambio se refleje inmediatamente
+            setTimeout(() => {
+                if(typeof window.renderizarVistas === 'function') window.renderizarVistas();
+                if(typeof window.renderEntregados === 'function') window.renderEntregados();
+            }, 500);
+        };
+
+        // Lógica de subida: comprobamos si el usuario ha adjuntado un archivo
+        if (formValues.file) {
+            Swal.fire({ 
+                title: 'Procesando acta...', 
+                text: 'Subiendo documento a la nube.', 
+                didOpen: () => Swal.showLoading(), 
+                allowOutsideClick: false 
+            });
+            
+            const reader = new FileReader(); 
+            reader.readAsDataURL(formValues.file);
+            
+            reader.onload = async () => {
+                try {
+                    // Llamada al script de subida
+                    const res = await fetch('https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec', { 
+                        method: 'POST', 
+                        body: JSON.stringify({ 
+                            base64: reader.result, 
+                            fileName: formValues.file.name, 
+                            mimeType: formValues.file.type 
+                        }) 
+                    });
+                    
+                    const data = await res.json(); 
+                    
+                    // Al recibir la URL del archivo, escribimos en Firebase
+                    await guardarEnBaseDeDatos(data.url);
+                    
+                } catch (error) {
+                    console.error("Error al subir el acta:", error);
+                    Swal.fire('Error de conexión', 'No se pudo subir el archivo. Inténtalo de nuevo.', 'error');
+                }
+            };
+        } else {
+            // Si el usuario no adjuntó ningún archivo, guardamos directamente los datos de texto
+            Swal.fire({ 
+                title: 'Registrando traslado...', 
+                didOpen: () => Swal.showLoading(), 
+                allowOutsideClick: false 
+            });
+            await guardarEnBaseDeDatos(null);
+        }
     }
 };
 
@@ -542,18 +631,18 @@ window.pedirInst = function(btn, id, depto) {
     console.log("👤 Rol detectado en el sistema:", window.rolActivo);
 
     // 🔥 1. COMPROBACIÓN DE INVENTARIO Y PERMISOS ESPECIALES
-    // Buscamos el coche en nuestra memoria temporal para ver si ha llegado
     let coche = todosLosCoches.find(c => c.fila === id);
     let enInventario = coche && coche.pasoAInventario !== false;
     
     let rolLimpio = String(window.rolActivo || '').toLowerCase().trim();
-    let tieneSuperpoderes = (rolLimpio === 'backoffice' || rolLimpio === 'admin' || rolLimpio === 'administracion');
+    // ✅ HEMOS AÑADIDO 'entregas' A LA LISTA DE SUPERPODERES
+    let tieneSuperpoderes = (rolLimpio === 'backoffice' || rolLimpio === 'admin' || rolLimpio === 'administracion' || rolLimpio === 'entregas');
 
     // Si no está en inventario y NO tiene superpoderes, bloqueamos.
     if (!enInventario && !tieneSuperpoderes) {
         Swal.fire({
             title: 'Vehículo en Tránsito',
-            text: 'Este vehículo aún no ha llegado físicamente a la campa. Solo el equipo de Administración o Back Office puede adelantar peticiones antes de su llegada.',
+            text: 'Este vehículo aún no ha llegado físicamente a la campa. Solo los equipos autorizados pueden adelantar peticiones antes de su llegada.',
             icon: 'warning',
             confirmButtonColor: '#001e50'
         });
@@ -582,13 +671,11 @@ window.pedirInst = function(btn, id, depto) {
             let departamento = String(depto).toLowerCase().trim();
             
             try {
-                // Ejecutamos la subida a Firebase
                 if(file) { 
                     window.subirYEnviar(id, departamento, ins, file); 
                 } else { 
                     window.mandarSinArchivo(id, departamento, ins); 
                 }
-                console.log("✅ Función de guardado lanzada con éxito.");
             } catch (error) {
                 console.error("❌ Fallo crítico al intentar guardar:", error);
                 Swal.fire('Error interno', 'El proceso se ha roto al intentar guardar. Revisa la consola.', 'error');
@@ -942,6 +1029,7 @@ window.descargarExcelReal = function() {
     XLSX.writeFile(wb, "Inventario_Activo.xlsx");
 };
 
+
 window.deshacerEntrega = async function(id) {
     let coche = todosLosCoches.find(c => c.fila === id);
     let modeloCoche = coche ? coche.C : "el vehículo seleccionado";
@@ -962,6 +1050,35 @@ window.deshacerEntrega = async function(id) {
                     else { window.renderEntregados(); }
                 }, 500);
             } catch (error) { Swal.fire('Error', 'No se pudo restaurar el vehículo.', 'error'); }
+        }
+    });
+};
+// ==========================================
+// ⏪ REVERTIR VEHÍCULO A LOGÍSTICA
+// ==========================================
+window.revertirLogistica = function(id) {
+    Swal.fire({
+        title: '¿Devolver a Logística?',
+        text: 'El vehículo saldrá del inventario actual y volverá a estar "En Tránsito" en la pestaña de Logística Renting.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b', // Color ámbar para advertencias reversibles
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, devolver',
+        cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                Swal.fire({title: 'Revirtiendo...', didOpen: () => Swal.showLoading()});
+                // Cambiamos el estado pasoAInventario de nuevo a false
+                await window.updateDoc(window.doc(window.db, "vehiculos", id), { pasoAInventario: false });
+                Swal.fire('¡Devuelto!', 'El vehículo ha regresado a Logística.', 'success');
+                // Refrescamos la vista para que el cambio sea inmediato
+                if(typeof window.renderizarVistas === 'function') window.renderizarVistas();
+            } catch (error) {
+                console.error("Error al revertir:", error);
+                Swal.fire('Error', 'No se pudo revertir el vehículo.', 'error');
+            }
         }
     });
 };

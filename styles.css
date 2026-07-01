@@ -1,3 +1,16 @@
+    /**
+ * ============================================================================
+ * PROYECTO: GesCar OS (Hojas de Estilo - UI/UX)
+ * COMPONENTES: GesCar OS Core, App Clientes, Web Renting
+ * AUTORES: Manuel Arjona Carrera y Miriam Olmo Fernández(M2 Code Systems)
+ * AÑO: 2026
+ * ============================================================================
+ * * Todos los derechos reservados.
+ * Este código fuente y su diseño visual son propiedad intelectual 
+ * de M2 Code Systems. Queda estrictamente prohibida su copia, 
+ * distribución, modificación o uso no autorizado.
+ * * ============================================================================
+ */
     body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; }
     .card-mini { background: white; border-radius: 12px; border: 1px solid #e2e8f0; transition: transform 0.2s; display: flex; flex-direction: column; }
     .card-mini:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #001e50; }

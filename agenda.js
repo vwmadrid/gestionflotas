@@ -254,23 +254,12 @@ window.mostrarPopupAtrasados = function() {
                 let cM = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].MANUEL : null;
                 let cA = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? agendaEstructurada[dateKey][hora].ANTONIO : null;
 
-               function obtenerBloqueo(agenteAbuscar) {
+                function obtenerBloqueo(agenteAbuscar) {
                     if (!window.datosVacaciones) return null;
                     return window.datosVacaciones.find(b => {
-                        // 1. Buscamos por el nombre de variable correcto: operarioAfectado
-                        if(b.operarioAfectado !== agenteAbuscar && b.operarioAfectado !== 'AMBOS') return false;
-                        
-                        // 2. Si son vacaciones (días completos)
-                        if(b.tipo === 'vacaciones') {
-                            return dateKey >= b.fechaInicio && dateKey <= b.fechaFin;
-                        }
-                        
-                        // 3. Si es un bloqueo de horas sueltas (rango de inicio a fin)
-                        if(b.tipo === 'hora_suelta') {
-                            let horaCeldaActual = hora + ':00'; // Añadimos los ceros para comparar bien (ej. 16:00)
-                            return dateKey === b.fechaInicio && horaCeldaActual >= b.horaInicio && horaCeldaActual <= b.horaFin;
-                        }
-                        
+                        if(b.agente !== agenteAbuscar && b.agente !== 'AMBOS') return false;
+                        if(b.tipo === 'dia_completo') return dateKey >= b.fechaInicio && dateKey <= b.fechaFin;
+                        if(b.tipo === 'hora_suelta') return b.fecha === dateKey && b.hora === (hora + ':00');
                         return false;
                     });
                 }
@@ -901,32 +890,10 @@ window.crearCitaManual = async function() {
     });
 
     if (formValues) {
-        // 🔥 1. RADAR DE COLISIONES: Comprobamos si el hueco ya está ocupado
-        let fechaElegida = formValues.fecha;
-        let horaElegida = formValues.hora;
-        let agenteElegido = formValues.agente;
-        
-        let huecoOcupado = window.datosAgenda.find(c => 
-            c.fechaHora.includes(`${fechaElegida}T${horaElegida}`) && 
-            c.agente === agenteElegido &&
-            !c.isBlock && 
-            c.matricula !== "---" 
-        );
-
-        if (huecoOcupado) {
-            Swal.fire({
-                icon: 'error',
-                title: '¡Hueco Ocupado!',
-                html: `Ya existe una cita para <b>${agenteElegido}</b> a las <b>${horaElegida}h</b>.<br><br>Coche asignado: <b class="text-[#001e50]">${huecoOcupado.modelo} (${huecoOcupado.matricula || 'S/M'})</b><br><br>Por favor, elige otra hora u otro asesor de entregas.`,
-                confirmButtonColor: '#001e50'
-            });
-            return; // 🛑 Frenazo en seco: detenemos el código aquí y no guardamos nada en Firebase
-        }
-
-        // 2. Limpiamos el texto del rol para evitar fallos por mayúsculas o espacios
+        // 1. Limpiamos el texto del rol para evitar fallos por mayúsculas o espacios
         let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
         
-        // 3. Asignamos el estado correcto
+        // 2. Asignamos el estado correcto
         const estadoAsignado = (rolLimpio === "backoffice" || rolLimpio === "administracion") ? "pendiente" : "confirmada";
         
         try {
@@ -937,7 +904,7 @@ window.crearCitaManual = async function() {
                 telefono: formValues.telefono || "", email: formValues.email || "", bastidor: formValues.bastidor || "",
                 renting: formValues.renting || "", entregaVO: formValues.devuelveVehiculo || "NO", 
                 notas: formValues.notas || "", creadoPor: window.usuarioActivo, 
-                estado: estadoAsignado 
+                estado: estadoAsignado // <-- Se inyecta el estado correcto
             });
 
             // 🔥 DISPARADOR DE CORREO: Solo enviamos si NO es pendiente
@@ -1193,47 +1160,6 @@ window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora)
             confirmButtonColor: '#001e50'
         });
     }
-};
-// ==========================================
-// 🔓 DESBLOQUEO DE HUECOS Y VACACIONES
-// ==========================================
-window.borrarBloqueo = function(idBloqueo) {
-    Swal.fire({
-        title: '¿Desbloquear este horario?',
-        text: "Vas a eliminar el bloqueo. El hueco volverá a estar libre en el cuadrante para agendar citas.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#10b981', 
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, liberar hueco',
-        cancelButtonText: 'Cancelar'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Liberando...',
-                didOpen: () => Swal.showLoading(),
-                allowOutsideClick: false
-            });
-
-            try {
-                // Eliminamos el documento de la colección en la base de datos
-                await window.deleteDoc(window.doc(window.db, "bloqueos_agenda", idBloqueo));
-                
-                // Mostramos un aviso discreto de éxito
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: 'Hueco liberado con éxito',
-                    showConfirmButton: false,
-                    timer: 3000
-                });
-            } catch (error) {
-                console.error("Error al borrar el bloqueo:", error);
-                Swal.fire('Fallo de conexión', 'No se ha podido liberar el hueco en el servidor.', 'error');
-            }
-        }
-    });
 };
 // ==========================================
 // 📧 MÓDULO DE NOTIFICACIONES POR EMAIL (BACKOFFICE)
