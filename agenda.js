@@ -923,6 +923,7 @@ window.crearCitaManual = async function() {
         }
     }
 }; // <-- Fin de la función crearCitaManual
+}; // <-- Fin de la función crearCitaManual
     window.generarListadoDiario = async function() {
     const { value: fechaSeleccionada } = await Swal.fire({
         title: 'Hoja de Preparaciones',
