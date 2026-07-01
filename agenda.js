@@ -1195,6 +1195,47 @@ window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora)
     }
 };
 // ==========================================
+// 🔓 DESBLOQUEO DE HUECOS Y VACACIONES
+// ==========================================
+window.borrarBloqueo = function(idBloqueo) {
+    Swal.fire({
+        title: '¿Desbloquear este horario?',
+        text: "Vas a eliminar el bloqueo. El hueco volverá a estar libre en el cuadrante para agendar citas.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981', 
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, liberar hueco',
+        cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Liberando...',
+                didOpen: () => Swal.showLoading(),
+                allowOutsideClick: false
+            });
+
+            try {
+                // Eliminamos el documento de la colección en la base de datos
+                await window.deleteDoc(window.doc(window.db, "bloqueos_agenda", idBloqueo));
+                
+                // Mostramos un aviso discreto de éxito
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Hueco liberado con éxito',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            } catch (error) {
+                console.error("Error al borrar el bloqueo:", error);
+                Swal.fire('Fallo de conexión', 'No se ha podido liberar el hueco en el servidor.', 'error');
+            }
+        }
+    });
+};
+// ==========================================
 // 📧 MÓDULO DE NOTIFICACIONES POR EMAIL (BACKOFFICE)
 // ==========================================
 window.dispararEmailCita = function(datosCita, accion) {
