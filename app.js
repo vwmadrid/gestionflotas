@@ -187,9 +187,12 @@ window.aplicarPermisosPorRol = function() {
             botonesInternos.forEach(btn => {
                 const clickAccion = (btn.getAttribute('onclick') || '').toLowerCase();
                 
+                // 🔥 AQUÍ ESTÁ LA MAGIA: Hemos añadido 'pedirinst' al salvoconducto de seguridad
                 if (!clickAccion.includes('abrirchat') && 
                     !clickAccion.includes('nota') && 
-                    !clickAccion.includes('crearcitamanual')) {
+                    !clickAccion.includes('crearcitamanual') &&
+                    !clickAccion.includes('pedirinst')) { // <-- NUEVO SALVOCONDUCTO
+                    
                     btn.disabled = true;
                     btn.style.opacity = '0.4';
                     btn.style.cursor = 'not-allowed';
