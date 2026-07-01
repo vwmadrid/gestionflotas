@@ -538,11 +538,29 @@ window.ejecutarDpto = async function(tipo, id, fin) {
 // 🛠️ AUTORIZACIÓN DE ENVÍOS (MODO DIAGNÓSTICO)
 // ==========================================
 window.pedirInst = function(btn, id, depto) {
-    // Imprimimos en consola los datos exactos que está recibiendo el sistema
     console.log("🛠️ Intentando abrir departamento:", depto);
     console.log("👤 Rol detectado en el sistema:", window.rolActivo);
 
-    // Lanzamos la ventana de petición directamente, sin restricciones de rol temporales
+    // 🔥 1. COMPROBACIÓN DE INVENTARIO Y PERMISOS ESPECIALES
+    // Buscamos el coche en nuestra memoria temporal para ver si ha llegado
+    let coche = todosLosCoches.find(c => c.fila === id);
+    let enInventario = coche && coche.pasoAInventario !== false;
+    
+    let rolLimpio = String(window.rolActivo || '').toLowerCase().trim();
+    let tieneSuperpoderes = (rolLimpio === 'backoffice' || rolLimpio === 'admin' || rolLimpio === 'administracion');
+
+    // Si no está en inventario y NO tiene superpoderes, bloqueamos.
+    if (!enInventario && !tieneSuperpoderes) {
+        Swal.fire({
+            title: 'Vehículo en Tránsito',
+            text: 'Este vehículo aún no ha llegado físicamente a la campa. Solo el equipo de Administración o Back Office puede adelantar peticiones antes de su llegada.',
+            icon: 'warning',
+            confirmButtonColor: '#001e50'
+        });
+        return; // Frenazo: no seguimos ejecutando el código
+    }
+
+    // 🔥 2. Si pasa el filtro, abrimos la ventana normal
     Swal.fire({ 
         title: 'Enviar a ' + String(depto).toUpperCase(), 
         html: `
