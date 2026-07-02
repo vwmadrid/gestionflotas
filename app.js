@@ -808,7 +808,7 @@ window.renderizarContactos = function() {
     // 1. Estructuramos a los usuarios por sus departamentos correspondientes
     const departamentos = {
         "ENTREGAS": ["MANUEL.ARJONA", "ANTONIO.BERMEJO"],
-        "TALLER": ["MANUEL.LOPEZ", "ALVARO.BELTRAN", "LORENA.LEOVEANU"],
+        "TALLER": ["MANUEL.LOPEZ", "ALVARO.BELTRAN", "LORENA.LEOVEANU"]
         "RECAMBIOS": ["SERGIO.CABALLERO", "FERNANDO.CRESPO", "JAIME.JORGE", "FERNANDO.REMON", "ABRAHAM.CANIZARES"],
         "BACKOFFICE": ["FATIMA.GARCIA", "GEMA.GOMEZ", "ALBERTO.GUTIERREZ", "RABAB.JAADAR", "RUBEN.GARCIA"]
     };
