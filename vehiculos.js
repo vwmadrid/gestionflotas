@@ -35,7 +35,137 @@ window.calcularProgreso = function(c) {
     if (pct === 100) color = 'bg-emerald-500';
     return { pct, color };
 };
+// Herramienta global para copiar al portapapeles
+window.copiarAlPortapapeles = function(texto) {
+    navigator.clipboard.writeText(texto).then(() => {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: '¡Copiado!',
+            text: texto,
+            showConfirmButton: false,
+            timer: 1500
+        });
+    }).catch(err => {
+        console.error('Error al copiar', err);
+        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Fallo al copiar', showConfirmButton: false, timer: 1500 });
+    });
+};
+// ==========================================
+// 🚛 GESTOR DE PEDIDOS A CAMPA
+// ==========================================
 
+// ==========================================
+// 🚛 GESTOR DE PEDIDOS A CAMPA
+// ==========================================
+
+window.abrirGestorPedidosCampa = function() {
+    // 1. Buscamos coches que tienen cita, NO están entregados, y NO están pedidos
+    let pendientesPedir = todosLosCoches.filter(c => c.fechaCita && c.entregado !== true && c.entregado !== "true" && c.cochePedido !== true);
+
+    if (pendientesPedir.length === 0) {
+        return Swal.fire({
+            title: '¡Todo al día!',
+            text: 'No tienes ningún vehículo agendado pendiente de solicitar a la campa.',
+            icon: 'success',
+            confirmButtonColor: '#001e50'
+        });
+    }
+
+    // 🔥 2. ORDENAMOS LA LISTA POR FECHA DE CITA (De más urgente a menos)
+    pendientesPedir.sort((a, b) => {
+        let parseFecha = (fStr) => {
+            if (!fStr) return 0;
+            // La fecha viene como "DD/MM/AAAA - HH:MMh", nos quedamos con la parte de la fecha
+            let fechaLimpia = fStr.split(' - ')[0]; 
+            let partes = fechaLimpia.split('/'); // [DD, MM, AAAA]
+            if (partes.length === 3) {
+                // Formato año, mes (empieza en 0), día
+                return new Date(partes[2], partes[1] - 1, partes[0]).getTime();
+            }
+            return 0;
+        };
+        return parseFecha(a.fechaCita) - parseFecha(b.fechaCita);
+    });
+
+    // 3. Generamos el HTML de la lista con los datos clave
+    let htmlLista = pendientesPedir.map(c => `
+        <div id="coche-pedido-${c.fila}" class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200 mb-2 transition-all duration-300">
+            <div class="text-left">
+                <p class="font-black text-sm text-[#001e50] uppercase">${c.C}</p>
+                <p class="text-xs font-bold text-gray-500 tracking-widest">VIN: ${c.A}</p>
+                <p class="text-xs font-bold text-[#00b0f0] mt-1"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</p>
+            </div>
+            <button onclick="window.marcarComoPedido('${c.fila}')" class="bg-white border border-gray-300 text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-500 transition-colors px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 shadow-sm">
+                <i class="ph-bold ph-check-square text-lg"></i> Pedir
+            </button>
+        </div>
+    `).join('');
+
+    // 4. Mostramos la ventana emergente con la lista
+    Swal.fire({
+        title: 'Bastidores Pendientes',
+        html: `<div class="max-h-80 overflow-y-auto mt-4 p-1 custom-scrollbar">${htmlLista}</div>`,
+        showConfirmButton: false,
+        showCancelButton: true,
+        cancelButtonText: 'Cerrar',
+        cancelButtonColor: '#6b7280',
+        width: '600px'
+    });
+};
+
+window.marcarComoPedido = async function(id) {
+    try {
+        // Ocultamos visualmente el elemento de la lista al instante
+        let divCoche = document.getElementById(`coche-pedido-${id}`);
+        if (divCoche) {
+            divCoche.style.opacity = '0';
+            setTimeout(() => divCoche.style.display = 'none', 300);
+        }
+
+        // 🔥 ACTULIZACIÓN LOCAL INSTANTÁNEA PARA QUE LA AGENDA LO VEA
+        let cocheLocal = todosLosCoches.find(c => c.fila === id);
+        if (cocheLocal) cocheLocal.cochePedido = true;
+
+        // Actualizamos en la base de datos de Firebase
+        await window.updateDoc(window.doc(window.db, "vehiculos", id), {
+            cochePedido: true
+        });
+
+        // 🔥 OBLIGAMOS A LA AGENDA A REPINTARSE PARA MOSTRAR LA ETIQUETA
+        if (typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes();
+        if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Marcado como pedido', showConfirmButton: false, timer: 1500 });
+        
+    } catch (error) {
+        console.error("Error al marcar pedido", error);
+        Swal.fire('Error', 'No se pudo guardar la información en la base de datos.', 'error');
+    }
+};
+
+window.marcarComoPedido = async function(id) {
+    try {
+        // Ocultamos visualmente el elemento de la lista al instante para que la experiencia sea muy rápida
+        let divCoche = document.getElementById(`coche-pedido-${id}`);
+        if (divCoche) {
+            divCoche.style.opacity = '0';
+            setTimeout(() => divCoche.style.display = 'none', 300);
+        }
+
+        // Actualizamos en la base de datos de Firebase
+        await window.updateDoc(window.doc(window.db, "vehiculos", id), {
+            cochePedido: true
+        });
+
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Marcado como pedido', showConfirmButton: false, timer: 1500 });
+        
+    } catch (error) {
+        console.error("Error al marcar pedido", error);
+        Swal.fire('Error', 'No se pudo guardar la información en la base de datos.', 'error');
+    }
+};
 window.renderizarVistas = function() {
    let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
    let inventario = todosLosCoches.filter(c => (c.pasoAInventario === true || c.pasoAInventario === "true") && (c.entregado !== true && c.entregado !== "true"));
@@ -113,19 +243,19 @@ window.renderTarjetaCompacta = function(c) {
   let htmlAlerta = isAlerta ? `<div class="bg-red-600 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-warning-circle text-sm"></i> ¡URGENTE! TIENE CITA EL ${c.fechaCita}</div>` : '';
 
   return `
-  <div class="card-mini ${borderAlerta} p-5 fila-coche">
+  <!-- Añadimos h-full flex flex-col para que ocupe todo el alto de su celda y no flote -->
+  <div class="card-mini ${borderAlerta} p-5 fila-coche h-full flex flex-col">
     ${htmlAlerta}
     <div class="flex justify-between items-start mb-2 gap-2">
       <div class="min-w-0 pr-2 flex-1">
         <h3 class="font-black text-base text-[#001e50] truncate uppercase">${c.C}</h3>
       </div>
-      <div class="flex gap-1 flex-shrink-0">
+      <div class="flex gap-1 flex-shrink-0 flex-wrap justify-end max-w-[150px]">
          <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
          <button onclick="window.editarVehiculoBasico('${c.fila}', '${escA}', '${escB}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info"><i class="ph-bold ph-pencil-simple text-lg"></i></button>
          <button onclick="window.marcarComoEntregado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-emerald-500 hover:text-white shadow-sm transition-colors" title="Entregar Vehículo"><i class="ph-bold ph-key text-lg"></i></button>
          
-         <!-- 🔥 NUEVO BOTÓN: Revertir a logística -->
-         <button onclick="window.revertirLogistica('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-amber-500 hover:text-white shadow-sm transition-colors" title="Devolver a Logística (En Tránsito)"><i class="ph-bold ph-arrow-u-up-left text-lg"></i></button>
+         <button onclick="window.revertirLogistica('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-amber-500 hover:text-white shadow-sm transition-colors" title="Devolver a Logística"><i class="ph-bold ph-arrow-u-up-left text-lg"></i></button>
          
          <button onclick="window.gestionarTraslado('${c.fila}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white shadow-sm transition-colors" title="Traslado a Concesionario"><i class="ph-bold ph-airplane-takeoff text-lg"></i></button>
          <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>  
@@ -137,19 +267,32 @@ window.renderTarjetaCompacta = function(c) {
         <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
     </div>
 
-    <div class="flex items-start justify-between mb-3 gap-2">
-       <div class="flex flex-col gap-1.5">
-           <span class="bg-gray-100 border border-gray-300 text-gray-800 px-2.5 py-1 rounded text-xs font-black tracking-widest shadow-sm w-max">${c.B}</span>
-           <span class="text-[9px] font-bold text-gray-400 tracking-widest">VIN: ${c.A}</span>
+    <!-- 🔧 ZONA REPARADA: Matrícula, Bastidor y Etiquetas -->
+    <div class="flex items-start justify-between mb-3 gap-2 overflow-hidden">
+       <!-- Botones clicables con restricción de ancho (truncate) -->
+       <div class="flex flex-col gap-1.5 min-w-0 flex-1">
+           <button onclick="window.copiarAlPortapapeles('${escB}')" title="Copiar" class="cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+               <span class="truncate">${c.B}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+           </button>
+           <button onclick="window.copiarAlPortapapeles('${escA}')" title="Copiar" class="cursor-pointer hover:bg-gray-100 transition-colors bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+               <span class="truncate">VIN: ${c.A}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+           </button>
        </div>
-       ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1 rounded font-black text-xs flex items-center gap-1"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}
+       
+       <!-- Etiquetas de Cita y Pedido -->
+       <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+           ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}
+           ${c.cochePedido ? `<div class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase tracking-widest"><i class="ph-bold ph-truck"></i> Pedido</div>` : ''}
+       </div>
     </div>
 
-    <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden">
+    <!-- Barra de progreso -->
+    <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden flex-shrink-0">
        <div class="${prog.color} h-2 transition-all duration-500" style="width: ${prog.pct}%"></div>
        <span class="absolute inset-0 flex items-center justify-center text-[7px] font-black text-gray-800 drop-shadow-md mix-blend-overlay">${prog.pct}%</span>
     </div>
 
+    <!-- MT-AUTO: Empuja el contenedor de botones de taller hacia abajo para igualar el diseño -->
     <div class="flex flex-col gap-2 mt-auto">
       <div class="flex gap-2 w-full">
         <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
