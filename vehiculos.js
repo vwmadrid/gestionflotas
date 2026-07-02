@@ -116,9 +116,8 @@ window.renderTarjetaCompacta = function(c) {
   <div class="card-mini ${borderAlerta} p-5 fila-coche">
     ${htmlAlerta}
     <div class="flex justify-between items-start mb-2 gap-2">
-      <div class="min-w-0 pr-2">
+      <div class="min-w-0 pr-2 flex-1">
         <h3 class="font-black text-base text-[#001e50] truncate uppercase">${c.C}</h3>
-        <p class="text-[10px] font-bold text-gray-400 mt-0.5 tracking-widest truncate">VIN: ${c.A}</p>
       </div>
       <div class="flex gap-1 flex-shrink-0">
          <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
@@ -138,8 +137,11 @@ window.renderTarjetaCompacta = function(c) {
         <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
     </div>
 
-    <div class="flex items-center justify-between mb-3">
-       <span class="bg-gray-100 border border-gray-300 text-gray-800 px-2.5 py-1 rounded text-xs font-black tracking-widest shadow-sm">${c.B}</span>
+    <div class="flex items-start justify-between mb-3 gap-2">
+       <div class="flex flex-col gap-1.5">
+           <span class="bg-gray-100 border border-gray-300 text-gray-800 px-2.5 py-1 rounded text-xs font-black tracking-widest shadow-sm w-max">${c.B}</span>
+           <span class="text-[9px] font-bold text-gray-400 tracking-widest">VIN: ${c.A}</span>
+       </div>
        ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1 rounded font-black text-xs flex items-center gap-1"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}
     </div>
 
@@ -338,7 +340,6 @@ window.editarRentingAgencia = async function(id, rentingActual, agenciaActual) {
     let valRenting = (!rentingActual || rentingActual === 'Renting' || rentingActual === 'null') ? '' : rentingActual;
     let valAgencia = (!agenciaActual || agenciaActual === 'Agencia' || agenciaActual === 'null') ? '' : agenciaActual;
 
-    // 2. Lanzamos la ventana con un diseño HTML súper simple que no rompa SweetAlert
     const { value: formValues } = await Swal.fire({
         title: 'Renting y Agencia',
         html: `
@@ -362,12 +363,10 @@ window.editarRentingAgencia = async function(id, rentingActual, agenciaActual) {
         }
     });
 
-    // 3. Guardamos en Firebase si el usuario le dio a "Guardar"
     if (formValues) {
         await window.updateDoc(window.doc(window.db, "vehiculos", id), formValues);
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Guardado', showConfirmButton: false, timer: 1500 });
-        
-        // Refrescamos las tarjetas para que el cambio se vea al instante
+ 
         if (typeof window.renderizarVistas === 'function') {
             setTimeout(() => window.renderizarVistas(), 400);
         }
@@ -377,18 +376,80 @@ window.editarRentingAgencia = async function(id, rentingActual, agenciaActual) {
 window.anadirVehiculoManual = async function() {
     const { value: formValues } = await Swal.fire({
         title: 'Añadir Vehículo Manual',
-        html: `<input id="add-bastidor" class="swal2-input !w-[80%] !m-0 !mb-3 text-center uppercase" placeholder="VIN"><input id="add-matricula" class="swal2-input !w-[80%] !m-0 !mb-3 text-center uppercase" placeholder="Matrícula"><input id="add-modelo" class="swal2-input !w-[80%] !m-0 text-center uppercase" placeholder="Modelo">`,
-        showCancelButton: true, confirmButtonColor: '#001e50', confirmButtonText: 'Añadir',
+        html: `
+            <input id="add-bastidor" class="swal2-input !w-[80%] !m-0 !mb-3 text-center uppercase" placeholder="VIN (Bastidor)">
+            <input id="add-matricula" class="swal2-input !w-[80%] !m-0 !mb-3 text-center uppercase" placeholder="Matrícula">
+            <input id="add-modelo" class="swal2-input !w-[80%] !m-0 text-center uppercase" placeholder="Modelo">
+        `,
+        showCancelButton: true, 
+        confirmButtonColor: '#001e50', 
+        confirmButtonText: 'Añadir',
         preConfirm: () => {
-            const b = document.getElementById('add-bastidor').value.toUpperCase().trim();
+            const b = document.getElementById('add-bastidor').value.toUpperCase().trim().replace(/\s/g, '');
+            const m = document.getElementById('add-matricula').value.toUpperCase().trim().replace(/\s/g, '');
+            const mod = document.getElementById('add-modelo').value.toUpperCase().trim() || "VW";
+            
             if (!b) return Swal.showValidationMessage('El bastidor es obligatorio');
-            return { bastidor: b, matricula: document.getElementById('add-matricula').value.toUpperCase().trim() || "S/M", modelo: document.getElementById('add-modelo').value.toUpperCase().trim() || "VW" };
+            
+            return { bastidor: b, matricula: m || "S/M", modelo: mod };
         }
     });
+
     if (formValues) {
-        let idNuevo = new Date().getTime().toString();
-        await window.setDoc(window.doc(window.db, "vehiculos", idNuevo), { bastidor: formValues.bastidor, matricula: formValues.matricula, Matricula: formValues.matricula, modelo: formValues.modelo, pasoAInventario: false, entregado: false, creadoEn: new Date().getTime() });
-        Swal.fire('¡Añadido!', 'Vehículo registrado.', 'success');
+        // 🔥 BARRIDO EN MEMORIA LOCAL (Bypass a la falta de window.where)
+        // Buscamos de forma ultra-segura cruzando tanto los nombres de campos nuevos como los antiguos de vuestra base de datos (A, B, bastidor, matricula)
+
+        // 🛡️ BARRERA 1: Comprobar si el BASTIDOR ya existe en el array local
+        let existeBastidor = todosLosCoches.some(c => {
+            let bLocal = String(c.bastidor || c.A || '').toUpperCase().replace(/\s/g, '');
+            return bLocal === formValues.bastidor;
+        });
+
+        if (existeBastidor) {
+            return Swal.fire({
+                title: '¡BASTIDOR DUPLICADO!', 
+                html: `El bastidor <b style="color:#ff4444;">${formValues.bastidor}</b> ya existe en el sistema.`, 
+                icon: 'warning', 
+                confirmButtonColor: '#001e50'
+            });
+        }
+
+        // 🛡️ BARRERA 2: Comprobar si la MATRÍCULA ya existe en el array local (Solo si no es "S/M")
+        if (formValues.matricula !== "S/M") {
+            let existeMatricula = todosLosCoches.some(c => {
+                let mLocal = String(c.matricula || c.Matricula || c.B || '').toUpperCase().replace(/\s/g, '');
+                return mLocal === formValues.matricula;
+            });
+            
+            if (existeMatricula) {
+                return Swal.fire({
+                    title: '¡MATRÍCULA DUPLICADA!', 
+                    html: `La matrícula <b style="color:#ff4444;">${formValues.matricula}</b> ya está registrada en otro vehículo.`, 
+                    icon: 'warning', 
+                    confirmButtonColor: '#001e50'
+                });
+            }
+        }
+
+        // ✅ VÍA LIBRE: Si ha pasado los dos filtros, guardamos en Firebase usando las funciones que SÍ existen
+        try {
+            let idNuevo = new Date().getTime().toString();
+            await window.setDoc(window.doc(window.db, "vehiculos", idNuevo), { 
+                bastidor: formValues.bastidor, 
+                matricula: formValues.matricula, 
+                Matricula: formValues.matricula, 
+                modelo: formValues.modelo, 
+                pasoAInventario: false, 
+                entregado: false, 
+                creadoEn: new Date().getTime() 
+            });
+            
+            Swal.fire('¡Añadido!', 'Vehículo registrado correctamente en Logística.', 'success');
+            
+        } catch (error) {
+            console.error("Error al guardar el vehículo:", error);
+            Swal.fire('Error de Permisos', 'No tienes permisos suficientes o estás usando un usuario sin autorización de escritura.', 'error');
+        }
     }
 };
 
