@@ -203,9 +203,15 @@ window.mostrarPopupAtrasados = function() {
             <div class="bg-[#001e50] text-white p-3 px-6 flex justify-between items-center shrink-0 z-30">
                <h2 class="text-base font-black tracking-widest uppercase flex items-center gap-2"><i class="ph-bold ph-calendar-grid-week text-xl text-[#00b0f0]"></i> Cuadrante</h2>
                
-               <div class="relative w-64">
-                   <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                   <input type="text" id="inputBusquedaAgenda" onkeyup="window.buscarEnAgenda()" placeholder="Buscar cliente, matrícula, modelo..." class="w-full pl-9 pr-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-sm text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-[#00b0f0] transition-all">
+               <div class="flex items-center gap-3">
+                   <button onclick="window.abrirGestorPedidosCampa()" class="bg-[#00b0f0] text-[#001e50] hover:bg-white px-4 py-1.5 rounded-lg font-black text-[10px] flex items-center gap-2 shadow-sm transition-colors uppercase tracking-widest">
+                       <i class="ph-bold ph-truck text-base"></i> Pendientes de Pedir
+                   </button>
+                   
+                   <div class="relative w-64">
+                       <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                       <input type="text" id="inputBusquedaAgenda" onkeyup="window.buscarEnAgenda()" placeholder="Buscar cliente, matrícula, modelo..." class="w-full pl-9 pr-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-sm text-white placeholder-gray-300 outline-none focus:ring-2 focus:ring-[#00b0f0] transition-all">
+                   </div>
                </div>
                
                <div class="flex items-center gap-4 bg-white/10 rounded-lg p-1.5 px-3 border border-white/20 shadow-sm backdrop-blur-sm">
@@ -335,7 +341,7 @@ window.mostrarPopupAtrasados = function() {
         }
     };
 
-    window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
+   window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
     let alturaClase = esUnico ? "min-h-[220px]" : "min-h-[140px]";
     
     if (!cita) {
@@ -363,7 +369,6 @@ window.mostrarPopupAtrasados = function() {
     let esPendiente = cita.estado === 'pendiente';
     let tagPendiente = esPendiente ? `<span class="bg-amber-100 text-amber-800 border border-amber-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1 animate-pulse"><i class="ph-bold ph-hourglass"></i> PENDIENTE</span>` : '';
     
-    // Estandarizamos el rol a minúsculas para que no falle por mayúsculas en las tarjetas
     let rolUsuarioLogueado = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
 
     if (esPendiente) {
@@ -388,6 +393,9 @@ window.mostrarPopupAtrasados = function() {
     let tagVO = (textoVO === 'SÍ' || textoVO === 'SI') ? `<span class="bg-purple-200 text-purple-900 border border-purple-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest"><i class="ph-bold ph-car-profile"></i> VO</span>` : '';
     let tagNotas = cita.notas ? `<span class="bg-yellow-200 text-yellow-900 border border-yellow-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1" title="${window.escapeJS(cita.notas)}"><i class="ph-bold ph-note"></i> NOTAS</span>` : '';
     
+    // 🔥 NUEVA ETIQUETA: Identifica visualmente si el coche ya está pedido a la campa
+    let tagPedido = (cocheEnBaseDatos && cocheEnBaseDatos.cochePedido) ? `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1" title="Pedido a Campa"><i class="ph-bold ph-truck"></i> PEDIDO</span>` : '';
+    
     let opacidad = "opacity-100"; let onclickCode = ""; let cursorClass = "";
     
     if (cita.isBlock) {
@@ -410,7 +418,6 @@ window.mostrarPopupAtrasados = function() {
         }
     }
 
-    // Botones rápidos para que Entregas acepte o rechace sin abrir la cita
     let botonesAprobacion = "";
     if (esPendiente && (rolUsuarioLogueado === 'entregas' || rolUsuarioLogueado === 'admin')) {
         botonesAprobacion = `
@@ -424,9 +431,9 @@ window.mostrarPopupAtrasados = function() {
     <div ${onclickCode} class="cita-tarjeta flex-1 rounded-lg p-2.5 relative border ${alturaClase} ${opacidad} flex flex-col justify-between transition-all ${cursorClass} ${borderColor}" style="background-color: ${bgColor};">
        ${alertaVisual}
        <div>
-         <div class="flex justify-between items-start mb-1">
+         <div class="flex justify-between items-start mb-1 gap-1">
            <h4 class="font-black text-[11px] ${textColor} uppercase leading-tight line-clamp-1 flex-1">${cita.modelo}</h4>
-           <div class="flex items-center">${tagVO} ${tagPendiente} ${tagNotas}</div>
+           <div class="flex items-center flex-wrap justify-end">${tagVO} ${tagPendiente} ${tagNotas} ${tagPedido}</div>
          </div>
          <div class="flex items-center gap-1.5 mb-1 flex-wrap">
             <p class="font-bold text-[10px] bg-white/80 px-1.5 py-0.5 rounded text-gray-900 tracking-widest">${cita.matricula}</p>
