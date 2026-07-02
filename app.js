@@ -808,7 +808,7 @@ window.renderizarContactos = function() {
     // 1. Estructuramos a los usuarios por sus departamentos correspondientes
     const departamentos = {
         "ENTREGAS": ["MANUEL.ARJONA", "ANTONIO.BERMEJO"],
-        "TALLER": ["MANUEL.LOPEZ", "ALVARO.BELTRAN", "LORENA.LEOVEANU"]
+        "TALLER": ["MANUEL.LOPEZ", "ALVARO.BELTRAN", "LORENA.LEOVEANU"], // 🔥 ¡COMA CORREGIDA AQUÍ!
         "RECAMBIOS": ["SERGIO.CABALLERO", "FERNANDO.CRESPO", "JAIME.JORGE", "FERNANDO.REMON", "ABRAHAM.CANIZARES"],
         "BACKOFFICE": ["FATIMA.GARCIA", "GEMA.GOMEZ", "ALBERTO.GUTIERREZ", "RABAB.JAADAR", "RUBEN.GARCIA"]
     };
@@ -822,7 +822,6 @@ window.renderizarContactos = function() {
         htmlGenerado += `<div class="bg-gray-200 text-[#001e50] text-[10px] font-black p-1.5 pl-3 uppercase tracking-widest mt-2 first:mt-0 shadow-inner">${nombreDpto}</div>`;
         
         // B) Dibujamos el botón especial para enviar mensajes a todo el grupo.
-        // Convertimos el nombre a minúsculas ('taller', 'entregas') para que coincida con los roles de tu base de datos.
         let rolDestino = nombreDpto.toLowerCase(); 
         htmlGenerado += `
         <div class="p-3 border-b border-gray-300 bg-blue-50 hover:bg-blue-100 cursor-pointer text-xs font-black flex items-center gap-3 text-[#001e50] transition-colors" onclick="window.abrirChatEspecifico('${rolDestino}')">
@@ -845,7 +844,6 @@ window.renderizarContactos = function() {
     // 3. Inyectamos todo el HTML construido de golpe en la pantalla
     contenedor.innerHTML = htmlGenerado;
 };
-
 window.abrirChatEspecifico = function(usuario) {
     window.chatDestinoActual = usuario; 
     
