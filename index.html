@@ -10,10 +10,23 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    
     <meta name="author" content="Manuel Arjona Carrera & Miriam Olmo Fernández">
     <meta name="copyright" content="© 2026 Manuel Arjona Carrera & Miriam Olmo Fernández. Todos los derechos reservados.">
     <meta name="application-name" content="GesCar OS / M2 Code Systems">
   <meta charset="UTF-8">
+  <script>
+    // 1. Detectamos si es un móvil
+    const esDispositivoMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // 2. Leemos la memoria para saber de qué departamento es el usuario guardado
+    const departamentoGuardado = localStorage.getItem('vw_departamento');
+
+    // 3. Redirección inteligente: Solo enviamos a la App si es móvil Y es de entregas
+    if (esDispositivoMovil && departamentoGuardado === 'entregas') {
+        window.location.href = "./www/index.html";
+    }
+</script>
   <title>Castellana Wagen M-40 - Control de Vehículos</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
