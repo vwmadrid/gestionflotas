@@ -54,7 +54,8 @@
 </head>
 <body class="text-gray-800 antialiased h-screen flex flex-col bg-gray-100 overflow-hidden" data-vista="movil">
 <script>
-    if (!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (!esMovil) {
         window.location.replace('./index.html');
     }
 </script>
