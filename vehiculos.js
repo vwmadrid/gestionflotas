@@ -242,6 +242,51 @@ window.renderTarjetaCompacta = function(c) {
   let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
   let htmlAlerta = isAlerta ? `<div class="bg-red-600 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-warning-circle text-sm"></i> ¡URGENTE! TIENE CITA EL ${c.fechaCita}</div>` : '';
 
+    let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+    let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion');
+
+    if (esBackoffice) {
+        return `
+        <div class="card-mini ${borderAlerta} p-5 fila-coche h-full flex flex-col">
+            ${htmlAlerta}
+            <div class="flex justify-between items-start mb-2 gap-2">
+                <div class="min-w-0 pr-2 flex-1">
+                    <h3 class="font-black text-base text-[#001e50] truncate uppercase">${c.C}</h3>
+                    <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
+                </div>
+                <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-9 h-9 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm" title="Chat interno"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <div class="text-[10px] bg-gray-50 border border-gray-200 text-gray-600 px-2 py-1.5 rounded font-bold truncate"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</div>
+                <div class="text-[10px] bg-gray-50 border border-gray-200 text-gray-600 px-2 py-1.5 rounded font-bold truncate"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</div>
+            </div>
+
+            <div class="flex items-start justify-between mb-3 gap-2 overflow-hidden">
+                <div class="flex flex-col gap-1.5 min-w-0 flex-1">
+                    <div class="bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm truncate">${c.B}</div>
+                    <div class="bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm truncate">VIN: ${c.A}</div>
+                </div>
+                <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}
+                    ${c.cochePedido ? `<div class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase tracking-widest"><i class="ph-bold ph-truck"></i> Pedido</div>` : ''}
+                </div>
+            </div>
+
+            <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden flex-shrink-0">
+                 <div class="${prog.color} h-2 transition-all duration-500" style="width: ${prog.pct}%"></div>
+                 <span class="absolute inset-0 flex items-center justify-center text-[7px] font-black text-gray-800 drop-shadow-md mix-blend-overlay">${prog.pct}%</span>
+            </div>
+
+            <div class="flex flex-col gap-2 mt-auto">
+                <div class="flex gap-2 w-full">
+                    <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
+                    <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+                </div>
+            </div>
+        </div>`;
+    }
+
   return `
   <!-- Añadimos h-full flex flex-col para que ocupe todo el alto de su celda y no flote -->
   <div class="card-mini ${borderAlerta} p-5 fila-coche h-full flex flex-col">
