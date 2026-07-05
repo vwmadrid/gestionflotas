@@ -745,6 +745,27 @@ window.mostrarPopupAtrasados = function() {
                     notaEditadaPor: window.usuarioActivo || 'BACKOFFICE',
                     notaEditadaTs: new Date().getTime()
                 });
+
+                try {
+                    const matLimpia = String(matricula || '').replace(/\s/g, '').toUpperCase();
+                    const basLimpio = String(bastidor || '').replace(/\s/g, '').toUpperCase();
+                    const cocheVinculado = (typeof todosLosCoches !== 'undefined' ? todosLosCoches : []).find(c => {
+                        const matVeh = String(c.B || c.matricula || c.Matricula || '').replace(/\s/g, '').toUpperCase();
+                        const basVeh = String(c.A || c.bastidor || '').replace(/\s/g, '').toUpperCase();
+                        return (matLimpia && matVeh && matVeh === matLimpia) || (basLimpio && basVeh && basVeh === basLimpio);
+                    });
+
+                    if (cocheVinculado && cocheVinculado.fila) {
+                        await window.updateDoc(window.doc(window.db, "vehiculos", cocheVinculado.fila), {
+                            notaAgenda: nuevasNotas,
+                            notaAgendaEditadaPor: window.usuarioActivo || 'BACKOFFICE',
+                            notaAgendaTs: new Date().getTime()
+                        });
+                    }
+                } catch (eSync) {
+                    console.warn('Aviso: no se pudo sincronizar nota en vehículo vinculado', eSync);
+                }
+
                 Swal.fire('Guardado', 'Nota actualizada correctamente.', 'success');
             } catch (error) {
                 console.error(error);

@@ -241,6 +241,8 @@ window.renderTarjetaCompacta = function(c) {
 
   let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
   let htmlAlerta = isAlerta ? `<div class="bg-red-600 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-warning-circle text-sm"></i> ¡URGENTE! TIENE CITA EL ${c.fechaCita}</div>` : '';
+    let notaAgendaLimpia = String(c.notaAgenda || '').replace(/[<>]/g, '').trim();
+    let htmlNotaAgenda = notaAgendaLimpia ? `<div class="text-[10px] bg-yellow-50 border border-yellow-200 text-yellow-900 px-2 py-1.5 rounded mb-3 font-bold"><i class="ph-bold ph-note"></i> Nota Agenda: ${notaAgendaLimpia}</div>` : '';
 
     let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
     let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion');
@@ -261,6 +263,8 @@ window.renderTarjetaCompacta = function(c) {
                 <div class="text-[10px] bg-gray-50 border border-gray-200 text-gray-600 px-2 py-1.5 rounded font-bold truncate"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</div>
                 <div class="text-[10px] bg-gray-50 border border-gray-200 text-gray-600 px-2 py-1.5 rounded font-bold truncate"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</div>
             </div>
+
+            ${htmlNotaAgenda}
 
             <div class="flex items-start justify-between mb-3 gap-2 overflow-hidden">
                 <div class="flex flex-col gap-1.5 min-w-0 flex-1">
@@ -315,6 +319,8 @@ window.renderTarjetaCompacta = function(c) {
         <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
         <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
     </div>
+
+    ${htmlNotaAgenda}
 
     <!-- 🔧 ZONA REPARADA: Matrícula, Bastidor y Etiquetas -->
     <div class="flex items-start justify-between mb-3 gap-2 overflow-hidden">
