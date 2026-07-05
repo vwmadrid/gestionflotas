@@ -236,6 +236,17 @@
     const esPaginaMovil = pathname.includes('movil.html') || document.body?.dataset?.vista === 'movil';
     const usarVistaMovil = esPaginaMovil || window.esVistaAgendaMovil();
     const div = document.getElementById('contenedorAgenda');
+
+    // No pintamos nada de Agenda fuera de su pestaña para evitar "bleed" visual.
+    if (window.tabActiva !== 'agenda') {
+        if (div) {
+            div.classList.add('hidden');
+            div.style.display = 'none';
+            div.innerHTML = '';
+        }
+        return;
+    }
+
     if (div) {
         div.classList.remove('hidden');
         div.style.display = 'flex';
