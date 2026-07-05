@@ -7,11 +7,11 @@
     <title>GesCar OS - Entregas Móvil</title>f
     
     <!-- 1. ENLACES PWA OBLIGATORIOS (Añadidos) -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/gestionflotas/www/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="GesCar Entregas">
-    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="apple-touch-icon" href="/gestionflotas/www/icon.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -232,12 +232,10 @@
         });
     </script>
 
-    <!-- 4. REGISTRO DEL SERVICE WORKER PARA INSTALACIÓN ANDROID (Añadido) -->
-    <!-- ⚙️ REGISTRO DEL SERVICE WORKER PARA INSTALACIÓN PWA -->
+    <!-- REGISTRO DEL SERVICE WORKER -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Usamos la ruta absoluta de GitHub Pages
                 navigator.serviceWorker.register('/gestionflotas/www/sw.js')
                     .then((registration) => {
                         console.log('Motor PWA activado con éxito.', registration.scope);
