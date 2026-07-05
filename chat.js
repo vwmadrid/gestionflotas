@@ -20,31 +20,41 @@
 
 window.obtenerBurbujaChat = function(chatObj) {
     if (!chatObj || !chatObj.history) return '';
+    const rol = String(window.userRole || window.rolActivo || '').toUpperCase();
     let hs = chatObj.history;
-    let lo = chatObj.lastOpened ? (chatObj.lastOpened[userRole.toUpperCase()] || 0) : 0;
-    let nl = hs.filter(m => m.fecha > lo && m.rol.toUpperCase() !== userRole.toUpperCase()).length;
+    let lo = chatObj.lastOpened ? (chatObj.lastOpened[rol] || 0) : 0;
+    let nl = hs.filter(m => m.fecha > lo && String(m.rol || '').toUpperCase() !== rol).length;
     if (nl > 0) return `<span class="absolute -top-2 -right-2 bg-red-500 border-2 border-white text-white text-[9px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-md animate-pulse">${nl}</span>`;
     return '';
 };
 
 window.abrirChat = async function(id, mod, mat, jsonStr) {
-    document.getElementById('chatFilaActiva').value = id;
-    document.getElementById('chatTituloCoche').innerText = decodeURIComponent(mod);
-    document.getElementById('chatSubtitulo').innerText = "Matrícula: " + decodeURIComponent(mat);
-    
-    let chatObj = { history: [], lastOpened: {} }; 
+    const filaInput = document.getElementById('chatFilaActiva');
+    const titulo = document.getElementById('chatTituloCoche');
+    const subtitulo = document.getElementById('chatSubtitulo');
+    const modal = document.getElementById('chatModal');
+    if (!filaInput || !titulo || !subtitulo || !modal) return;
+
+    filaInput.value = id;
+    titulo.innerText = decodeURIComponent(mod || 'Vehículo');
+    subtitulo.innerText = 'Matrícula: ' + decodeURIComponent(mat || '');
+
+    let chatObj = { history: [], lastOpened: {} };
     try { if (jsonStr) chatObj = JSON.parse(decodeURIComponent(jsonStr)); } catch(e) {}
-    
-    window.dibujarMsj(chatObj.history || []); 
-    document.getElementById('chatModal').classList.remove('hidden');
+
+    window.dibujarMsj(chatObj.history || []);
+    modal.classList.remove('hidden');
 
     let timestamp = new Date().getTime();
+    let rol = String(window.userRole || window.rolActivo || '').toUpperCase();
     let updateData = { chatInfo: { lastOpened: {} } };
-    updateData.chatInfo.lastOpened[userRole.toUpperCase()] = timestamp;
-    
+    updateData.chatInfo.lastOpened[rol] = timestamp;
+
     try {
-        await window.setDoc(window.doc(window.db, "vehiculos", id), updateData, { merge: true });
-    } catch(e) { console.log("Aviso: No se pudo resetear la notificación", e); }
+        if (window.db && window.doc && window.setDoc) {
+            await window.setDoc(window.doc(window.db, 'vehiculos', id), updateData, { merge: true });
+        }
+    } catch(e) { console.log('Aviso: No se pudo resetear la notificación', e); }
 };
 
 window.cerrarChat = function() { 
@@ -53,44 +63,53 @@ window.cerrarChat = function() {
 
 window.dibujarMsj = function(hist) {
     const cont = document.getElementById('chatMessages');
-    if (!hist || hist.length === 0) { 
-        cont.innerHTML = `<p class="text-center text-xs font-bold mt-4 text-gray-500">No hay mensajes. ¡Escribe el primero!</p>`; 
-        return; 
+    if (!cont) return;
+    if (!hist || hist.length === 0) {
+        cont.innerHTML = `<p class="text-center text-xs font-bold mt-4 text-gray-500">No hay mensajes. ¡Escribe el primero!</p>`;
+        return;
     }
-    
+
+    const rol = String(window.userRole || window.rolActivo || '').toUpperCase();
     cont.innerHTML = hist.map(m => {
-        let isMe = m.rol.toUpperCase() === userRole.toUpperCase();
+        let isMe = String(m.rol || '').toUpperCase() === rol;
         let bubbleClass = isMe ? 'wa-me' : 'wa-other';
-        let etiquetaRemitente = isMe ? '' : `<span style="display:block; font-size:9px; font-weight:900; color:#128c7e; margin-bottom:3px; text-transform:uppercase;">${m.rol}</span>`;
-        return `<div class="wa-bubble ${bubbleClass}"><div>${etiquetaRemitente}${m.texto}</div></div>`;
+        let etiquetaRemitente = isMe ? '' : `<span style="display:block; font-size:9px; font-weight:900; color:#128c7e; margin-bottom:3px; text-transform:uppercase;">${m.rol || 'Sistema'}</span>`;
+        return `<div class="wa-bubble ${bubbleClass}"><div>${etiquetaRemitente}${m.texto || ''}</div></div>`;
     }).join('');
-    
+
     setTimeout(() => { cont.scrollTop = cont.scrollHeight; }, 50);
 };
 
 window.enviarMensajeChat = async function() {
-    const id = document.getElementById('chatFilaActiva').value; 
-    const txt = document.getElementById('chatInput').value.trim();
-    if (!id || !txt) return; 
-    
-    document.getElementById('chatInput').value = ""; 
-    
-    const nM = { rol: userRole.toUpperCase(), fecha: new Date().getTime(), texto: txt };
-    let c = todosLosCoches.find(x => x.fila === id);
-    
-    if (c) { 
-        if (!c.chatData) c.chatData = {}; 
+    const filaInput = document.getElementById('chatFilaActiva');
+    const input = document.getElementById('chatInput');
+    if (!filaInput || !input) return;
+
+    const id = filaInput.value;
+    const txt = input.value.trim();
+    if (!id || !txt) return;
+
+    input.value = '';
+
+    const rol = String(window.userRole || window.rolActivo || '').toUpperCase();
+    const nM = { rol, fecha: new Date().getTime(), texto: txt };
+    let c = typeof todosLosCoches !== 'undefined' ? todosLosCoches.find(x => x.fila === id) : null;
+
+    if (c) {
+        if (!c.chatData) c.chatData = {};
         if (!c.chatData.history) c.chatData.history = [];
-        c.chatData.history.push(nM); 
-        window.dibujarMsj(c.chatData.history); 
+        c.chatData.history.push(nM);
+        window.dibujarMsj(c.chatData.history);
     }
-    
+
     try {
-        await window.setDoc(window.doc(window.db, "vehiculos", id), { 
-            chatInfo: { history: window.arrayUnion(nM) } 
-        }, { merge: true });
+        if (window.db && window.doc && window.setDoc && window.arrayUnion) {
+            await window.setDoc(window.doc(window.db, 'vehiculos', id), {
+                chatInfo: { history: window.arrayUnion(nM) }
+            }, { merge: true });
+        }
     } catch (e) {
-        console.error("Error al enviar el mensaje:", e);
+        console.error('Error al enviar el mensaje:', e);
     }
 };
 
