@@ -629,7 +629,41 @@ window.marcarComoEntregado = function(id) {
     
     // 2. Buscamos el teléfono en la agenda cruzando la matrícula
     let cita = window.datosAgenda && window.datosAgenda.find(cita => (cita.matricula && coche.B && String(cita.matricula).replace(/\s/g, '') === String(coche.B).replace(/\s/g, '')));
-    let tlf = cita ? cita.telefono : "";
+    let tlf = cita ? cita.telefono : (coche.telefono || "");
+
+    const normalizarTelefonoWhatsapp = function(numeroRaw) {
+        let digitos = String(numeroRaw || '').replace(/\D/g, '');
+        if (!digitos) return '';
+        if (digitos.length === 9) return '34' + digitos;
+        if (digitos.length > 9 && digitos.startsWith('34')) return digitos;
+        return digitos;
+    };
+
+    const abrirWhatsappSeguro = function(telefonoRaw, mensaje) {
+        const tel = normalizarTelefonoWhatsapp(telefonoRaw);
+        if (!tel || tel.length < 11) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Entrega guardada',
+                text: 'No hay un teléfono válido para abrir WhatsApp. Puedes enviarlo manualmente desde la agenda.'
+            });
+            return;
+        }
+
+        const textoCodificado = encodeURIComponent(mensaje || '');
+        const urlApi = `https://api.whatsapp.com/send?phone=${tel}&text=${textoCodificado}`;
+        const urlWaMe = `https://wa.me/${tel}?text=${textoCodificado}`;
+
+        try {
+            window.location.assign(urlApi);
+        } catch (e) {
+            try {
+                window.location.href = urlWaMe;
+            } catch (e2) {
+                Swal.fire('Aviso', 'No se pudo abrir WhatsApp automáticamente.', 'warning');
+            }
+        }
+    };
 
     // 3. Desplegamos el formulario
     Swal.fire({
@@ -667,7 +701,7 @@ window.marcarComoEntregado = function(id) {
                 if (urlFoto) msg += `Aquí tienes un recuerdo de tu entrega: ${urlFoto} `;
                 if (pedirResena) msg += `Te agradeceríamos mucho si nos dejas una pequeña reseña en Google: https://search.google.com/local/writereview?placeid=ChIJc6vL3fIvQg0RGT8iQzPAenc`;
                 
-                let enlaceWhatsApp = `https://wa.me/34${tlf.replace(/\s/g, '')}?text=${encodeURIComponent(msg)}`;
+                const telefonoWhatsapp = normalizarTelefonoWhatsapp(tlf);
 
                 // C. Mostramos el botón manual para EVITAR el bloqueo del navegador
                 Swal.fire({
@@ -678,10 +712,11 @@ window.marcarComoEntregado = function(id) {
                     confirmButtonColor: '#25D366',
                     cancelButtonColor: '#6b7280',
                     confirmButtonText: '<i class="ph-bold ph-whatsapp-logo text-lg"></i> Enviar WhatsApp',
-                    cancelButtonText: 'Cerrar sin enviar'
+                    cancelButtonText: 'Cerrar sin enviar',
+                    showConfirmButton: !!telefonoWhatsapp
                 }).then((waResult) => {
                     if (waResult.isConfirmed) {
-                        window.open(enlaceWhatsApp, "_blank");
+                        abrirWhatsappSeguro(telefonoWhatsapp, msg);
                     }
                     // Refrescamos la pantalla al final de todo el proceso
                     if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
