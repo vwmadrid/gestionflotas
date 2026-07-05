@@ -139,9 +139,21 @@
         let fechaStr = fechaCitaObj.getFullYear() + '-' + String(fechaCitaObj.getMonth() + 1).padStart(2, '0') + '-' + String(fechaCitaObj.getDate()).padStart(2, '0');
         let horaStr = String(fechaCitaObj.getHours()).padStart(2, '0') + ':00';
         let idFb = (cita && cita.fila) ? cita.fila : 'no_db';
+
+        if (idFb === 'no_db') {
+            const matCita = String(cita.matricula || '').replace(/\s/g, '').toUpperCase();
+            const basCita = String(cita.bastidor || '').replace(/\s/g, '').toUpperCase();
+            const cocheVinculado = (typeof todosLosCoches !== 'undefined' ? todosLosCoches : []).find(c => {
+                const matVeh = String(c.B || c.matricula || c.Matricula || '').replace(/\s/g, '').toUpperCase();
+                const basVeh = String(c.A || c.bastidor || '').replace(/\s/g, '').toUpperCase();
+                return (matCita && matVeh && matVeh === matCita) || (basCita && basVeh && basVeh === basCita);
+            });
+            if (cocheVinculado && cocheVinculado.fila) idFb = cocheVinculado.fila;
+        }
+
         let modeloSeguro = window.escapeJS(cita.modelo || 'Vehículo');
         let matriculaSegura = window.escapeJS(cita.matricula || 'S/M');
-        window.preguntarSiEntregado(idFb, modeloSeguro, matriculaSegura, fechaStr, horaStr);
+        window.preguntarSiEntregado(idFb, modeloSeguro, matriculaSegura, fechaStr, horaStr, cita.id || null);
     };
 
     window.renderAgendaMovil = function() {
@@ -1356,7 +1368,7 @@ window.crearCitaManual = async function() {
     // ==========================================
 // ❓ PREGUNTA INTERMEDIA PARA CITAS ATRASADAS
 // ==========================================
-window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora) {
+window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora, citaId) {
     // Si la cita no tiene un coche vinculado en la base de datos activa
     if (idFb === 'no_db') {
         return Swal.fire('Aviso', 'Este vehículo no se encuentra en la base de datos activa.', 'info');
@@ -1386,7 +1398,7 @@ window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora)
     if (result.isConfirmed) {
         // Si se entregó, conectamos con la herramienta de WhatsApp y fotografía
         if (typeof window.marcarComoEntregado === 'function') {
-            window.marcarComoEntregado(idFb);
+            window.marcarComoEntregado(idFb, { idCita: citaId || null, mantenerCita: true });
         } else {
             Swal.fire('Error', 'La función de entrega no está disponible en este momento.', 'error');
         }
