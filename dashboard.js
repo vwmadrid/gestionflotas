@@ -35,11 +35,25 @@ window.renderizarDashboard = function() {
             return p[2] === yearSel && m === monthSel;
         };
 
-        const esVODelMes = (fechaHoraStr) => {
-            if (!fechaHoraStr) return false;
-            let p = fechaHoraStr.split('T')[0].split('-'); 
-            if (p.length !== 3) return false;
-            return p[0] === yearSel && p[1] === monthSel;
+        const normalizarFechaDashboard = (valor) => {
+            if (!valor) return null;
+            if (valor instanceof Date) return isNaN(valor.getTime()) ? null : valor;
+            if (typeof valor?.toDate === 'function') {
+                const f = valor.toDate();
+                return isNaN(f.getTime()) ? null : f;
+            }
+            if (typeof valor?.seconds === 'number') {
+                const f = new Date(valor.seconds * 1000);
+                return isNaN(f.getTime()) ? null : f;
+            }
+            const f = new Date(String(valor).replace(' ', 'T'));
+            return isNaN(f.getTime()) ? null : f;
+        };
+
+        const esVODelMes = (fechaHoraRaw) => {
+            const fecha = normalizarFechaDashboard(fechaHoraRaw);
+            if (!fecha) return false;
+            return String(fecha.getFullYear()) === yearSel && String(fecha.getMonth() + 1).padStart(2, '0') === monthSel;
         };
 
         // 2. Filtrado de datos
@@ -93,9 +107,9 @@ window.renderizarDashboard = function() {
         (window.datosAgenda || []).forEach(cita => {
             let vo = String(cita.entregaVO || '').toUpperCase().trim();
             if ((vo === 'SÍ' || vo === 'SI') && cita.fechaHora) {
-                let partes = cita.fechaHora.split('T')[0].split('-');
-                if (partes.length === 3 && partes[0] === yearSel) {
-                    let mesIndex = parseInt(partes[1], 10) - 1;
+                const fechaCita = normalizarFechaDashboard(cita.fechaHora);
+                if (fechaCita && String(fechaCita.getFullYear()) === yearSel) {
+                    let mesIndex = fechaCita.getMonth();
                     if (mesIndex >= 0 && mesIndex <= 11) recogidasPorMes[mesIndex]++;
                 }
             }
