@@ -1,0 +1,16 @@
+{
+  "name": "GesCar OS",
+  "short_name": "GesCar",
+  "description": "Aplicación de logística y entregas de Castellana Wagen",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#001e50",
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
