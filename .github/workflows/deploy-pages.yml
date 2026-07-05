@@ -33,10 +33,60 @@ jobs:
         with:
           path: .
 
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - name: Deploy to GitHub Pages (attempt 1)
+        id: deploy_attempt_1
+        continue-on-error: true
         uses: actions/deploy-pages@v5
         with:
           artifact_name: github-pages
           timeout: 1200000
           error_count: 30
+
+      - name: Wait before retry 2
+        if: steps.deploy_attempt_1.outcome == 'failure'
+        run: sleep 20
+
+      - name: Deploy to GitHub Pages (attempt 2)
+        id: deploy_attempt_2
+        if: steps.deploy_attempt_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages
+          timeout: 1200000
+          error_count: 30
+
+      - name: Wait before retry 3
+        if: steps.deploy_attempt_1.outcome == 'failure' && steps.deploy_attempt_2.outcome == 'failure'
+        run: sleep 30
+
+      - name: Deploy to GitHub Pages (attempt 3)
+        id: deploy_attempt_3
+        if: steps.deploy_attempt_1.outcome == 'failure' && steps.deploy_attempt_2.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages
+          timeout: 1200000
+          error_count: 30
+
+      - name: Resolve deployment result
+        id: deployment
+        shell: bash
+        run: |
+          PAGE_URL=""
+
+          if [ "${{ steps.deploy_attempt_1.outcome }}" = "success" ]; then
+            PAGE_URL="${{ steps.deploy_attempt_1.outputs.page_url }}"
+          elif [ "${{ steps.deploy_attempt_2.outcome }}" = "success" ]; then
+            PAGE_URL="${{ steps.deploy_attempt_2.outputs.page_url }}"
+          elif [ "${{ steps.deploy_attempt_3.outcome }}" = "success" ]; then
+            PAGE_URL="${{ steps.deploy_attempt_3.outputs.page_url }}"
+          fi
+
+          if [ -z "$PAGE_URL" ]; then
+            echo "All deploy attempts failed" >&2
+            exit 1
+          fi
+
+          echo "page_url=$PAGE_URL" >> "$GITHUB_OUTPUT"
