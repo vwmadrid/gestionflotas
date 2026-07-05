@@ -492,9 +492,29 @@ window.mostrarPopupAtrasados = function() {
                 function obtenerBloqueo(agenteAbuscar) {
                     if (!window.datosVacaciones) return null;
                     return window.datosVacaciones.find(b => {
-                        if(b.agente !== agenteAbuscar && b.agente !== 'AMBOS') return false;
-                        if(b.tipo === 'dia_completo') return dateKey >= b.fechaInicio && dateKey <= b.fechaFin;
-                        if(b.tipo === 'hora_suelta') return b.fecha === dateKey && b.hora === (hora + ':00');
+                        const agenteBloqueado = b.operarioAfectado || b.agente || 'AMBOS';
+                        const tipoBloqueo = b.tipo || 'vacaciones';
+
+                        if (agenteBloqueado !== agenteAbuscar && agenteBloqueado !== 'AMBOS') return false;
+
+                        if (tipoBloqueo === 'dia_completo' || tipoBloqueo === 'vacaciones') {
+                            const inicio = b.fechaInicio || b.fecha;
+                            const fin = b.fechaFin || b.fechaInicio || b.fecha;
+                            return !!inicio && dateKey >= inicio && dateKey <= fin;
+                        }
+
+                        if (tipoBloqueo === 'hora_suelta') {
+                            const fechaBloqueo = b.fecha || b.fechaInicio;
+                            if (fechaBloqueo !== dateKey) return false;
+
+                            const horaCelda = hora + ':00';
+                            if (b.hora) return b.hora === horaCelda;
+
+                            if (b.horaInicio && b.horaFin) {
+                                return horaCelda >= b.horaInicio && horaCelda <= b.horaFin;
+                            }
+                        }
+
                         return false;
                     });
                 }
