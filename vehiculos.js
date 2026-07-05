@@ -677,9 +677,24 @@ window.borrarVehiculo = async function(id, modelo) {
 // ==========================================
 // 🚀 FUNCIÓN DE ENTREGA Y WHATSAPP AUTOMÁTICO
 // ==========================================
-window.marcarComoEntregado = function(id) {
+window.marcarComoEntregado = function(id, opciones) {
+    const opts = opciones || {};
     // 1. Buscamos el coche en nuestra memoria local
     let coche = todosLosCoches.find(c => c.fila === id);
+
+    if (!coche && opts.idCita && Array.isArray(window.datosAgenda)) {
+        const cita = window.datosAgenda.find(c => c.id === opts.idCita);
+        if (cita) {
+            const matCita = String(cita.matricula || '').replace(/\s/g, '').toUpperCase();
+            const basCita = String(cita.bastidor || '').replace(/\s/g, '').toUpperCase();
+            coche = todosLosCoches.find(c => {
+                const matVeh = String(c.B || c.matricula || c.Matricula || '').replace(/\s/g, '').toUpperCase();
+                const basVeh = String(c.A || c.bastidor || '').replace(/\s/g, '').toUpperCase();
+                return (matCita && matVeh && matVeh === matCita) || (basCita && basVeh && basVeh === basCita);
+            });
+        }
+    }
+
     if (!coche) return Swal.fire('Error', 'Vehículo no encontrado en el sistema.', 'error');
     
     // 2. Buscamos el teléfono en la agenda cruzando la matrícula
@@ -750,15 +765,44 @@ window.marcarComoEntregado = function(id) {
                     entregado: true, 
                     fechaEntrega: new Date().toLocaleDateString('es-ES') 
                 });
+
+                // B. La cita se mantiene: la marcamos como confirmada/entregada y no se elimina.
+                try {
+                    const tsEntrega = new Date().getTime();
+                    if (opts.idCita) {
+                        await window.updateDoc(window.doc(window.db, "citas_agenda", opts.idCita), {
+                            estado: "confirmada",
+                            entregado: true,
+                            fechaEntrega: tsEntrega
+                        });
+                    } else if (Array.isArray(window.datosAgenda)) {
+                        const matCoche = String(coche.B || '').replace(/\s/g, '').toUpperCase();
+                        const basCoche = String(coche.A || '').replace(/\s/g, '').toUpperCase();
+                        const citaVinculada = window.datosAgenda.find(cita => {
+                            const matCita = String(cita.matricula || '').replace(/\s/g, '').toUpperCase();
+                            const basCita = String(cita.bastidor || '').replace(/\s/g, '').toUpperCase();
+                            return (matCoche && matCita && matCita === matCoche) || (basCoche && basCita && basCita === basCoche);
+                        });
+                        if (citaVinculada && citaVinculada.id) {
+                            await window.updateDoc(window.doc(window.db, "citas_agenda", citaVinculada.id), {
+                                estado: "confirmada",
+                                entregado: true,
+                                fechaEntrega: tsEntrega
+                            });
+                        }
+                    }
+                } catch (errorCita) {
+                    console.warn('No se pudo actualizar la cita tras la entrega, pero el vehículo quedó entregado.', errorCita);
+                }
                 
-                // B. Construimos el mensaje dinámico
+                // C. Construimos el mensaje dinámico
                 let msg = `¡Hola! Un placer entregarte tu ${coche.C}. `;
                 if (urlFoto) msg += `Aquí tienes un recuerdo de tu entrega: ${urlFoto} `;
                 if (pedirResena) msg += `Te agradeceríamos mucho si nos dejas una pequeña reseña en Google: https://search.google.com/local/writereview?placeid=ChIJc6vL3fIvQg0RGT8iQzPAenc`;
                 
                 const telefonoWhatsapp = normalizarTelefonoWhatsapp(tlf);
 
-                // C. Mostramos el botón manual para EVITAR el bloqueo del navegador
+                // D. Mostramos el botón manual para EVITAR el bloqueo del navegador
                 Swal.fire({
                     title: '¡Operación Registrada!',
                     text: 'El vehículo ya está en el historial de finalizados.',
