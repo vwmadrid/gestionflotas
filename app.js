@@ -469,6 +469,13 @@ window.cambiarPestana = function(pestana) {
             }
             if (buscador) buscador.style.display = 'none';
             const b = document.getElementById('botonesAgenda'); if (b) b.style.display = 'flex';
+            const esBackoffice = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '') === 'backoffice';
+            const btnListado = document.getElementById('btnAgendaListado');
+            const btnNuevaCita = document.getElementById('btnAgendaNuevaCita');
+            const btnBloqueos = document.getElementById('btnAgendaBloqueos');
+            if (btnListado) btnListado.style.display = esBackoffice ? 'none' : 'inline-flex';
+            if (btnBloqueos) btnBloqueos.style.display = esBackoffice ? 'none' : 'inline-flex';
+            if (btnNuevaCita) btnNuevaCita.style.display = 'inline-flex';
             if (typeof window.renderAgenda === 'function') window.renderAgenda();
         } else if (pestana === 'entregados') {
             const c = document.getElementById('contenedorEntregados'); if (c) c.style.display = 'block';
@@ -635,6 +642,39 @@ window.renderLogistica = function() {
                txtRecambiosInfo += arrRecambios.map(p => `<div class="text-[9px] leading-tight text-gray-600 mt-1 border-l-2 border-teal-500 pl-1.5"><b class="text-teal-700">${p.fecha}:</b> ${p.motivo} ${p.url ? `<a href="${p.url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1" title="Ver Acta"><i class="ph-bold ph-paperclip"></i></a>` : ''}</div>`).join('');
 
                let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
+                             let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+                             let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion');
+
+                             if (esBackoffice) {
+                                     return `
+                                     <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm fila-coche flex flex-col relative">
+                                         <div class="flex justify-between items-start mb-2 gap-2">
+                                                <div class="min-w-0 pr-2">
+                                                        <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
+                                                        <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
+                                                </div>
+                                                <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-9 h-9 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm" title="Chat interno"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
+                                         </div>
+
+                                         <div class="flex gap-2 mb-3">
+                                                <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</div>
+                                                <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</div>
+                                         </div>
+
+                                         <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
+                                                <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Doc: ${c.fechaDoc || 'Pte'}</div>
+                                                <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Trans: ${c.fechaTransporte || 'Pte'}</div>
+                                                <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Prep: ${c.fechaPreparacion || 'Pte'}</div>
+                                         </div>
+
+                                         <div class="flex flex-col gap-2">
+                                             <div class="flex gap-2 w-full">
+                                                 <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
+                                                 <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+                                             </div>
+                                         </div>
+                                     </div>`;
+                             }
 
                return `
                <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm fila-coche flex flex-col relative">

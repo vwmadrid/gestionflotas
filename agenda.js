@@ -390,6 +390,8 @@ window.mostrarPopupAtrasados = function() {
         let div = document.getElementById('contenedorAgenda');
         let agendaEstructurada = {};
         const horasLaborales = ['10', '11', '12', '13', '16', '17', '18', '19'];
+        let rolAgenda = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+        let esBackoffice = (rolAgenda === 'backoffice' || rolAgenda === 'administracion');
 
         window.datosAgenda.forEach(cita => {
             if (!cita.fechaHora) return;
@@ -427,15 +429,18 @@ window.mostrarPopupAtrasados = function() {
         let atrasados = window.comprobarAtrasosGenerales() || [];
         let bannerAtrasados = atrasados.length > 0 ? `<div onclick="window.mostrarPopupAtrasados()" class="bg-red-600 text-white text-[12px] font-black p-3 text-center cursor-pointer hover:bg-red-700 uppercase tracking-widest flex items-center justify-center gap-2 shadow-md z-20 border-b border-red-800"><i class="ph-bold ph-warning text-lg animate-pulse"></i> ¡Atención! Tienes ${atrasados.length} entrega(s) pasada(s) sin confirmar. Haz clic para revisarlas.</div>` : '';
 
+        let botonPedidosCampa = esBackoffice ? '' : `
+                   <button onclick="window.abrirGestorPedidosCampa()" class="bg-[#00b0f0] text-[#001e50] hover:bg-white px-4 py-1.5 rounded-lg font-black text-[10px] flex items-center gap-2 shadow-sm transition-colors uppercase tracking-widest">
+                       <i class="ph-bold ph-truck text-base"></i> Pendientes de Pedir
+                   </button>`;
+
         let html = `
         <div class="bg-white rounded-xl shadow-xl border border-[#001e50] flex flex-col h-[calc(100vh-140px)] w-full relative">
             <div class="bg-[#001e50] text-white p-3 px-6 flex justify-between items-center shrink-0 z-30">
                <h2 class="text-base font-black tracking-widest uppercase flex items-center gap-2"><i class="ph-bold ph-calendar-grid-week text-xl text-[#00b0f0]"></i> Cuadrante</h2>
                
                <div class="flex items-center gap-3">
-                   <button onclick="window.abrirGestorPedidosCampa()" class="bg-[#00b0f0] text-[#001e50] hover:bg-white px-4 py-1.5 rounded-lg font-black text-[10px] flex items-center gap-2 shadow-sm transition-colors uppercase tracking-widest">
-                       <i class="ph-bold ph-truck text-base"></i> Pendientes de Pedir
-                   </button>
+                   ${botonPedidosCampa}
                    
                    <div class="relative w-64">
                        <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -648,8 +653,12 @@ window.mostrarPopupAtrasados = function() {
     let opacidad = "opacity-100"; let onclickCode = ""; let cursorClass = "";
     
     if (cita.isBlock) {
-        onclickCode = `onclick="window.borrarBloqueo('${cita.idBloqueo}')"`;
-        cursorClass = "cursor-pointer hover:ring-2 hover:ring-red-500 hover:scale-[1.02] shadow-sm";
+        if (rolUsuarioLogueado === 'backoffice' || rolUsuarioLogueado === 'administracion') {
+            cursorClass = "cursor-default";
+        } else {
+            onclickCode = `onclick="window.borrarBloqueo('${cita.idBloqueo}')"`;
+            cursorClass = "cursor-pointer hover:ring-2 hover:ring-red-500 hover:scale-[1.02] shadow-sm";
+        }
     } 
     else if (cita.id && cita.matricula !== "---") {
         let d = fechaCitaObj.getFullYear() + "-" + String(fechaCitaObj.getMonth()+1).padStart(2,'0') + "-" + String(fechaCitaObj.getDate()).padStart(2,'0');
@@ -659,7 +668,7 @@ window.mostrarPopupAtrasados = function() {
         let escMod = window.escapeJS(cita.modelo); let escMat = window.escapeJS(cita.matricula);
         let escRen = window.escapeJS(cita.renting); let escNotas = window.escapeJS(cita.notas);
         
-        if (esPendiente && window.rolActivo === "backoffice") {
+        if (rolUsuarioLogueado === 'backoffice' || rolUsuarioLogueado === 'administracion') {
             cursorClass = "cursor-not-allowed";
         } else {
             onclickCode = `onclick="window.abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${escCliente}', '${escMat}', '${escTlf}', '${escEmail}', '${escVO}', '${escNotas}')"`;
