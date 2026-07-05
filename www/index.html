@@ -233,10 +233,12 @@
     </script>
 
     <!-- 4. REGISTRO DEL SERVICE WORKER PARA INSTALACIÓN ANDROID (Añadido) -->
+    <!-- ⚙️ REGISTRO DEL SERVICE WORKER PARA INSTALACIÓN PWA -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
+                // Usamos la ruta absoluta de GitHub Pages
+                navigator.serviceWorker.register('/gestionflotas/www/sw.js')
                     .then((registration) => {
                         console.log('Motor PWA activado con éxito.', registration.scope);
                     })
