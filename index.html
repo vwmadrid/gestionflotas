@@ -198,14 +198,14 @@
             </div>
 
             <div id="botonesAgenda" class="hidden flex items-center gap-2">
-                <button onclick="window.generarListadoDiario()" class="bg-[#00b0f0] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-600 transition-colors shadow-sm">
+                <button id="btnAgendaListado" onclick="window.generarListadoDiario()" class="bg-[#00b0f0] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-600 transition-colors shadow-sm">
                     <i class="ph-bold ph-clipboard-text text-base"></i> Hoja Preparadores
                 </button>
                 
-                <button onclick="window.crearCitaManual()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-800 transition-colors shadow-sm">
+                <button id="btnAgendaNuevaCita" onclick="window.crearCitaManual()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-800 transition-colors shadow-sm">
                     <i class="ph-bold ph-plus-circle text-base"></i> Nueva Cita
                 </button>
-                <button onclick="window.abrirGestorVacaciones()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-indigo-800 transition-colors shadow-sm">
+                <button id="btnAgendaBloqueos" onclick="window.abrirGestorVacaciones()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-indigo-800 transition-colors shadow-sm">
                     <i class="ph-bold ph-calendar-slash text-base"></i> Bloquear Fechas
                 </button>
             </div>
@@ -392,10 +392,10 @@
     </div>
 </div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
     <script src="chat.js?v=8"></script>
     <script src="dashboard.js?v=9"></script>
-    <script src="agenda.js?v=10"></script>
+    <script src="agenda.js?v=11"></script>
     <script src="vehiculos.js?v=10"></script>
 
 <!-- REGISTRO DEL SERVICE WORKER (PWA) AÑADIDO -->
