@@ -264,8 +264,12 @@ window.renderTarjetaCompacta = function(c) {
 
             <div class="flex items-start justify-between mb-3 gap-2 overflow-hidden">
                 <div class="flex flex-col gap-1.5 min-w-0 flex-1">
-                    <div class="bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm truncate">${c.B}</div>
-                    <div class="bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm truncate">VIN: ${c.A}</div>
+                    <button onclick="window.copiarAlPortapapeles('${escB}')" title="Copiar matrícula" class="cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+                        <span class="truncate">${c.B}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+                    </button>
+                    <button onclick="window.copiarAlPortapapeles('${escA}')" title="Copiar bastidor" class="cursor-pointer hover:bg-gray-100 transition-colors bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+                        <span class="truncate">VIN: ${c.A}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+                    </button>
                 </div>
                 <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
                     ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}

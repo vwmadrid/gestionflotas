@@ -661,6 +661,15 @@ window.renderLogistica = function() {
                                                 <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</div>
                                          </div>
 
+                                        <div class="flex flex-col gap-1.5 mb-3 min-w-0">
+                                            <button onclick="window.copiarAlPortapapeles('${escB}')" title="Copiar matrícula" class="cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+                                                <span class="truncate">${c.B}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+                                            </button>
+                                            <button onclick="window.copiarAlPortapapeles('${escA}')" title="Copiar bastidor" class="cursor-pointer hover:bg-gray-100 transition-colors bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+                                                <span class="truncate">VIN: ${c.A}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+                                            </button>
+                                        </div>
+
                                          <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
                                                 <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Doc: ${c.fechaDoc || 'Pte'}</div>
                                                 <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Trans: ${c.fechaTransporte || 'Pte'}</div>

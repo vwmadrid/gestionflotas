@@ -666,10 +666,12 @@ window.mostrarPopupAtrasados = function() {
         let escCliente = window.escapeJS(cita.cliente); let escTlf = window.escapeJS(cita.telefono);
         let escEmail = window.escapeJS(cita.email); let escVO = window.escapeJS(cita.entregaVO);
         let escMod = window.escapeJS(cita.modelo); let escMat = window.escapeJS(cita.matricula);
+        let escBas = window.escapeJS(cita.bastidor || '');
         let escRen = window.escapeJS(cita.renting); let escNotas = window.escapeJS(cita.notas);
         
         if (rolUsuarioLogueado === 'backoffice' || rolUsuarioLogueado === 'administracion') {
-            cursorClass = "cursor-not-allowed";
+            onclickCode = `onclick="window.abrirNotasCitaBackoffice('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${escCliente}', '${escMod}', '${escMat}', '${escBas}', '${escTlf}', '${escEmail}', '${escVO}', '${escRen}', '${escNotas}')"`;
+            cursorClass = "cursor-pointer hover:ring-2 hover:ring-[#00b0f0] hover:scale-[1.02] shadow-sm";
         } else {
             onclickCode = `onclick="window.abrirEdicionCita('${cita.id}', '${d}', '${h}', '${nombreAgente}', '${escCliente}', '${escMat}', '${escTlf}', '${escEmail}', '${escVO}', '${escNotas}')"`;
             cursorClass = "cursor-pointer hover:ring-2 hover:ring-[#00b0f0] hover:scale-[1.02] shadow-sm";
@@ -707,6 +709,49 @@ window.mostrarPopupAtrasados = function() {
        ${botonesAprobacion}
     </div>`;
 };
+    window.abrirNotasCitaBackoffice = async function(idCita, fecha, hora, agente, cliente, modelo, matricula, bastidor, telefono, email, vo, renting, notasActuales) {
+        const { value: nuevasNotas } = await Swal.fire({
+            title: 'Detalle de Cita (Back Office)',
+            width: '620px',
+            html: `
+                <div class="text-left bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-700 space-y-1">
+                    <p><b>Cliente:</b> ${cliente || '-'}</p>
+                    <p><b>Modelo:</b> ${modelo || '-'}</p>
+                    <p><b>Matrícula:</b> ${matricula || '-'}</p>
+                    <p><b>Bastidor:</b> ${bastidor || '-'}</p>
+                    <p><b>Fecha/Hora:</b> ${fecha || '-'} ${hora || ''}</p>
+                    <p><b>Agente:</b> ${agente || '-'}</p>
+                    <p><b>Teléfono:</b> ${telefono || '-'}</p>
+                    <p><b>Email:</b> ${email || '-'}</p>
+                    <p><b>V.O.:</b> ${vo || 'NO'}</p>
+                    <p><b>Renting:</b> ${renting || '-'}</p>
+                </div>
+                <div class="text-left mt-3">
+                    <label class="text-xs font-bold text-gray-500 uppercase">Notas</label>
+                    <textarea id="bo-notas-cita" class="swal2-textarea !w-full !m-0 !mt-1 text-sm p-3" style="min-height:100px;" placeholder="Escribe una nota para esta cita...">${notasActuales && notasActuales !== 'undefined' ? notasActuales : ''}</textarea>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonColor: '#001e50',
+            confirmButtonText: 'Guardar Nota',
+            cancelButtonText: 'Cerrar',
+            preConfirm: () => document.getElementById('bo-notas-cita').value.trim()
+        });
+
+        if (typeof nuevasNotas === 'string') {
+            try {
+                await window.updateDoc(window.doc(window.db, "citas_agenda", idCita), {
+                    notas: nuevasNotas,
+                    notaEditadaPor: window.usuarioActivo || 'BACKOFFICE',
+                    notaEditadaTs: new Date().getTime()
+                });
+                Swal.fire('Guardado', 'Nota actualizada correctamente.', 'success');
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'No se pudo guardar la nota.', 'error');
+            }
+        }
+    };
     window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agenteActual, cliente, matricula, telefono, email, vo, notas) {
         const { value: formValues, isDenied } = await Swal.fire({
             title: 'Gestionar Cita',
