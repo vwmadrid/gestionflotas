@@ -357,25 +357,37 @@
                     try {
                         let matriculaLimpia = String(matricula).replace(/\s/g, '').toUpperCase();
                         let cocheIdFb = null;
+
+                        // 0. Leemos la cita para poder cruzar por bastidor si la matrícula no coincide exacta.
+                        let citaData = null;
+                        try {
+                            const citaSnap = await window.getDoc(window.doc(window.db, "citas_agenda", idCita));
+                            if (citaSnap.exists()) citaData = citaSnap.data();
+                        } catch (eCita) {}
+
+                        let bastidorLimpio = String((citaData && citaData.bastidor) || '').replace(/\s/g, '').toUpperCase();
                         
                         // 1. Buscamos el ID real del coche en la base de datos
-                        if (matriculaLimpia !== "S/M" && matriculaLimpia !== "---") {
-                            const snapCoche = await window.getDocs(window.collection(window.db, "vehiculos"));
-                            snapCoche.forEach(doc => {
-                                if (doc.data().matricula === matriculaLimpia || doc.data().B === matriculaLimpia) {
-                                    cocheIdFb = doc.id;
-                                }
-                            });
-                        }
+                        const snapCoche = await window.getDocs(window.collection(window.db, "vehiculos"));
+                        snapCoche.forEach(doc => {
+                            if (cocheIdFb) return;
+                            const data = doc.data() || {};
+                            const matDb = String(data.matricula || data.Matricula || data.B || '').replace(/\s/g, '').toUpperCase();
+                            const basDb = String(data.bastidor || data.A || '').replace(/\s/g, '').toUpperCase();
+
+                            const matchMatricula = matriculaLimpia && matriculaLimpia !== "S/M" && matriculaLimpia !== "---" && matDb === matriculaLimpia;
+                            const matchBastidor = bastidorLimpio && basDb === bastidorLimpio;
+
+                            if (matchMatricula || matchBastidor) {
+                                cocheIdFb = doc.id;
+                            }
+                        });
 
                         if (cocheIdFb) {
-                            // 2. Borramos la cita de la agenda móvil para limpiar la pantalla
-                            await window.deleteDoc(window.doc(window.db, "citas_agenda", idCita));
-                            window.cargarEntregasHoy(); 
-
-                            // 3. ¡LA MAGIA! Llamamos a tu función principal del ordenador
+                            // 2. Llamamos al motor principal SIN borrar la cita.
+                            //    El propio flujo marcará la cita en verde y el coche en historial.
                             if (typeof window.marcarComoEntregado === 'function') {
-                                window.marcarComoEntregado(cocheIdFb);
+                                window.marcarComoEntregado(cocheIdFb, { idCita, mantenerCita: true });
                             } else {
                                 Swal.fire('Error', 'La función de fotos y reseñas no está disponible en este momento.', 'error');
                             }
@@ -395,7 +407,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=7')
+                navigator.serviceWorker.register('./sw.js?v=8')
                     .then((registration) => {
                         registration.update();
 

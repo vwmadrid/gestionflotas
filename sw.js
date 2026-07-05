@@ -1,7 +1,7 @@
 // Archivo: sw.js
 // Service Worker básico para mejorar la instalación y carga en móvil.
 
-const CACHE_NAME = 'gescar-os-v6';
+const CACHE_NAME = 'gescar-os-v7';
 const APP_SHELL = [
     './',
     './index.html',
