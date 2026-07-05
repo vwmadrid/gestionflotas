@@ -202,9 +202,11 @@ window.aplicarPermisosPorRol = function() {
 
 window.iniciarAppDirectamente = function(rol, usuario) {
     const esDispositivoMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const esRutaMovil = window.location.pathname.toLowerCase().includes('movil.html');
     
-    if (esDispositivoMovil && rol === 'entregas') {
-        console.info('Acceso móvil: se continúa en la vista principal de GesCar OS.');
+    if (esDispositivoMovil && rol === 'entregas' && !esRutaMovil) {
+        window.location.replace('./movil.html?v=8');
+        return;
     }
 
     window.rolActivo = rol;

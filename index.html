@@ -28,15 +28,12 @@
     <link rel="apple-touch-icon" href="./icon.png">
 
     <script>
-        // 1. Detectamos si es un móvil
         const esDispositivoMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        // 2. Leemos la memoria para saber de qué departamento es el usuario guardado
         const departamentoGuardado = localStorage.getItem('vw_departamento');
+        const esRutaMovil = window.location.pathname.toLowerCase().includes('movil.html');
 
-        // 3. Redirigimos a la versión móvil si se cumplen las condiciones
-        if (esDispositivoMovil && (departamentoGuardado === 'entregas' || !departamentoGuardado)) {
-            window.location.replace("./movil.html?v=6");
+        if (esDispositivoMovil && (departamentoGuardado === 'entregas' || !departamentoGuardado) && !esRutaMovil) {
+            window.location.replace('./movil.html?v=8');
         }
     </script>
     
