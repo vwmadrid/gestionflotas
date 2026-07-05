@@ -201,14 +201,11 @@ window.aplicarPermisosPorRol = function() {
 };
 
 window.iniciarAppDirectamente = function(rol, usuario) {
-    // --- NUEVO CÓDIGO DE REDIRECCIÓN INTELIGENTE ---
     const esDispositivoMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (esDispositivoMovil && rol === 'entregas') {
-        window.location.href = "./www/index.html";
-        return; // Detenemos la carga de la versión de escritorio
+        console.info('Acceso móvil: se continúa en la vista principal de GesCar OS.');
     }
-    // -----------------------------------------------
 
     window.rolActivo = rol;
     window.userRole = rol; 
