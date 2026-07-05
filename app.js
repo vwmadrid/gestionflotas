@@ -20,6 +20,7 @@
 window.usuarioActivo = "";
 window.rolActivo = "";
 window.userRole = ""; // Puente de compatibilidad
+window.tabActiva = "logistica";
 
 let activeTab = 'logistica'; 
 let modoVistaActual = 'tarjetas'; 
@@ -392,6 +393,7 @@ window.registrarMetricaM2 = async function(campo) {
 // ========================================================
 window.cambiarPestana = function(pestana) {
     activeTab = pestana;
+    window.tabActiva = pestana;
     
     // 1. Gestión de estilos en botones de navegación (con protección contra elementos nulos)
     try {
