@@ -961,6 +961,43 @@ window.mostrarPopupAtrasados = function() {
 // ========================================================
 // 📅 GESTOR DE BLOQUEOS Y VACACIONES (AVANZADO)
 // ========================================================
+window.borrarBloqueo = async function(idBloqueo) {
+    if (!idBloqueo) return;
+
+    const rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+    if (rolLimpio === 'backoffice' || rolLimpio === 'administracion') {
+        Swal.fire('Sin permisos', 'Back Office no puede desbloquear franjas de agenda.', 'warning');
+        return;
+    }
+
+    const confirmar = await Swal.fire({
+        title: '¿Desbloquear esta franja?',
+        html: 'Se eliminará el bloqueo de vacaciones/día libre/hora suelta y el hueco volverá a quedar disponible en la agenda.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#001e50',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, desbloquear',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!confirmar.isConfirmed) return;
+
+    try {
+        await window.deleteDoc(window.doc(window.db, "bloqueos_agenda", idBloqueo));
+        Swal.fire({
+            icon: 'success',
+            title: 'Franja desbloqueada',
+            text: 'El bloqueo se ha eliminado correctamente.',
+            timer: 1800,
+            showConfirmButton: false
+        });
+    } catch (error) {
+        console.error('Error al borrar bloqueo:', error);
+        Swal.fire('Error', 'No se ha podido eliminar el bloqueo. Inténtalo de nuevo.', 'error');
+    }
+};
+
 window.abrirGestorVacaciones = async function() {
     const { value: formValues } = await Swal.fire({
         title: '🔒 Bloquear Fechas / Horas',

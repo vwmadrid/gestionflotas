@@ -1170,6 +1170,48 @@ window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda
 // ==========================================
 
 window.generarListadoDiario = function() {
+    const obtenerFechaKey = (valor) => {
+        if (!valor) return '';
+        let fechaObj = null;
+
+        if (valor instanceof Date) {
+            fechaObj = valor;
+        } else if (typeof valor === 'string') {
+            const normalizada = valor.replace(' ', 'T');
+            const parseada = new Date(normalizada);
+            if (!isNaN(parseada.getTime())) fechaObj = parseada;
+            if (!fechaObj && /^\d{4}-\d{2}-\d{2}/.test(valor)) return valor.substring(0, 10);
+        }
+
+        if (!fechaObj || isNaN(fechaObj.getTime())) return '';
+        return `${fechaObj.getFullYear()}-${String(fechaObj.getMonth() + 1).padStart(2, '0')}-${String(fechaObj.getDate()).padStart(2, '0')}`;
+    };
+
+    const obtenerHoraTexto = (valor) => {
+        if (!valor) return '--:--';
+
+        if (valor instanceof Date) {
+            if (isNaN(valor.getTime())) return '--:--';
+            return `${String(valor.getHours()).padStart(2, '0')}:${String(valor.getMinutes()).padStart(2, '0')}`;
+        }
+
+        if (typeof valor === 'string') {
+            const match = valor.match(/(\d{1,2}):(\d{2})/);
+            if (match) return `${String(match[1]).padStart(2, '0')}:${match[2]}`;
+        }
+
+        return '--:--';
+    };
+
+    const obtenerTimestamp = (valor) => {
+        if (valor instanceof Date) return isNaN(valor.getTime()) ? Number.MAX_SAFE_INTEGER : valor.getTime();
+        if (typeof valor === 'string') {
+            const parseada = new Date(valor.replace(' ', 'T'));
+            return isNaN(parseada.getTime()) ? Number.MAX_SAFE_INTEGER : parseada.getTime();
+        }
+        return Number.MAX_SAFE_INTEGER;
+    };
+
     // 1. Preparamos la fecha de hoy por defecto para el formulario
     let hoy = new Date();
     let diaDefecto = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, '0') + "-" + String(hoy.getDate()).padStart(2, '0');
@@ -1199,10 +1241,11 @@ window.generarListadoDiario = function() {
 
             // 3. Buscamos todas las citas en la agenda para ese día concreto
             // (Descartamos los huecos libres "---" y los bloqueos/vacaciones)
-            let citasDelDia = window.datosAgenda.filter(c => 
-                c.fechaHora && 
-                c.fechaHora.startsWith(fechaElegida) && 
-                c.matricula !== "---" && 
+            const agendaFuente = Array.isArray(window.datosAgenda) ? window.datosAgenda : [];
+            let citasDelDia = agendaFuente.filter(c => 
+                c &&
+                obtenerFechaKey(c.fechaHora) === fechaElegida &&
+                c.matricula !== "---" &&
                 !c.isBlock
             );
 
@@ -1212,7 +1255,7 @@ window.generarListadoDiario = function() {
             }
 
             // 4. Ordenamos las citas cronológicamente (de 10:00 a 19:00)
-            citasDelDia.sort((a, b) => a.fechaHora.localeCompare(b.fechaHora));
+            citasDelDia.sort((a, b) => obtenerTimestamp(a.fechaHora) - obtenerTimestamp(b.fechaHora));
 
             // 5. Construimos el HTML de la página imprimible
             let htmlImprimir = `
@@ -1262,7 +1305,7 @@ window.generarListadoDiario = function() {
                         <tbody>
                             ${citasDelDia.map(c => {
                                 // Extraemos la hora (de "2026-07-03T16:00:00" sacamos "16:00")
-                                let horaCita = c.fechaHora.split('T')[1].substring(0, 5);
+                                let horaCita = obtenerHoraTexto(c.fechaHora);
                                 
                                 // Formateamos la alerta de si el cliente entrega Vehículo de Ocasión (VO)
                                 let etiquetaVO = (c.entregaVO === 'SÍ' || c.entregaVO === 'SI') ? '<span class="vo-badge">RECOGE V.O.</span>' : '';
@@ -1295,6 +1338,10 @@ window.generarListadoDiario = function() {
 
             // 6. Abrimos la vista en una pestaña nueva para que puedan darle al botón de imprimir
             let ventanaImpresion = window.open('', '_blank');
+            if (!ventanaImpresion) {
+                Swal.fire('Popup bloqueado', 'El navegador ha bloqueado la hoja de impresión. Permite ventanas emergentes para esta web e inténtalo de nuevo.', 'warning');
+                return;
+            }
             ventanaImpresion.document.write(htmlImprimir);
             ventanaImpresion.document.close();
         }
