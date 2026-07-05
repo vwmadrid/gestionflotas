@@ -13,10 +13,11 @@ permissions:
 
 concurrency:
   group: github-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    timeout-minutes: 45
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -33,6 +34,9 @@ jobs:
         with:
           path: .
 
+      - name: Warm up before deploy
+        run: sleep 30
+
       - name: Deploy to GitHub Pages (attempt 1)
         id: deploy_attempt_1
         continue-on-error: true
@@ -40,11 +44,11 @@ jobs:
         with:
           artifact_name: github-pages
           timeout: 1200000
-          error_count: 30
+          error_count: 120
 
       - name: Wait before retry 2
         if: steps.deploy_attempt_1.outcome == 'failure'
-        run: sleep 20
+        run: sleep 60
 
       - name: Deploy to GitHub Pages (attempt 2)
         id: deploy_attempt_2
@@ -54,11 +58,11 @@ jobs:
         with:
           artifact_name: github-pages
           timeout: 1200000
-          error_count: 30
+          error_count: 120
 
       - name: Wait before retry 3
         if: steps.deploy_attempt_1.outcome == 'failure' && steps.deploy_attempt_2.outcome == 'failure'
-        run: sleep 30
+        run: sleep 120
 
       - name: Deploy to GitHub Pages (attempt 3)
         id: deploy_attempt_3
@@ -68,7 +72,7 @@ jobs:
         with:
           artifact_name: github-pages
           timeout: 1200000
-          error_count: 30
+          error_count: 120
 
       - name: Resolve deployment result
         id: deployment
