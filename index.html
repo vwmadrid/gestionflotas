@@ -13,7 +13,12 @@
     <meta name="author" content="Manuel Arjona Carrera & Miriam Olmo Fernández">
     <meta name="copyright" content="© 2026 Manuel Arjona Carrera & Miriam Olmo Fernández. Todos los derechos reservados.">
     <meta name="application-name" content="GesCar OS / M2 Code Systems">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#001e50">
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
   
     <!-- ENLACES PWA (AÑADIDOS PARA INSTALACIÓN) -->
     <link rel="manifest" href="./manifest.json">
@@ -29,10 +34,10 @@
         // 2. Leemos la memoria para saber de qué departamento es el usuario guardado
         const departamentoGuardado = localStorage.getItem('vw_departamento');
 
-        // 3. ANULADO: Ya no redirigimos a /www/ porque la PWA corre desde la raíz
-        // if (esDispositivoMovil && departamentoGuardado === 'entregas') {
-        //     window.location.href = "./www/index.html";
-        // }
+        // 3. Redirigimos a la versión móvil si se cumplen las condiciones
+        if (esDispositivoMovil && (departamentoGuardado === 'entregas' || !departamentoGuardado)) {
+            window.location.replace("./movil.html?v=6");
+        }
     </script>
     
     <title>Castellana Wagen M-40 - Control de Vehículos</title>
@@ -389,11 +394,11 @@
     </div>
 </div>
 
-<script src="app.js?v=3"></script>
-<script src="chat.js?v=3"></script>
-<script src="dashboard.js?v=3"></script>
-<script src="agenda.js?v=3"></script>
-<script src="vehiculos.js?v=3"></script>
+<script src="app.js?v=7"></script>
+    <script src="chat.js?v=7"></script>
+    <script src="dashboard.js?v=7"></script>
+    <script src="agenda.js?v=7"></script>
+    <script src="vehiculos.js?v=7"></script>
 
 <!-- REGISTRO DEL SERVICE WORKER (PWA) AÑADIDO -->
 <script>

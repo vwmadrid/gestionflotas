@@ -55,4 +55,72 @@
     .swal2-backdrop-show {
         cursor: default !important;
     }
+
+    .mobile-hero-card {
+        background: linear-gradient(135deg, #f8fbff 0%, #eef7ff 100%);
+        border: 1px solid #dbeafe;
+        border-radius: 16px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        box-shadow: 0 8px 20px rgba(0, 30, 80, 0.08);
+    }
+
+    .mobile-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #001e50;
+        color: white;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        white-space: nowrap;
+    }
+
+    .mobile-nav button {
+        transition: all 0.2s ease;
+        border-radius: 0;
+    }
+
+    .mobile-nav button.active {
+        background: linear-gradient(180deg, #f2f8ff 0%, #e9f5ff 100%);
+        color: #001e50;
+    }
+
+    .mobile-nav button.active i {
+        color: #00b0f0;
+    }
+
+    #contenedorTarjetas {
+        padding-bottom: 0.25rem;
+    }
+
+    #contenedorTarjetas .card-mini {
+        border-radius: 16px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+        border: 1px solid #e2e8f0;
+    }
+
+    #buscadorInput:focus {
+        box-shadow: 0 0 0 3px rgba(0, 176, 240, 0.16);
+    }
+
+    .agenda-mobile-header {
+        backdrop-filter: blur(8px);
+    }
+
+    .agenda-mobile-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .agenda-mobile-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    }
   

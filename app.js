@@ -211,12 +211,29 @@ window.iniciarAppDirectamente = function(rol, usuario) {
     window.userRole = rol; 
     window.usuarioActivo = usuario || rol;
     
-    document.getElementById('roleBadge').innerText = `${window.usuarioActivo} (${window.rolActivo})`;
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('sidebarApp').style.display = 'flex';
-    document.getElementById('mainApp').style.display = 'flex';
+    const roleBadge = document.getElementById('roleBadge');
+    if (roleBadge) roleBadge.innerText = `${window.usuarioActivo} (${window.rolActivo})`;
+
+    const loginScreen = document.getElementById('loginScreen');
+    if (loginScreen) loginScreen.style.display = 'none';
+
+    const sidebarApp = document.getElementById('sidebarApp');
+    if (sidebarApp) sidebarApp.style.display = 'flex';
+
+    const mainApp = document.getElementById('mainApp');
+    if (mainApp) mainApp.style.display = 'flex';
+
+    const contenedorTarjetas = document.getElementById('contenedorTarjetas');
+    if (contenedorTarjetas) {
+        contenedorTarjetas.style.display = 'grid';
+        contenedorTarjetas.innerHTML = '<div class="text-center text-gray-500 py-8">Cargando vehículos...</div>';
+    }
     
     window.cargar(); // Carga los coches de la app de forma normal
+
+    if (document.body?.dataset?.vista === 'movil' && typeof window.cambiarPestana === 'function') {
+        setTimeout(() => window.cambiarPestana('agenda'), 250);
+    }
     
     // 🔥 AQUÍ ESTÁ LA CLAVE: Enciende el chat general ahora que ya sabemos quién eres
     if (typeof window.cargarChatGlobal === 'function') {
@@ -228,17 +245,29 @@ window.iniciarAppDirectamente = function(rol, usuario) {
         if (rol === 'backoffice' && typeof window.escucharNotificacionesBackOffice === 'function') {
             window.escucharNotificacionesBackOffice();
         }
-        document.getElementById('tabsDpto').classList.replace('flex', 'hidden');
-        document.getElementById('tabsEntregas').classList.replace('hidden', 'flex');
-        if (rol === 'entregas') {
-            document.getElementById('botonesLogistica').classList.replace('hidden', 'flex');
+
+        const tabsDpto = document.getElementById('tabsDpto');
+        const tabsEntregas = document.getElementById('tabsEntregas');
+        if (tabsDpto && tabsEntregas) {
+            tabsDpto.classList.replace('flex', 'hidden');
+            tabsEntregas.classList.replace('hidden', 'flex');
         }
+
+        const botonesLogistica = document.getElementById('botonesLogistica');
+        if (rol === 'entregas' && botonesLogistica) {
+            botonesLogistica.classList.replace('hidden', 'flex');
+        }
+
         window.cambiarPestana('todos');
     } else { 
-        document.getElementById('tabsEntregas').classList.replace('flex', 'hidden'); 
-        document.getElementById('tabsDpto').classList.replace('hidden', 'flex');
+        const tabsEntregas = document.getElementById('tabsEntregas');
+        const tabsDpto = document.getElementById('tabsDpto');
+        if (tabsEntregas) tabsEntregas.classList.replace('flex', 'hidden');
+        if (tabsDpto) tabsDpto.classList.replace('hidden', 'flex');
+
         let icono = rol === 'taller' ? 'ph-wrench' : 'ph-package';
-        document.getElementById('iconoDptoCurso').className = `ph-bold ${icono} text-lg`;
+        const iconoDptoCurso = document.getElementById('iconoDptoCurso');
+        if (iconoDptoCurso) iconoDptoCurso.className = `ph-bold ${icono} text-lg`;
         window.cambiarPestana('global-' + rol);
     }
 };
@@ -254,17 +283,30 @@ window.cerrarSesion = function() {
 // ==========================================
 
 window.onload = function() {
-    // ❌ BLOQUEO ELIMINADO PARA EVITAR EL "CHOQUE DE TRENES"
-    
     const rol = localStorage.getItem('vw_departamento');
     const usr = localStorage.getItem('vw_usuario');
     if (rol) { 
         window.iniciarAppDirectamente(rol, usr); 
+    } else {
+        const loginScreen = document.getElementById('loginScreen');
+        if (loginScreen) loginScreen.style.display = 'flex';
+        const mainApp = document.getElementById('mainApp');
+        if (mainApp) mainApp.style.display = 'none';
     }
 
-    document.getElementById("btnAbout").onclick = function() { document.getElementById("aboutModal").style.display = "block"; };
-    document.getElementById("btnClose").onclick = function() { document.getElementById("aboutModal").style.display = "none"; };
-    window.onclick = function(event) { if (event.target == document.getElementById("aboutModal")) { document.getElementById("aboutModal").style.display = "none"; } };
+    const btnAbout = document.getElementById("btnAbout");
+    const btnClose = document.getElementById("btnClose");
+    const aboutModal = document.getElementById("aboutModal");
+
+    if (btnAbout && aboutModal) {
+        btnAbout.onclick = function() { aboutModal.style.display = "block"; };
+    }
+    if (btnClose && aboutModal) {
+        btnClose.onclick = function() { aboutModal.style.display = "none"; };
+    }
+    if (aboutModal) {
+        window.onclick = function(event) { if (event.target == aboutModal) { aboutModal.style.display = "none"; } };
+    }
 
     window.addEventListener('error', function(event) {
         console.error('Global JS error:', event.error || event.message);
@@ -418,9 +460,14 @@ window.cambiarPestana = function(pestana) {
         } else if (pestana === 'global-taller' || pestana === 'global-recambios') {
             const c = document.getElementById('contenedorTarjetas'); if (c) c.style.display = 'grid';
         } else if (pestana === 'agenda') {
-            const c = document.getElementById('contenedorAgenda'); if (c) c.style.display = 'block';
+            const c = document.getElementById('contenedorAgenda');
+            if (c) {
+                c.style.display = 'block';
+                c.classList.remove('hidden');
+            }
             if (buscador) buscador.style.display = 'none';
-            const b = document.getElementById('botonesAgenda'); if (b) b.style.display = 'flex'; 
+            const b = document.getElementById('botonesAgenda'); if (b) b.style.display = 'flex';
+            if (typeof window.renderAgenda === 'function') window.renderAgenda();
         } else if (pestana === 'entregados') {
             const c = document.getElementById('contenedorEntregados'); if (c) c.style.display = 'block';
             if (buscador) buscador.style.display = 'none';
@@ -630,17 +677,26 @@ window.cambiarModoVisualizacion = function(modo) {
    modoVistaActual = modo;
    const btnT = document.getElementById('btnVistaTarjetas');
    const btnE = document.getElementById('btnVistaTabla');
-   if (modo === 'tarjetas') {
-      btnT.className = "bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
-      btnE.className = "text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
-      document.getElementById('contenedorTarjetas').style.display = 'grid';
-      document.getElementById('contenedorTabla').style.display = 'none';
-   } else {
-      btnE.className = "bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
-      btnT.className = "text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
-      document.getElementById('contenedorTarjetas').style.display = 'none';
-      document.getElementById('contenedorTabla').style.display = 'block';
+   const contenedorTarjetas = document.getElementById('contenedorTarjetas');
+   const contenedorTabla = document.getElementById('contenedorTabla');
+
+   if (btnT && btnE) {
+      if (modo === 'tarjetas') {
+         btnT.className = "bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
+         btnE.className = "text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
+      } else {
+         btnE.className = "bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
+         btnT.className = "text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all";
+      }
    }
+
+   if (contenedorTarjetas) {
+      contenedorTarjetas.style.display = modo === 'tarjetas' ? 'grid' : 'none';
+   }
+   if (contenedorTabla) {
+      contenedorTabla.style.display = modo === 'tarjetas' ? 'none' : 'block';
+   }
+
    if(typeof window.renderizarVistas === 'function') window.renderizarVistas();
 };
 

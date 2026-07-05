@@ -34,30 +34,251 @@
         }
     };
 
+    window.esVistaAgendaMovil = function() {
+        return window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    };
+
+    window.agendaFechaSeleccionada = new Date();
+    window.agendaFechaSeleccionada.setHours(0, 0, 0, 0);
+
+    window.normalizarFechaAgenda = function(valor) {
+        if (!valor) return null;
+        if (valor instanceof Date) return valor;
+        if (typeof valor?.toDate === 'function') return valor.toDate();
+        if (typeof valor?.seconds === 'number') return new Date(valor.seconds * 1000);
+
+        const texto = String(valor).trim();
+        if (!texto) return null;
+
+        if (/^\d{4}-\d{2}-\d{2}/.test(texto)) {
+            const fecha = new Date(texto.replace(' ', 'T'));
+            if (!isNaN(fecha.getTime())) return fecha;
+        }
+
+        const fechaConHora = new Date(texto.replace(' ', 'T'));
+        if (!isNaN(fechaConHora.getTime())) return fechaConHora;
+
+        const partes = texto.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+        if (partes) {
+            return new Date(Number(partes[3]), Number(partes[2]) - 1, Number(partes[1]));
+        }
+
+        return null;
+    };
+
+    window.normalizarFechaHoraAgenda = function(data) {
+        const fechaRaw = data?.fechaHora || data?.fecha_hora || data?.fechaCita || data?.fecha || data?.fechaProgramada;
+        const horaRaw = data?.hora || data?.horaCita || data?.horaProgramada || data?.hora_programada || data?.horaCitaProgramada;
+        const fechaBase = window.normalizarFechaAgenda(fechaRaw);
+
+        if (!fechaBase) return null;
+
+        if (horaRaw) {
+            const match = String(horaRaw).match(/(\d{1,2})(?::(\d{2}))?/);
+            if (match) {
+                const fecha = new Date(fechaBase);
+                fecha.setHours(parseInt(match[1], 10), parseInt(match[2] || '0', 10), 0, 0);
+                return fecha;
+            }
+        }
+
+        return fechaBase;
+    };
+
+    window.formatearFechaAgenda = function(fecha) {
+        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        return fecha.toLocaleDateString('es-ES', opciones);
+    };
+
+    window.cambiarDiaAgenda = function(delta) {
+        if (!window.agendaFechaSeleccionada || isNaN(window.agendaFechaSeleccionada.getTime())) {
+            window.agendaFechaSeleccionada = new Date();
+        }
+        const nuevaFecha = new Date(window.agendaFechaSeleccionada);
+        nuevaFecha.setDate(nuevaFecha.getDate() + delta);
+        nuevaFecha.setHours(0, 0, 0, 0);
+        window.agendaFechaSeleccionada = nuevaFecha;
+        window.renderAgendaMovil();
+    };
+
+    window.seleccionarDiaAgenda = function(fecha) {
+        const nuevaFecha = new Date(fecha);
+        nuevaFecha.setHours(0, 0, 0, 0);
+        window.agendaFechaSeleccionada = nuevaFecha;
+        window.renderAgendaMovil();
+    };
+
+    window.irHoyAgenda = function() {
+        window.agendaFechaSeleccionada = new Date();
+        window.agendaFechaSeleccionada.setHours(0, 0, 0, 0);
+        window.renderAgendaMovil();
+    };
+
+    window.abrirWhatsAppAgenda = function(telefono, cliente) {
+        const numero = String(telefono || '').replace(/[^0-9+]/g, '');
+        if (!numero) {
+            Swal.fire({ icon: 'info', title: 'Sin teléfono', text: 'Este cliente no tiene número de teléfono asociado.' });
+            return;
+        }
+        const mensaje = encodeURIComponent(`Hola ${cliente || 'cliente'}, te escribo desde GesCar OS.`);
+        window.open(`https://wa.me/${numero}?text=${mensaje}`, '_blank', 'noopener,noreferrer');
+    };
+
+    window.llamarAgenda = function(telefono) {
+        const numero = String(telefono || '').replace(/[^0-9+]/g, '');
+        if (!numero) {
+            Swal.fire({ icon: 'info', title: 'Sin teléfono', text: 'Este cliente no tiene número de teléfono asociado.' });
+            return;
+        }
+        window.location.href = `tel:${numero}`;
+    };
+
+    window.marcarEntregadoAgenda = function(cita) {
+        if (!cita) return;
+        let fechaCitaObj = cita.fechaHora ? new Date(cita.fechaHora) : new Date();
+        let fechaStr = fechaCitaObj.getFullYear() + '-' + String(fechaCitaObj.getMonth() + 1).padStart(2, '0') + '-' + String(fechaCitaObj.getDate()).padStart(2, '0');
+        let horaStr = String(fechaCitaObj.getHours()).padStart(2, '0') + ':00';
+        let idFb = (cita && cita.fila) ? cita.fila : 'no_db';
+        let modeloSeguro = window.escapeJS(cita.modelo || 'Vehículo');
+        let matriculaSegura = window.escapeJS(cita.matricula || 'S/M');
+        window.preguntarSiEntregado(idFb, modeloSeguro, matriculaSegura, fechaStr, horaStr);
+    };
+
+    window.renderAgendaMovil = function() {
+        const div = document.getElementById('contenedorAgenda');
+        if (!div) return;
+
+        const fechaSel = window.agendaFechaSeleccionada && !isNaN(window.agendaFechaSeleccionada.getTime())
+            ? new Date(window.agendaFechaSeleccionada)
+            : new Date();
+        fechaSel.setHours(0, 0, 0, 0);
+        window.agendaFechaSeleccionada = fechaSel;
+
+        const fechaKey = `${fechaSel.getFullYear()}-${String(fechaSel.getMonth() + 1).padStart(2, '0')}-${String(fechaSel.getDate()).padStart(2, '0')}`;
+        const citasDia = (window.datosAgenda || [])
+            .filter((cita) => {
+                if (!cita.fechaHora) return false;
+                const fechaCita = new Date(cita.fechaHora);
+                if (isNaN(fechaCita.getTime())) return false;
+                return `${fechaCita.getFullYear()}-${String(fechaCita.getMonth() + 1).padStart(2, '0')}-${String(fechaCita.getDate()).padStart(2, '0')}` === fechaKey;
+            })
+            .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
+
+        const fechaLabel = fechaSel.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        const diaTitulo = fechaLabel.charAt(0).toUpperCase() + fechaLabel.slice(1);
+
+        const html = `
+            <div class="space-y-3">
+                <div class="agenda-mobile-header rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <p class="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">Agenda del día</p>
+                            <h3 class="text-base font-black text-slate-800">${diaTitulo}</h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="window.cambiarDiaAgenda(-1)" class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700"><i class="ph-bold ph-caret-left"></i></button>
+                            <button onclick="window.irHoyAgenda()" class="rounded-full bg-[#001e50] px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">Hoy</button>
+                            <button onclick="window.cambiarDiaAgenda(1)" class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-700"><i class="ph-bold ph-caret-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                ${citasDia.length === 0 ? `<div class="rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm font-semibold text-slate-500 shadow-sm">No hay citas para este día.</div>` : citasDia.map((cita) => {
+                    const fechaCita = cita.fechaHora ? new Date(cita.fechaHora) : new Date();
+                    const hora = `${String(fechaCita.getHours()).padStart(2, '0')}:${String(fechaCita.getMinutes()).padStart(2, '0')}`;
+                    const cliente = window.escapeJS(cita.cliente || 'Cliente');
+                    const modelo = window.escapeJS(cita.modelo || 'Vehículo');
+                    const matricula = window.escapeJS(cita.matricula || 'S/M');
+                    const telefono = window.escapeJS(String(cita.telefono || '').trim());
+                    const email = window.escapeJS(String(cita.email || '').trim());
+                    const renting = window.escapeJS(String(cita.renting || '').trim());
+                    const notas = window.escapeJS(String(cita.notas || '').trim());
+                    const estado = String(cita.estado || 'confirmada').toLowerCase();
+                    const badgeClass = estado === 'pendiente' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800';
+                    const badgeLabel = estado === 'pendiente' ? 'Pendiente' : 'Confirmada';
+                    const idFb = cita.fila ? cita.fila : 'no_db';
+                    const modeloSeg = window.escapeJS(cita.modelo || 'Vehículo');
+                    const matriculaSeg = window.escapeJS(cita.matricula || 'S/M');
+
+                    return `
+                        <div class="agenda-mobile-card rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[0.3em] text-[#00b0f0]">${hora}</p>
+                                    <h4 class="mt-1 text-base font-black text-slate-800">${modelo}</h4>
+                                    <p class="text-sm font-semibold text-slate-600">${matricula}</p>
+                                </div>
+                                <span class="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${badgeClass}">${badgeLabel}</span>
+                            </div>
+
+                            <div class="mt-3 space-y-1 text-sm text-slate-600">
+                                <p class="font-semibold text-slate-800">${cliente}</p>
+                                ${telefono ? `<p class="flex items-center gap-1"><i class="ph-fill ph-phone text-sm text-slate-400"></i> ${telefono}</p>` : ''}
+                                ${email ? `<p class="flex items-center gap-1"><i class="ph-fill ph-envelope text-sm text-slate-400"></i> ${email}</p>` : ''}
+                                ${renting ? `<p class="flex items-center gap-1"><i class="ph-fill ph-buildings text-sm text-slate-400"></i> ${renting}</p>` : ''}
+                                ${notas ? `<p class="flex items-center gap-1 rounded-lg bg-slate-50 px-2 py-1 text-xs"><i class="ph-fill ph-note text-sm text-slate-400"></i> ${notas}</p>` : ''}
+                            </div>
+
+                            <div class="mt-4 grid grid-cols-3 gap-2">
+                                <button onclick="window.abrirWhatsAppAgenda('${telefono}', '${cliente}')" class="rounded-xl bg-emerald-600 px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">WhatsApp</button>
+                                <button onclick="window.llamarAgenda('${telefono}')" class="rounded-xl bg-sky-600 px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">Llamar</button>
+                                <button onclick="window.marcarEntregadoAgenda({fila:'${idFb}', modelo:'${modeloSeg}', matricula:'${matriculaSeg}', fechaHora:'${cita.fechaHora}'})" class="rounded-xl bg-[#001e50] px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">Entregado</button>
+                            </div>
+                        </div>`;
+                }).join('')}
+            </div>`;
+
+        div.innerHTML = html;
+    };
+
    window.renderAgenda = function() { 
-    let div = document.getElementById('contenedorAgenda');
-    div.innerHTML = `<div class="bg-white p-16 rounded-xl shadow-sm border border-gray-200 text-center flex flex-col items-center"><i class="ph-bold ph-spinner animate-spin text-5xl text-[#001e50] mb-4"></i><p class="font-black text-gray-500 tracking-widest uppercase">Conectando Radares en Vivo...</p></div>`;
+    const pathname = (window.location.pathname || '').toLowerCase();
+    const esPaginaMovil = pathname.includes('movil.html') || document.body?.dataset?.vista === 'movil';
+    const usarVistaMovil = esPaginaMovil || window.esVistaAgendaMovil();
+    const div = document.getElementById('contenedorAgenda');
+    if (div) {
+        div.classList.remove('hidden');
+        div.style.display = 'flex';
+        div.innerHTML = `<div class="bg-white p-16 rounded-2xl shadow-sm border border-gray-200 text-center flex flex-col items-center"><i class="ph-bold ph-spinner animate-spin text-5xl text-[#001e50] mb-4"></i><p class="font-black text-gray-500 tracking-widest uppercase">Cargando agenda...</p></div>`;
+    }
 
     try {
         if (!window.mesVistaActual) {
             window.mesVistaActual = new Date(); window.mesVistaActual.setDate(1);
         }
 
+        const renderizarVistaSegunDispositivo = function() {
+            if (usarVistaMovil && typeof window.renderAgendaMovil === 'function') {
+                if (div) {
+                    div.classList.remove('hidden');
+                    div.style.display = 'flex';
+                }
+                window.renderAgendaMovil();
+            } else {
+                if (div) {
+                    div.innerHTML = `<div class="bg-white p-16 rounded-xl shadow-sm border border-gray-200 text-center flex flex-col items-center"><i class="ph-bold ph-spinner animate-spin text-5xl text-[#001e50] mb-4"></i><p class="font-black text-gray-500 tracking-widest uppercase">Conectando Radares en Vivo...</p></div>`;
+                }
+                if (typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes();
+                if (typeof window.comprobarAtrasosGenerales === 'function') window.comprobarAtrasosGenerales(); 
+            }
+        };
+
         // 1. Radar de Citas
         window.onSnapshot(window.collection(window.db, "citas_agenda"), (querySnapshot) => {
             window.datosAgenda = []; 
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
+                const fechaHora = window.normalizarFechaHoraAgenda(data) || new Date();
                 window.datosAgenda.push({
-                    id: doc.id, fechaHora: `${data.fecha}T${data.hora}:00`, 
+                    id: doc.id, fechaHora,
                     cliente: data.cliente || "Cliente", telefono: data.telefono || "", email: data.email || "",
                     matricula: data.matricula || "S/M", modelo: data.modelo || "Vehículo", bastidor: data.bastidor || "",
                     renting: data.renting || "", entregaVO: data.entregaVO || "NO", agente: data.agente || "MANUEL",
                     notas: data.notas || "", estado: data.estado || "confirmada", isBlock: false
                 });
             });
-            window.dibujarCuadranteMes();
-            window.comprobarAtrasosGenerales(); 
+
+            renderizarVistaSegunDispositivo();
         }, (error) => {
             if (typeof window.mostrarErrorFirebase === 'function') window.mostrarErrorFirebase(error, 'Error al cargar citas de agenda');
             else console.error('Error al cargar citas de agenda', error);
@@ -69,14 +290,16 @@
             querySnapshot.forEach((doc) => {
                 window.datosVacaciones.push({ id: doc.id, ...doc.data() });
             });
-            window.dibujarCuadranteMes(); 
+            if (typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes(); 
         }, (error) => {
             if (typeof window.mostrarErrorFirebase === 'function') window.mostrarErrorFirebase(error, 'Error al cargar bloqueos de agenda');
             else console.error('Error al cargar bloqueos de agenda', error);
         });
 
     } catch (error) {
-        div.innerHTML = `<div class="bg-red-50 p-10 rounded-xl shadow-sm border border-red-200 text-center"><p class="font-bold text-red-600 text-lg">Error de conexión en vivo</p></div>`;
+        if (div) {
+            div.innerHTML = `<div class="bg-red-50 p-10 rounded-xl shadow-sm border border-red-200 text-center"><p class="font-bold text-red-600 text-lg">Error de conexión en vivo</p></div>`;
+        }
     }
 };
 
