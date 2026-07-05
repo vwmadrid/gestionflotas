@@ -1,7 +1,7 @@
 // Archivo: sw.js
 // Service Worker básico para mejorar la instalación y carga en móvil.
 
-const CACHE_NAME = 'gescar-os-v4';
+const CACHE_NAME = 'gescar-os-v5';
 const APP_SHELL = [
     './',
     './index.html',
@@ -38,6 +38,11 @@ self.addEventListener('fetch', (event) => {
 
     const isSameOrigin = self.location.origin === new URL(request.url).origin;
     if (!isSameOrigin) return;
+
+    if (request.mode === 'navigate') {
+        event.respondWith(fetch(request).catch(() => caches.match('./movil.html')));
+        return;
+    }
 
     event.respondWith(
         caches.match(request).then((cached) => {
