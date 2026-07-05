@@ -278,7 +278,9 @@
                 });
             });
 
-            renderizarVistaSegunDispositivo();
+            if (window.tabActiva === 'agenda') {
+                renderizarVistaSegunDispositivo();
+            }
         }, (error) => {
             if (typeof window.mostrarErrorFirebase === 'function') window.mostrarErrorFirebase(error, 'Error al cargar citas de agenda');
             else console.error('Error al cargar citas de agenda', error);
@@ -290,7 +292,7 @@
             querySnapshot.forEach((doc) => {
                 window.datosVacaciones.push({ id: doc.id, ...doc.data() });
             });
-            if (typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes(); 
+            if (window.tabActiva === 'agenda' && typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes(); 
         }, (error) => {
             if (typeof window.mostrarErrorFirebase === 'function') window.mostrarErrorFirebase(error, 'Error al cargar bloqueos de agenda');
             else console.error('Error al cargar bloqueos de agenda', error);
