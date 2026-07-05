@@ -42,7 +42,9 @@
         window.updatePassword = updatePassword;
         window.collection = collection; window.onSnapshot = onSnapshot; window.doc = doc; 
         window.updateDoc = updateDoc; window.setDoc = setDoc; window.getDoc = getDoc; 
+        window.arrayUnion = arrayUnion;
         window.deleteDoc = deleteDoc;
+        window.increment = increment;
         
         // ¡ESTA ES LA CLAVE PARA QUE NO DÉ ERROR!
         window.getDocs = getDocs;
@@ -163,7 +165,7 @@
 
     <button id="btnAbrirChatGlobal" onclick="window.abrirChatGlobal()" class="bg-[#001e50] text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:bg-blue-900 transition-transform hover:scale-110 border-2 border-white" style="position: fixed !important; bottom: 24px !important; right: 24px !important; z-index: 99998 !important; display: none;">
         <i class="ph-bold ph-chats text-2xl"></i>
-        <span id="contadorChatGlobal" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm" style="display: none;">0</span>
+        <span id="contadorChatGlobalFab" class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm" style="display: none;">0</span>
     </button>
 
     <div id="chatGlobalWidget" class="fixed bottom-6 right-6 w-[calc(100%-1.5rem)] max-w-sm h-[75vh] max-h-[580px] bg-gray-100 rounded-2xl shadow-2xl z-50 flex-col overflow-hidden border border-gray-300" style="display: none;">
@@ -201,10 +203,31 @@
         </div>
     </div>
 
-    <script src="app.js?v=7"></script>
-    <script src="chat.js?v=7"></script>
-    <script src="agenda.js?v=7"></script>
-    <script src="vehiculos.js?v=7"></script>
+        <div id="chatModal" class="fixed inset-0 z-50 hidden bg-black/60 flex items-center justify-center p-3">
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col h-[72vh] overflow-hidden border-t-8 border-[#075e54]">
+                <div class="px-4 py-3 bg-[#075e54] text-white flex items-center justify-between shadow-md z-10">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"><i class="ph-fill ph-car text-xl"></i></div>
+                        <div class="leading-tight min-w-0">
+                            <h3 class="font-bold text-sm truncate" id="chatTituloCoche">Modelo</h3>
+                            <p id="chatSubtitulo" class="text-[11px] text-white/80 font-medium truncate"></p>
+                        </div>
+                    </div>
+                    <button onclick="window.cerrarChat()" class="p-2 hover:bg-white/10 rounded-full transition-colors"><i class="ph-bold ph-x"></i></button>
+                </div>
+                <div id="chatMessages" class="p-4 flex-grow overflow-y-auto bg-whatsapp flex flex-col gap-2"></div>
+                <div class="p-3 bg-[#f0f0f0] flex gap-2 items-center border-t border-gray-300">
+                    <input type="hidden" id="chatFilaActiva">
+                    <input type="text" id="chatInput" placeholder="Escribe un mensaje..." class="flex-grow px-4 py-2.5 bg-white border border-gray-300 rounded-full outline-none text-sm shadow-sm focus:border-[#128c7e]">
+                    <button onclick="window.enviarMensajeChat()" class="w-10 h-10 flex-shrink-0 bg-[#128c7e] text-white rounded-full shadow-sm flex items-center justify-center hover:bg-[#0b5c53]"><i class="ph-fill ph-paper-plane-right text-lg"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <script src="app.js?v=8"></script>
+        <script src="chat.js?v=8"></script>
+        <script src="agenda.js?v=8"></script>
+        <script src="vehiculos.js?v=8"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
