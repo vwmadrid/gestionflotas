@@ -310,12 +310,18 @@
     
     window.datosAgenda.forEach(cita => {
         if (!cita.fechaHora || cita.matricula === "---") return;
-        
-        let fechaCitaPartes = cita.fechaHora.split('T')[0].split('-');
-        if(fechaCitaPartes.length !== 3) return;
 
-        let fechaCitaLimpia = new Date(fechaCitaPartes[0], fechaCitaPartes[1] - 1, fechaCitaPartes[2]);
+        let fechaCitaObj = window.normalizarFechaAgenda(cita.fechaHora);
+        if (!fechaCitaObj || isNaN(fechaCitaObj.getTime())) return;
+
+        let fechaCitaLimpia = new Date(fechaCitaObj);
         fechaCitaLimpia.setHours(0, 0, 0, 0);
+
+        let fechaCitaPartes = [
+            String(fechaCitaLimpia.getFullYear()),
+            String(fechaCitaLimpia.getMonth() + 1).padStart(2, '0'),
+            String(fechaCitaLimpia.getDate()).padStart(2, '0')
+        ];
         
         let matCita = cita.matricula ? String(cita.matricula).replace(/\s/g, '').toUpperCase() : '';
         let basCita = cita.bastidor ? String(cita.bastidor).toUpperCase() : '';
@@ -328,7 +334,7 @@
         let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
         
         if (fechaCitaLimpia < hoyLimpio && !yaEntregado) {
-            let fechaCitaRaw = cita.fechaHora.split('T')[0]; 
+            let fechaCitaRaw = `${fechaCitaPartes[0]}-${fechaCitaPartes[1]}-${fechaCitaPartes[2]}`;
             let modeloSeguro = window.escapeJS(cita.modelo);
             
             atrasados.push(`<span class="cursor-pointer hover:underline text-red-700 hover:text-red-900 transition-colors inline-flex items-center gap-1" onclick="window.irACitaAtrasada('${fechaCitaRaw}')"><b>${cita.matricula || "S/M"}</b> - ${modeloSeguro} (${fechaCitaPartes[2]}/${fechaCitaPartes[1]}) <i class="ph-bold ph-arrow-square-out text-sm"></i></span>`);
