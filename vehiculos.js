@@ -697,9 +697,13 @@ window.marcarComoEntregado = function(id, opciones) {
 
     if (!coche) return Swal.fire('Error', 'Vehículo no encontrado en el sistema.', 'error');
     
-    // 2. Buscamos el teléfono en la agenda cruzando la matrícula
-    let cita = window.datosAgenda && window.datosAgenda.find(cita => (cita.matricula && coche.B && String(cita.matricula).replace(/\s/g, '') === String(coche.B).replace(/\s/g, '')));
-    let tlf = cita ? cita.telefono : (coche.telefono || "");
+    // 2. Buscamos el teléfono en agenda y en el propio coche
+    let cita = window.datosAgenda && window.datosAgenda.find(cita => {
+        const matCita = String(cita.matricula || '').replace(/\s/g, '').toUpperCase();
+        const matCoche = String(coche.B || '').replace(/\s/g, '').toUpperCase();
+        return matCita && matCoche && matCita === matCoche;
+    });
+    let tlf = cita ? cita.telefono : (coche.telefono || coche.tlf || coche.telefonoCliente || "");
 
     const normalizarTelefonoWhatsapp = function(numeroRaw) {
         let digitos = String(numeroRaw || '').replace(/\D/g, '');
@@ -723,16 +727,52 @@ window.marcarComoEntregado = function(id, opciones) {
         const textoCodificado = encodeURIComponent(mensaje || '');
         const urlApi = `https://api.whatsapp.com/send?phone=${tel}&text=${textoCodificado}`;
         const urlWaMe = `https://wa.me/${tel}?text=${textoCodificado}`;
+        const urlScheme = `whatsapp://send?phone=${tel}&text=${textoCodificado}`;
+
+        try {
+            const popup = window.open(urlWaMe, '_blank', 'noopener,noreferrer');
+            if (popup) return;
+        } catch (e) {
+            console.warn('No se pudo abrir popup de WhatsApp, probando fallback.', e);
+        }
+
+        try {
+            window.location.href = urlWaMe;
+            return;
+        } catch (e2) {
+            console.warn('Fallo wa.me, probando api.whatsapp.com', e2);
+        }
 
         try {
             window.location.assign(urlApi);
-        } catch (e) {
+            return;
+        } catch (e3) {
+            console.warn('Fallo api.whatsapp.com, probando whatsapp://', e3);
+        }
+
+        try {
+            window.location.href = urlScheme;
+        } catch (e4) {
+            Swal.fire('Aviso', 'No se pudo abrir WhatsApp automáticamente.', 'warning');
+        }
+    };
+
+    const resolverTelefonoEntrega = async function() {
+        if (opts.idCita) {
             try {
-                window.location.href = urlWaMe;
-            } catch (e2) {
-                Swal.fire('Aviso', 'No se pudo abrir WhatsApp automáticamente.', 'warning');
+                const citaSnap = await window.getDoc(window.doc(window.db, "citas_agenda", opts.idCita));
+                if (citaSnap.exists()) {
+                    const dataCita = citaSnap.data() || {};
+                    const tlfCita = dataCita.telefono || dataCita.tlf || '';
+                    if (normalizarTelefonoWhatsapp(tlfCita)) return tlfCita;
+                }
+            } catch (errTlf) {
+                console.warn('No se pudo leer teléfono desde la cita.', errTlf);
             }
         }
+
+        if (normalizarTelefonoWhatsapp(tlf)) return tlf;
+        return coche.telefono || coche.tlf || coche.telefonoCliente || '';
     };
 
     // 3. Desplegamos el formulario
@@ -800,7 +840,8 @@ window.marcarComoEntregado = function(id, opciones) {
                 if (urlFoto) msg += `Aquí tienes un recuerdo de tu entrega: ${urlFoto} `;
                 if (pedirResena) msg += `Te agradeceríamos mucho si nos dejas una pequeña reseña en Google: https://search.google.com/local/writereview?placeid=ChIJc6vL3fIvQg0RGT8iQzPAenc`;
                 
-                const telefonoWhatsapp = normalizarTelefonoWhatsapp(tlf);
+                const telefonoRaw = await resolverTelefonoEntrega();
+                const telefonoWhatsapp = normalizarTelefonoWhatsapp(telefonoRaw);
 
                 // D. Mostramos el botón manual para EVITAR el bloqueo del navegador
                 Swal.fire({
@@ -815,7 +856,7 @@ window.marcarComoEntregado = function(id, opciones) {
                     showConfirmButton: !!telefonoWhatsapp
                 }).then((waResult) => {
                     if (waResult.isConfirmed) {
-                        abrirWhatsappSeguro(telefonoWhatsapp, msg);
+                        abrirWhatsappSeguro(telefonoRaw, msg);
                     }
                     // Refrescamos la pantalla al final de todo el proceso
                     if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
@@ -834,7 +875,8 @@ window.marcarComoEntregado = function(id, opciones) {
                             body: JSON.stringify({ base64: reader.result, fileName: inputFoto.name, mimeType: inputFoto.type }) 
                         });
                         const data = await res.json(); 
-                        await finalizar(data.url); // Llamamos a finalizar con la URL de Drive
+                        const urlFoto = data?.url || data?.fileUrl || data?.link || null;
+                        await finalizar(urlFoto); // Llamamos a finalizar con la URL de Drive
                     } catch (e) {
                         console.error(e);
                         Swal.fire('Error', 'Hubo un problema al subir la fotografía a Drive.', 'error');
