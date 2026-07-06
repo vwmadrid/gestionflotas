@@ -60,9 +60,90 @@ window.copiarAlPortapapeles = function(texto) {
 // 🚛 GESTOR DE PEDIDOS A CAMPA
 // ==========================================
 
+window.esFechaCitaDevolucion = function(coche) {
+    const modelo = String(coche?.C || coche?.modelo || '').toUpperCase();
+    return modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
+};
+
+window.parsearFechaCitaVehiculo = function(fechaCita) {
+    if (!fechaCita || typeof fechaCita !== 'string') return null;
+    const fechaLimpia = fechaCita.split(' - ')[0].trim();
+    const partes = fechaLimpia.split('/');
+    if (partes.length !== 3) return null;
+
+    const dia = parseInt(partes[0], 10);
+    const mes = parseInt(partes[1], 10) - 1;
+    const anio = parseInt(partes[2], 10);
+    const fecha = new Date(anio, mes, dia, 0, 0, 0, 0);
+    return isNaN(fecha.getTime()) ? null : fecha;
+};
+
+window.obtenerPendientesPedirCampa = function() {
+    return (typeof todosLosCoches !== 'undefined' ? todosLosCoches : []).filter(c => {
+        if (!c || !c.fechaCita) return false;
+        if (c.entregado === true || c.entregado === 'true') return false;
+        if (c.cochePedido === true || c.cochePedido === 'true') return false;
+        if (window.esFechaCitaDevolucion(c)) return false;
+        return !!window.parsearFechaCitaVehiculo(c.fechaCita);
+    });
+};
+
+window.obtenerPendientesPedirHoySiOSi = function(diasAntelacion) {
+    const dias = Number.isFinite(diasAntelacion) ? diasAntelacion : 3;
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    return window.obtenerPendientesPedirCampa().filter(c => {
+        const fecha = window.parsearFechaCitaVehiculo(c.fechaCita);
+        if (!fecha) return false;
+
+        const diffMs = fecha.getTime() - hoy.getTime();
+        const diffDias = Math.round(diffMs / 86400000);
+
+        return diffDias >= 0 && diffDias <= dias;
+    });
+};
+
+window.mostrarAvisoPedidosHoySiOSi = function() {
+    const urgentes = window.obtenerPendientesPedirHoySiOSi(3);
+    if (!urgentes.length) return;
+
+    const hoy = new Date();
+    const claveHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+    const claveLocal = `vw_alerta_pedidos_${window.usuarioActivo || 'anon'}_${claveHoy}`;
+    if (localStorage.getItem(claveLocal) === 'ok') return;
+
+    localStorage.setItem(claveLocal, 'ok');
+
+    const listado = urgentes
+        .slice(0, 8)
+        .map(c => `<li><b>${c.B || c.matricula || 'S/M'}</b> - ${c.C || c.modelo || 'Vehículo'} <span style="color:#0f172a;">(${c.fechaCita})</span></li>`)
+        .join('');
+    const extra = urgentes.length > 8 ? `<p class="text-xs text-gray-500 mt-2">...y ${urgentes.length - 8} más.</p>` : '';
+
+    Swal.fire({
+        icon: 'warning',
+        title: '🚛 Pedidos obligatorios de hoy',
+        html: `
+            <p class="text-sm text-gray-700 mb-2">Tienes <b>${urgentes.length}</b> vehículo(s) con cita en <b>3 días o menos</b> sin pedir a campa.</p>
+            <ul class="text-left text-sm bg-amber-50 border border-amber-200 rounded-lg p-3 max-h-52 overflow-y-auto custom-scrollbar" style="line-height:1.5;">${listado}</ul>
+            ${extra}
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Abrir Pendientes de Pedir',
+        cancelButtonText: 'Cerrar',
+        confirmButtonColor: '#001e50',
+        cancelButtonColor: '#6b7280'
+    }).then((res) => {
+        if (res.isConfirmed && typeof window.abrirGestorPedidosCampa === 'function') {
+            window.abrirGestorPedidosCampa();
+        }
+    });
+};
+
 window.abrirGestorPedidosCampa = function() {
     // 1. Buscamos coches que tienen cita, NO están entregados, y NO están pedidos
-    let pendientesPedir = todosLosCoches.filter(c => c.fechaCita && c.entregado !== true && c.entregado !== "true" && c.cochePedido !== true);
+    let pendientesPedir = window.obtenerPendientesPedirCampa();
 
     if (pendientesPedir.length === 0) {
         return Swal.fire({
@@ -75,18 +156,9 @@ window.abrirGestorPedidosCampa = function() {
 
     // 🔥 2. ORDENAMOS LA LISTA POR FECHA DE CITA (De más urgente a menos)
     pendientesPedir.sort((a, b) => {
-        let parseFecha = (fStr) => {
-            if (!fStr) return 0;
-            // La fecha viene como "DD/MM/AAAA - HH:MMh", nos quedamos con la parte de la fecha
-            let fechaLimpia = fStr.split(' - ')[0]; 
-            let partes = fechaLimpia.split('/'); // [DD, MM, AAAA]
-            if (partes.length === 3) {
-                // Formato año, mes (empieza en 0), día
-                return new Date(partes[2], partes[1] - 1, partes[0]).getTime();
-            }
-            return 0;
-        };
-        return parseFecha(a.fechaCita) - parseFecha(b.fechaCita);
+        const fA = window.parsearFechaCitaVehiculo(a.fechaCita);
+        const fB = window.parsearFechaCitaVehiculo(b.fechaCita);
+        return (fA ? fA.getTime() : Number.MAX_SAFE_INTEGER) - (fB ? fB.getTime() : Number.MAX_SAFE_INTEGER);
     });
 
     // 3. Generamos el HTML de la lista con los datos clave
