@@ -86,6 +86,7 @@ window.iniciar = async function() {
         "ANTONIO.BERMEJO": "entregas",
         "MANUEL.LOPEZ": "taller",
         "ALVARO.BELTRAN": "taller",
+        "LORENA.LEOVEANU": "taller",
         "SERGIO.CABALLERO": "recambios",
         "FERNANDO.CRESPO": "recambios",
         "JAIME.JORGE": "recambios",
