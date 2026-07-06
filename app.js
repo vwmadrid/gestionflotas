@@ -71,9 +71,18 @@ window.gestionarCamposLogin = function() {
     else if (depto === 'backoffice') inputUser.placeholder = "Nombre de Usuario";
 };
 
+window.normalizarUsuarioLogin = function(valor) {
+    return String(valor || '')
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '.')
+        .replace(/\.+/g, '.')
+        .replace(/^\.|\.$/g, '');
+};
+
 window.iniciar = async function() {
     const depto = document.getElementById('selectDepartamento').value;
-    const usuarioInput = document.getElementById('userLogin').value.trim().toUpperCase();
+    const usuarioInput = window.normalizarUsuarioLogin(document.getElementById('userLogin').value);
     const passInput = document.getElementById('userPass').value.trim();
 
     if (!depto || !usuarioInput || !passInput) {
@@ -156,7 +165,22 @@ window.iniciar = async function() {
 
     } catch (error) {
         console.error(error);
-        Swal.fire({ icon: 'error', title: 'Acceso Denegado', text: 'Usuario o contraseña incorrectos.' });
+        let tituloError = 'Acceso Denegado';
+        let textoError = 'No se ha podido iniciar sesión.';
+
+        if (error?.code === 'auth/invalid-email') {
+            textoError = `El usuario ${usuarioInput} no genera un correo válido de acceso.`;
+        } else if (error?.code === 'auth/user-not-found') {
+            textoError = `La cuenta ${emailSeguro} no existe en Firebase Auth. Revisa que esté creada exactamente con ese email.`;
+        } else if (error?.code === 'auth/wrong-password' || error?.code === 'auth/invalid-credential') {
+            textoError = `La contraseña de ${emailSeguro} no es correcta.`;
+        } else if (error?.code === 'auth/too-many-requests') {
+            textoError = 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.';
+        } else {
+            textoError = `No se ha podido iniciar sesión con ${emailSeguro}. Verifica usuario, rol y contraseña.`;
+        }
+
+        Swal.fire({ icon: 'error', title: tituloError, text: textoError });
         btn.innerText = textoOriginal;
     }
 };
