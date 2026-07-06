@@ -574,6 +574,11 @@ window.cargar = function() {
                 primeraCargaDb = false;
                 setTimeout(() => { if(typeof window.sincronizarCitasSilencioso === 'function') window.sincronizarCitasSilencioso(); }, 1500); 
             }
+
+            // Aviso diario: coches con cita dentro de 3 días aún sin pedir a campa.
+            if (typeof window.mostrarAvisoPedidosHoySiOSi === 'function') {
+                setTimeout(() => window.mostrarAvisoPedidosHoySiOSi(), 900);
+            }
         }
 
         window.aplicarPermisosPorRol();
@@ -1212,6 +1217,11 @@ window.generarListadoDiario = function() {
         return Number.MAX_SAFE_INTEGER;
     };
 
+    const esCitaDevolucion = (cita) => {
+        const modelo = String(cita?.modelo || '').toUpperCase();
+        return modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
+    };
+
     // 1. Preparamos la fecha de hoy por defecto para el formulario
     let hoy = new Date();
     let diaDefecto = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, '0') + "-" + String(hoy.getDate()).padStart(2, '0');
@@ -1246,7 +1256,8 @@ window.generarListadoDiario = function() {
                 c &&
                 obtenerFechaKey(c.fechaHora) === fechaElegida &&
                 c.matricula !== "---" &&
-                !c.isBlock
+                !c.isBlock &&
+                !esCitaDevolucion(c)
             );
 
             // Si no hay nada, avisamos
@@ -1256,6 +1267,19 @@ window.generarListadoDiario = function() {
 
             // 4. Ordenamos las citas cronológicamente (de 10:00 a 19:00)
             citasDelDia.sort((a, b) => obtenerTimestamp(a.fechaHora) - obtenerTimestamp(b.fechaHora));
+
+            const mensajeWhatsApp = [
+                `*HOJA PREPARACION* ${fechaVisual}`,
+                '',
+                ...citasDelDia.map(c => {
+                    const horaCita = obtenerHoraTexto(c.fechaHora);
+                    const rentingTxt = (c.renting || 'S/D').toUpperCase();
+                    const voTxt = (c.entregaVO === 'SÍ' || c.entregaVO === 'SI') ? ' | RECOGE VO' : '';
+                    return `${horaCita} | ${c.matricula || 'S/M'} | ${c.modelo || 'VEHICULO'} | ${c.cliente || 'CLIENTE'} | RENTING: ${rentingTxt}${voTxt}`;
+                })
+            ].join('\n');
+
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(mensajeWhatsApp)}`;
 
             // 5. Construimos el HTML de la página imprimible
             let htmlImprimir = `
@@ -1268,8 +1292,12 @@ window.generarListadoDiario = function() {
                         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 30px; color: #111827; }
                         .cabecera { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #001e50; padding-bottom: 15px; margin-bottom: 25px; }
                         h1 { color: #001e50; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
-                        .btn-print { padding: 12px 24px; background: #00b0f0; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+                        .acciones { display: flex; gap: 10px; }
+                        .btn-print, .btn-wa { padding: 12px 24px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; text-transform: uppercase; text-decoration: none; display: inline-flex; align-items: center; }
+                        .btn-print { background: #00b0f0; }
                         .btn-print:hover { background: #008cc0; }
+                        .btn-wa { background: #16a34a; }
+                        .btn-wa:hover { background: #15803d; }
                         table { width: 100%; border-collapse: collapse; }
                         th, td { border: 1px solid #d1d5db; padding: 14px; text-align: left; vertical-align: middle; }
                         th { background-color: #f3f4f6; color: #001e50; font-weight: bold; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }
@@ -1280,7 +1308,7 @@ window.generarListadoDiario = function() {
                         
                         /* Ocultamos el botón al imprimir */
                         @media print {
-                            .btn-print { display: none !important; }
+                            .acciones { display: none !important; }
                             body { margin: 0; }
                             @page { margin: 1cm; size: A4 portrait; }
                         }
@@ -1289,7 +1317,10 @@ window.generarListadoDiario = function() {
                 <body>
                     <div class="cabecera">
                         <h1>🚘 Hoja de Lavadero y Preparación | ${fechaVisual}</h1>
-                        <button class="btn-print" onclick="window.print()">Imprimir Hoja</button>
+                        <div class="acciones">
+                            <a class="btn-wa" href="${waUrl}" target="_blank" rel="noopener noreferrer">Enviar por WhatsApp</a>
+                            <button class="btn-print" onclick="window.print()">Imprimir Hoja</button>
+                        </div>
                     </div>
                     <table>
                         <thead>
@@ -1297,7 +1328,7 @@ window.generarListadoDiario = function() {
                                 <th style="width: 80px; text-align: center;">Hora</th>
                                 <th style="width: 140px;">Matrícula / VIN</th>
                                 <th>Vehículo y Cliente</th>
-                                <th>Agente</th>
+                                <th>Renting</th>
                                 <th>Notas / VO</th>
                                 <th style="width: 70px; text-align: center;">Listo</th>
                             </tr>
@@ -1321,7 +1352,7 @@ window.generarListadoDiario = function() {
                                             <strong style="font-size: 15px; color: #111827; text-transform: uppercase;">${c.modelo}</strong><br>
                                             <span style="font-size: 12px; color: #4b5563;">${c.cliente}</span>
                                         </td>
-                                        <td style="font-weight: bold; color: #374151;">${c.agente}</td>
+                                        <td style="font-weight: bold; color: #374151; text-transform: uppercase;">${c.renting || 'S/D'}</td>
                                         <td style="font-size: 12px; color: #ef4444; font-weight: bold;">
                                             ${etiquetaVO}
                                             <div style="margin-top: ${etiquetaVO ? '6px' : '0'};">${c.notas || ''}</div>
