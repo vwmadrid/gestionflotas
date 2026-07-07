@@ -141,6 +141,51 @@ window.mostrarAvisoPedidosHoySiOSi = function() {
     });
 };
 
+window.subirArchivoConReintento = async function(file, opciones) {
+    const opts = opciones || {};
+    const maxIntentos = Number(opts.maxIntentos || 3);
+
+    const leerBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+    });
+
+    let ultimoError = null;
+    for (let intento = 1; intento <= maxIntentos; intento++) {
+        try {
+            const res = await fetch('https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec', {
+                method: 'POST',
+                body: JSON.stringify({
+                    base64: leerBase64,
+                    fileName: file.name,
+                    mimeType: file.type
+                })
+            });
+
+            if (!res.ok) throw new Error(`Respuesta no valida (${res.status})`);
+            const data = await res.json();
+            const url = data?.url || data?.fileUrl || data?.link || null;
+            if (!url) throw new Error('No se recibio URL de archivo.');
+
+            return { ok: true, url, intentos: intento, error: null };
+        } catch (errorSubida) {
+            ultimoError = errorSubida;
+            if (intento < maxIntentos) {
+                await new Promise(resolve => setTimeout(resolve, 600 * intento));
+            }
+        }
+    }
+
+    return {
+        ok: false,
+        url: null,
+        intentos: maxIntentos,
+        error: ultimoError ? String(ultimoError.message || ultimoError) : 'Error de subida desconocido'
+    };
+};
+
 window.abrirGestorPedidosCampa = function() {
     // 1. Buscamos coches que tienen cita, NO están entregados, y NO están pedidos
     let pendientesPedir = window.obtenerPendientesPedirCampa();
@@ -723,6 +768,113 @@ window.anadirVehiculoManual = async function() {
     }
 };
 
+window.crearVehiculoDesdeCitaAgenda = async function(datosBase = {}, opciones = {}) {
+    const citaId = opciones.citaId || null;
+    const fechaVisual = datosBase.fecha || opciones.fecha || '';
+    const hora = datosBase.hora || opciones.hora || '';
+
+    let datosCita = { ...datosBase };
+    if (citaId && window.getDoc && window.doc && window.db) {
+        try {
+            const snap = await window.getDoc(window.doc(window.db, 'citas_agenda', citaId));
+            if (snap.exists()) {
+                datosCita = { ...snap.data(), ...datosCita };
+            }
+        } catch (error) {
+            console.warn('No se pudo leer la cita origen para crear el vehículo.', error);
+        }
+    }
+
+    const matricula = String(datosCita.matricula || datosCita.Matricula || opciones.matricula || 'S/M').toUpperCase().trim();
+    let bastidor = String(datosCita.bastidor || opciones.bastidor || '').toUpperCase().trim();
+    const modelo = String(datosCita.modelo || opciones.modelo || 'VW').toUpperCase().trim();
+    const cliente = String(datosCita.cliente || opciones.cliente || 'Cliente').trim();
+    const telefono = String(datosCita.telefono || opciones.telefono || '').trim();
+    const email = String(datosCita.email || opciones.email || '').trim();
+    const renting = String(datosCita.renting || datosCita.agencia || opciones.renting || opciones.agencia || '').trim();
+    const entregaVO = String(datosCita.entregaVO || opciones.entregaVO || 'NO').toUpperCase().trim();
+    const agente = String(datosCita.agente || opciones.agente || 'MANUEL').toUpperCase().trim();
+
+    if (!matricula || matricula === 'S/M') {
+        throw new Error('No se puede crear la tarjeta sin matrícula válida.');
+    }
+
+    if (!bastidor) {
+        const { value: bastidorIntroducido } = await Swal.fire({
+            title: 'Bastidor obligatorio',
+            html: `
+                <p class="text-sm text-gray-700 mb-2">La cita no trae bastidor. Introduce el VIN para crear correctamente la tarjeta.</p>
+                <input id="vin-cita-nueva" class="swal2-input !w-full !m-0 text-center uppercase" placeholder="VIN / BASTIDOR" value="${String(opciones.bastidor || datosCita.bastidor || '').toUpperCase()}">
+            `,
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#001e50',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Guardar bastidor',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const vin = document.getElementById('vin-cita-nueva').value.toUpperCase().trim().replace(/\s/g, '');
+                if (!vin) return Swal.showValidationMessage('El bastidor es obligatorio para crear la tarjeta.');
+                return vin;
+            }
+        });
+
+        if (!bastidorIntroducido) {
+            throw new Error('Alta cancelada por falta de bastidor.');
+        }
+
+        bastidor = bastidorIntroducido;
+    }
+
+    const nowIso = new Date().toISOString();
+    const idNuevo = new Date().getTime().toString();
+    const fechaCitaTexto = fechaVisual && hora ? `${fechaVisual} - ${hora}h` : (datosCita.fechaCita || '');
+
+    await window.setDoc(window.doc(window.db, 'vehiculos', idNuevo), {
+        bastidor: bastidor,
+        A: bastidor,
+        matricula: matricula,
+        Matricula: matricula,
+        B: matricula,
+        modelo: modelo,
+        C: modelo,
+        cliente: cliente,
+        telefono: telefono,
+        email: email,
+        renting: renting,
+        agencia: renting,
+        entregaVO: entregaVO,
+        agente: agente,
+        fechaCita: fechaCitaTexto,
+        pasoAInventario: true,
+        entregado: true,
+        fechaEntrega: nowIso,
+        creadoEn: new Date().getTime(),
+        origenCitaId: citaId || '',
+        origenCitaManual: true
+    });
+
+    if (citaId && window.updateDoc && window.doc && window.db) {
+        try {
+            await window.updateDoc(window.doc(window.db, 'citas_agenda', citaId), {
+                entregado: true,
+                estado: 'confirmada',
+                fechaEntrega: new Date().getTime(),
+                vehiculoCreadoManual: true,
+                vehiculoCreadoId: idNuevo
+            });
+        } catch (error) {
+            console.warn('No se pudo actualizar la cita tras crear el vehículo.', error);
+        }
+    }
+
+    if (typeof window.cargar === 'function') window.cargar();
+    if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+    if (typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes();
+
+    return { id: idNuevo, matricula, modelo, cliente, fechaCitaTexto };
+};
+
 window.editarVehiculoBasico = async function(id, bastidorActual, matriculaActual, modeloActual) {
     const { value: formValues } = await Swal.fire({
         title: 'Editar Vehículo',
@@ -871,21 +1023,31 @@ window.marcarComoEntregado = function(id, opciones) {
             let pedirResena = document.getElementById('pedirResena').checked;
             
             // Función interna para cerrar el proceso y lanzar WhatsApp de forma segura
-            const finalizar = async (urlFoto) => {
+            const finalizar = async (urlFoto, estadoSubida) => {
+                const tsEntrega = typeof window.obtenerTimestamp === 'function' ? window.obtenerTimestamp() : new Date().getTime();
+                const fechaEntregaTexto = typeof window.formatearFechaES === 'function' ? window.formatearFechaES(tsEntrega) : new Date().toLocaleDateString('es-ES');
+                const subida = estadoSubida || { estado: 'SIN_ARCHIVO', intentos: 0, error: null };
+
                 // A. Actualizamos el estado en la base de datos
                 await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
                     entregado: true, 
-                    fechaEntrega: new Date().toLocaleDateString('es-ES') 
+                    fechaEntrega: fechaEntregaTexto,
+                    fechaEntregaTs: tsEntrega,
+                    tipoFinalizacion: 'ENTREGA',
+                    estadoSubidaEntrega: subida.estado,
+                    intentosSubidaEntrega: Number(subida.intentos || 0),
+                    errorSubidaEntrega: subida.error || null
                 });
 
                 // B. La cita se mantiene: la marcamos como confirmada/entregada y no se elimina.
                 try {
-                    const tsEntrega = new Date().getTime();
                     if (opts.idCita) {
                         await window.updateDoc(window.doc(window.db, "citas_agenda", opts.idCita), {
                             estado: "confirmada",
                             entregado: true,
-                            fechaEntrega: tsEntrega
+                            fechaEntrega: tsEntrega,
+                            fechaEntregaTexto: fechaEntregaTexto,
+                            tipoFinalizacion: 'ENTREGA'
                         });
                     } else if (Array.isArray(window.datosAgenda)) {
                         const matCoche = String(coche.B || '').replace(/\s/g, '').toUpperCase();
@@ -899,12 +1061,31 @@ window.marcarComoEntregado = function(id, opciones) {
                             await window.updateDoc(window.doc(window.db, "citas_agenda", citaVinculada.id), {
                                 estado: "confirmada",
                                 entregado: true,
-                                fechaEntrega: tsEntrega
+                                fechaEntrega: tsEntrega,
+                                fechaEntregaTexto: fechaEntregaTexto,
+                                tipoFinalizacion: 'ENTREGA'
                             });
                         }
                     }
                 } catch (errorCita) {
                     console.warn('No se pudo actualizar la cita tras la entrega, pero el vehículo quedó entregado.', errorCita);
+                }
+
+                if (typeof window.registrarMovimientoHistorial === 'function') {
+                    await window.registrarMovimientoHistorial({
+                        tipo: 'ENTREGA',
+                        vehiculoId: id,
+                        citaId: opts.idCita || null,
+                        matricula: coche.B || coche.matricula || 'S/M',
+                        bastidor: coche.A || coche.bastidor || 'S/D',
+                        modelo: coche.C || coche.modelo || '-',
+                        renting: coche.renting || '',
+                        urlFotoEntrega: urlFoto || null,
+                        solicitarResena: !!pedirResena,
+                        estadoSubida: subida.estado,
+                        intentosSubida: Number(subida.intentos || 0),
+                        errorSubida: subida.error || null
+                    });
                 }
                 
                 // C. Construimos el mensaje dinámico
@@ -938,25 +1119,21 @@ window.marcarComoEntregado = function(id, opciones) {
             // 4. Si hay foto, la subimos primero a Apps Script
             if (inputFoto) {
                 Swal.fire({ title: 'Procesando fotografía...', text: 'Subiendo a la nube, por favor espera.', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
-                const reader = new FileReader(); 
-                reader.readAsDataURL(inputFoto);
-                reader.onload = async () => {
-                    try {
-                        const res = await fetch('https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec', { 
-                            method: 'POST', 
-                            body: JSON.stringify({ base64: reader.result, fileName: inputFoto.name, mimeType: inputFoto.type }) 
-                        });
-                        const data = await res.json(); 
-                        const urlFoto = data?.url || data?.fileUrl || data?.link || null;
-                        await finalizar(urlFoto); // Llamamos a finalizar con la URL de Drive
-                    } catch (e) {
-                        console.error(e);
-                        Swal.fire('Error', 'Hubo un problema al subir la fotografía a Drive.', 'error');
-                    }
-                };
+                const subida = await window.subirArchivoConReintento(inputFoto, { maxIntentos: 3 });
+                if (subida.ok) {
+                    await finalizar(subida.url, { estado: 'SUBIDO', intentos: subida.intentos, error: null });
+                } else {
+                    await finalizar(null, { estado: 'PENDIENTE_SUBIDA', intentos: subida.intentos, error: subida.error });
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Entrega cerrada con subida pendiente',
+                        text: 'Se ha guardado la entrega, pero la foto no se pudo subir. Queda marcada como PENDIENTE_SUBIDA.',
+                        confirmButtonColor: '#f59e0b'
+                    });
+                }
             } else { 
                 // Si no hay foto, pasamos directamente
-                await finalizar(null); 
+                await finalizar(null, { estado: 'SIN_ARCHIVO', intentos: 0, error: null }); 
             }
         }
     });
@@ -993,14 +1170,38 @@ window.gestionarTraslado = async function(id) {
 
     if (formValues) {
         // Función interna encargada de escribir en Firebase
-        const guardarEnBaseDeDatos = async (urlArchivo) => {
+        const guardarEnBaseDeDatos = async (urlArchivo, estadoSubida) => {
+            const tsTraslado = typeof window.obtenerTimestamp === 'function' ? window.obtenerTimestamp() : new Date().getTime();
+            const fechaEntregaTexto = typeof window.formatearFechaES === 'function' ? window.formatearFechaES(tsTraslado) : new Date().toLocaleDateString('es-ES');
+            const subida = estadoSubida || { estado: 'SIN_ARCHIVO', intentos: 0, error: null };
             await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
                 entregado: true, 
-                fechaEntrega: new Date().toLocaleDateString('es-ES'), 
+                fechaEntrega: fechaEntregaTexto,
+                fechaEntregaTs: tsTraslado,
                 tipoFinalizacion: 'TRASLADO', 
                 concesionarioDestino: formValues.dest, // Se ha corregido el error tipográfico
-                urlActaTraslado: urlArchivo || null    // Almacenamos el enlace del PDF si se subió
+                urlActaTraslado: urlArchivo || null,
+                estadoSubidaActa: subida.estado,
+                intentosSubidaActa: Number(subida.intentos || 0),
+                errorSubidaActa: subida.error || null
             });
+
+            const coche = todosLosCoches.find(c => c.fila === id) || {};
+            if (typeof window.registrarMovimientoHistorial === 'function') {
+                await window.registrarMovimientoHistorial({
+                    tipo: 'TRASLADO',
+                    vehiculoId: id,
+                    matricula: coche.B || coche.matricula || 'S/M',
+                    bastidor: coche.A || coche.bastidor || 'S/D',
+                    modelo: coche.C || coche.modelo || '-',
+                    renting: coche.renting || '',
+                    concesionarioDestino: formValues.dest,
+                    urlActaTraslado: urlArchivo || null,
+                    estadoSubida: subida.estado,
+                    intentosSubida: Number(subida.intentos || 0),
+                    errorSubida: subida.error || null
+                });
+            }
             
             Swal.fire('Registrado', 'El traslado y el acta se han guardado en el historial.', 'success');
             
@@ -1019,32 +1220,19 @@ window.gestionarTraslado = async function(id) {
                 didOpen: () => Swal.showLoading(), 
                 allowOutsideClick: false 
             });
-            
-            const reader = new FileReader(); 
-            reader.readAsDataURL(formValues.file);
-            
-            reader.onload = async () => {
-                try {
-                    // Llamada al script de subida
-                    const res = await fetch('https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec', { 
-                        method: 'POST', 
-                        body: JSON.stringify({ 
-                            base64: reader.result, 
-                            fileName: formValues.file.name, 
-                            mimeType: formValues.file.type 
-                        }) 
-                    });
-                    
-                    const data = await res.json(); 
-                    
-                    // Al recibir la URL del archivo, escribimos en Firebase
-                    await guardarEnBaseDeDatos(data.url);
-                    
-                } catch (error) {
-                    console.error("Error al subir el acta:", error);
-                    Swal.fire('Error de conexión', 'No se pudo subir el archivo. Inténtalo de nuevo.', 'error');
-                }
-            };
+
+            const subida = await window.subirArchivoConReintento(formValues.file, { maxIntentos: 3 });
+            if (subida.ok) {
+                await guardarEnBaseDeDatos(subida.url, { estado: 'SUBIDO', intentos: subida.intentos, error: null });
+            } else {
+                await guardarEnBaseDeDatos(null, { estado: 'PENDIENTE_SUBIDA', intentos: subida.intentos, error: subida.error });
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Traslado cerrado con acta pendiente',
+                    text: 'No se pudo subir el acta tras varios intentos. El traslado queda registrado como PENDIENTE_SUBIDA.',
+                    confirmButtonColor: '#f59e0b'
+                });
+            }
         } else {
             // Si el usuario no adjuntó ningún archivo, guardamos directamente los datos de texto
             Swal.fire({ 
@@ -1052,7 +1240,7 @@ window.gestionarTraslado = async function(id) {
                 didOpen: () => Swal.showLoading(), 
                 allowOutsideClick: false 
             });
-            await guardarEnBaseDeDatos(null);
+            await guardarEnBaseDeDatos(null, { estado: 'SIN_ARCHIVO', intentos: 0, error: null });
         }
     }
 };
@@ -1086,12 +1274,18 @@ window.pedirInst = function(btn, id, depto) {
     let coche = todosLosCoches.find(c => c.fila === id);
     let enInventario = coche && coche.pasoAInventario !== false;
     
-    let rolLimpio = String(window.rolActivo || '').toLowerCase().trim();
-    // ✅ HEMOS AÑADIDO 'entregas' A LA LISTA DE SUPERPODERES
-    let tieneSuperpoderes = (rolLimpio === 'backoffice' || rolLimpio === 'admin' || rolLimpio === 'administracion' || rolLimpio === 'entregas');
+    let puedeAdelantarTransito = typeof window.tienePermiso === 'function'
+        ? window.tienePermiso('adelantar_peticion_transito')
+        : false;
+    let puedeFlujoInterdepartamental = typeof window.tienePermiso === 'function'
+        ? window.tienePermiso('flujo_interdepartamental_transito', {
+            coche,
+            deptoDestino: String(depto || '').toLowerCase().trim()
+        })
+        : false;
 
     // Si no está en inventario y NO tiene superpoderes, bloqueamos.
-    if (!enInventario && !tieneSuperpoderes) {
+    if (!enInventario && !puedeAdelantarTransito && !puedeFlujoInterdepartamental) {
         Swal.fire({
             title: 'Vehículo en Tránsito',
             text: 'Este vehículo aún no ha llegado físicamente a la campa. Solo los equipos autorizados pueden adelantar peticiones antes de su llegada.',
@@ -1329,10 +1523,88 @@ window.cargarMasHistorial = function() {
     window.pintarFilasHistorial(window.cochesHistorialMemoria.slice(0, window.limiteHistorial));
 };
 
+window.filtroRapidoHistorial = 'todos';
+
+window.obtenerTipoMovimientoHistorial = function(item) {
+    const tipoRaw = String((item && item.tipoFinalizacion) || (item && item.tipo) || '').toUpperCase();
+    if (tipoRaw === 'TRASLADO') return 'TRASLADO';
+    if (tipoRaw === 'DEVOLUCION' || tipoRaw === 'DEVOLUCIÓN') return 'DEVOLUCION';
+    return 'ENTREGA';
+};
+
+window.filtrarListaHistorialRapido = function(lista) {
+    const arr = Array.isArray(lista) ? lista : [];
+    const filtro = String(window.filtroRapidoHistorial || 'todos').toLowerCase();
+    if (filtro === 'todos') return arr;
+
+    if (filtro === 'entregas') return arr.filter(x => window.obtenerTipoMovimientoHistorial(x) === 'ENTREGA');
+    if (filtro === 'devoluciones') return arr.filter(x => window.obtenerTipoMovimientoHistorial(x) === 'DEVOLUCION');
+    if (filtro === 'traslados') return arr.filter(x => window.obtenerTipoMovimientoHistorial(x) === 'TRASLADO');
+    if (filtro === 'hoy') {
+        const hoy = new Date();
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const yyyy = String(hoy.getFullYear());
+        const hoyTxt = `${dd}/${mm}/${yyyy}`;
+        return arr.filter(x => String(x.fechaEntrega || '').trim() === hoyTxt);
+    }
+
+    return arr;
+};
+
+window.aplicarFiltroRapidoHistorial = function(filtro, btn) {
+    window.filtroRapidoHistorial = filtro;
+    document.querySelectorAll('.hist-quick-filter-btn').forEach(b => {
+        b.classList.remove('bg-[#001e50]', 'text-white', 'border-[#001e50]');
+        b.classList.add('bg-white', 'text-gray-700', 'border-gray-300');
+    });
+    if (btn) {
+        btn.classList.remove('bg-white', 'text-gray-700', 'border-gray-300');
+        btn.classList.add('bg-[#001e50]', 'text-white', 'border-[#001e50]');
+    }
+    window.renderEntregados();
+};
+
+window.obtenerContadoresFiltroHistorial = function(listaBase) {
+    const arr = Array.isArray(listaBase) ? listaBase : [];
+    const hoy = new Date();
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(hoy.getFullYear());
+    const hoyTxt = `${dd}/${mm}/${yyyy}`;
+
+    const entregas = arr.filter(x => window.obtenerTipoMovimientoHistorial(x) === 'ENTREGA').length;
+    const devoluciones = arr.filter(x => window.obtenerTipoMovimientoHistorial(x) === 'DEVOLUCION').length;
+    const traslados = arr.filter(x => window.obtenerTipoMovimientoHistorial(x) === 'TRASLADO').length;
+    const hoyCount = arr.filter(x => String(x.fechaEntrega || '').trim() === hoyTxt).length;
+
+    return {
+        todos: arr.length,
+        entregas,
+        devoluciones,
+        traslados,
+        hoy: hoyCount
+    };
+};
+
 window.renderEntregados = function() {
    let div = document.getElementById('contenedorEntregados');
+
+   const baseConteo = window.obtenerMovimientosHistorial();
+   const cFiltros = window.obtenerContadoresFiltroHistorial(baseConteo);
+
    div.innerHTML = `
    <div class="max-w-2xl mx-auto mt-6 space-y-6">
+       <div class="bg-white p-4 rounded-xl shadow-md border border-gray-200">
+           <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Filtros rápidos operativos</p>
+           <div class="flex gap-2 flex-wrap">
+               <button onclick="window.aplicarFiltroRapidoHistorial('todos', this)" class="hist-quick-filter-btn ${window.filtroRapidoHistorial === 'todos' ? 'bg-[#001e50] text-white border-[#001e50]' : 'bg-white text-gray-700 border-gray-300'} px-3 py-2 rounded-lg text-[11px] font-black border transition-all">Todos (${cFiltros.todos})</button>
+               <button onclick="window.aplicarFiltroRapidoHistorial('entregas', this)" class="hist-quick-filter-btn ${window.filtroRapidoHistorial === 'entregas' ? 'bg-[#001e50] text-white border-[#001e50]' : 'bg-white text-gray-700 border-gray-300'} px-3 py-2 rounded-lg text-[11px] font-black border transition-all">Entregas (${cFiltros.entregas})</button>
+               <button onclick="window.aplicarFiltroRapidoHistorial('devoluciones', this)" class="hist-quick-filter-btn ${window.filtroRapidoHistorial === 'devoluciones' ? 'bg-[#001e50] text-white border-[#001e50]' : 'bg-white text-gray-700 border-gray-300'} px-3 py-2 rounded-lg text-[11px] font-black border transition-all">Devoluciones (${cFiltros.devoluciones})</button>
+               <button onclick="window.aplicarFiltroRapidoHistorial('traslados', this)" class="hist-quick-filter-btn ${window.filtroRapidoHistorial === 'traslados' ? 'bg-[#001e50] text-white border-[#001e50]' : 'bg-white text-gray-700 border-gray-300'} px-3 py-2 rounded-lg text-[11px] font-black border transition-all">Traslados (${cFiltros.traslados})</button>
+               <button onclick="window.aplicarFiltroRapidoHistorial('hoy', this)" class="hist-quick-filter-btn ${window.filtroRapidoHistorial === 'hoy' ? 'bg-[#001e50] text-white border-[#001e50]' : 'bg-white text-gray-700 border-gray-300'} px-3 py-2 rounded-lg text-[11px] font-black border transition-all">Hoy (${cFiltros.hoy})</button>
+           </div>
+       </div>
        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
            <h2 class="text-xl font-black text-[#001e50] uppercase mb-1 flex items-center gap-2"><i class="ph-bold ph-magnifying-glass text-blue-500"></i> Buscar por Vehículo</h2>
            <div class="flex gap-2">
@@ -1362,18 +1634,85 @@ window.renderEntregados = function() {
    </div>`;
    setTimeout(() => { 
        if(document.getElementById('inputBusquedaHistorial')) document.getElementById('inputBusquedaHistorial').focus();
-       let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
-       let ultimos = entregados.slice(0, 15);
+       let base = window.filtrarListaHistorialRapido(window.obtenerMovimientosHistorial());
+       let ultimos = base.slice(0, 15);
        window.inyectarResultadosHistorial(ultimos, document.getElementById('resultadoBusquedaHistorial'), "Últimos Movimientos Registrados");
    }, 100);
 }
+
+window.obtenerMovimientosHistorial = function() {
+   if (Array.isArray(window.movimientosHistorial) && window.movimientosHistorial.length > 0) {
+       return window.movimientosHistorial.map(m => {
+           const tipo = String(m.tipo || m.tipoFinalizacion || '').toUpperCase();
+           const ts = Number(m.ts || m.fechaEntregaTs || 0) || 0;
+           let fechaTxt = m.fechaTexto || m.fechaEntrega || '';
+           if (!fechaTxt && ts > 0) {
+               const d = new Date(ts);
+               if (!isNaN(d.getTime())) fechaTxt = d.toLocaleDateString('es-ES');
+           }
+
+           return {
+               fila: m.vehiculoId || m.id || ('mov_' + Math.random().toString(36).slice(2)),
+               C: m.modelo || 'MOVIMIENTO',
+               A: m.bastidor || 'S/D',
+               B: m.matricula || 'S/M',
+               agente: m.usuario || m.agente || 'N/A',
+               entregador: m.usuario || m.agente || 'N/A',
+               renting: m.renting || '-',
+               fechaEntrega: fechaTxt || 'Completado',
+               fechaEntregaTs: ts,
+               tipoFinalizacion: tipo === 'TRASLADO' ? 'TRASLADO' : (tipo === 'DEVOLUCION' ? 'DEVOLUCION' : 'ENTREGA'),
+               concesionarioDestino: m.concesionarioDestino || null,
+               urlActaTraslado: m.urlActaTraslado || null,
+               esRegistroAgenda: !m.vehiculoId
+           };
+       });
+   }
+
+   let entregadosVehiculos = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
+   let devolucionesAgenda = (window.datosAgenda || []).filter(cita => {
+       let modelo = String(cita && cita.modelo ? cita.modelo : '').toUpperCase();
+       let esDevolucion = modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
+       return esDevolucion && (cita.entregado === true || cita.entregado === "true");
+   }).map(cita => {
+       let fechaTxt = cita.fechaEntregaTexto || '';
+       if (!fechaTxt && cita.fechaEntrega) {
+           let d = new Date(Number(cita.fechaEntrega));
+           if (!isNaN(d.getTime())) fechaTxt = d.toLocaleDateString('es-ES');
+       }
+       if (!fechaTxt && cita.fecha) {
+           let p = String(cita.fecha).split('-');
+           if (p.length === 3) fechaTxt = `${p[2]}/${p[1]}/${p[0]}`;
+       }
+       return {
+           fila: cita.id || ('cita_' + Math.random().toString(36).slice(2)),
+           C: cita.modelo || 'DEVOLUCIÓN',
+           A: cita.bastidor || 'S/D',
+           B: cita.matricula || 'S/M',
+           agente: cita.entregador || cita.agente || 'N/A',
+           renting: cita.renting || '-',
+           fechaEntrega: fechaTxt || 'Completado',
+           fechaEntregaTs: Number(cita.fechaEntrega || 0) || 0,
+           tipoFinalizacion: 'DEVOLUCION',
+           esRegistroAgenda: true
+       };
+   });
+
+   let combinado = entregadosVehiculos.concat(devolucionesAgenda);
+   combinado.sort((a, b) => {
+       const tsA = Number(a.fechaEntregaTs || 0) || 0;
+       const tsB = Number(b.fechaEntregaTs || 0) || 0;
+       return tsB - tsA;
+   });
+   return combinado;
+};
 
 window.buscarEnHistorial = function() {
    let inputVal = document.getElementById('inputBusquedaHistorial').value.toUpperCase().trim().replace(/\s/g, '');
    let contenedor = document.getElementById('resultadoBusquedaHistorial');
    if (!inputVal) { contenedor.innerHTML = ''; return; }
    
-   let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
+    let entregados = window.filtrarListaHistorialRapido(window.obtenerMovimientosHistorial());
    let resultados = entregados.filter(c => (c.B && c.B.replace(/\s/g, '').includes(inputVal)) || (c.A && c.A.includes(inputVal)));
    window.inyectarResultadosHistorial(resultados, contenedor, `el dato: ${inputVal}`);
 };
@@ -1386,10 +1725,11 @@ window.buscarPorDiaManual = function() {
    let parts = fechaInput.split('-');
    let fechaBuscadaLocal = `${parseInt(parts[2])}/${parseInt(parts[1])}/${parts[0]}`; 
 
-   let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
+    let entregados = window.filtrarListaHistorialRapido(window.obtenerMovimientosHistorial());
    let resultados = entregados.filter(c => {
        if (!c.fechaEntrega) return false;
        let pCoche = c.fechaEntrega.trim().split('/');
+       if (pCoche.length < 3) return false;
        let fechaCocheLimpia = `${parseInt(pCoche[0])}/${parseInt(pCoche[1])}/${pCoche[2]}`;
        return fechaCocheLimpia === fechaBuscadaLocal;
    });
@@ -1404,10 +1744,12 @@ window.inyectarResultadosHistorial = function(resultados, contenedor, criterioTe
     
     contenedor.innerHTML = `<p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Resultados (${resultados.length}):</p>` + 
     resultados.map(c => {
-        let esTraslado = c.tipoFinalizacion === 'TRASLADO';
-        let bgTag = esTraslado ? 'bg-orange-500' : 'bg-emerald-500';
-        let textoTag = esTraslado ? 'Traslado' : 'Entregado';
-        let borderTag = esTraslado ? 'border-orange-500' : 'border-emerald-500';
+        let tipoMov = window.obtenerTipoMovimientoHistorial(c);
+        let esTraslado = tipoMov === 'TRASLADO';
+        let esDevolucion = tipoMov === 'DEVOLUCION';
+        let bgTag = esTraslado ? 'bg-orange-500' : (esDevolucion ? 'bg-sky-600' : 'bg-emerald-500');
+        let textoTag = esTraslado ? 'Traslado' : (esDevolucion ? 'Devolución' : 'Entregado');
+        let iconTag = esTraslado ? 'ph-truck' : (esDevolucion ? 'ph-arrow-counter-clockwise' : 'ph-key');
         
         let infoTraslado = esTraslado ? `
             <p class="text-[10px] font-bold text-orange-600 mb-1"><i class="ph-bold ph-map-pin"></i> Destino: ${c.concesionarioDestino || 'N/A'}</p>
@@ -1415,22 +1757,24 @@ window.inyectarResultadosHistorial = function(resultados, contenedor, criterioTe
         ` : '';
 
         return `
-        <div class="bg-white rounded-xl ${esTraslado ? 'border-l-8 border-orange-500' : 'border-l-8 border-emerald-500'} p-5 shadow-sm mb-3 relative overflow-hidden">
-            <div class="absolute top-0 right-0 ${bgTag} text-white text-[9px] font-black px-3 py-1 rounded-bl-lg uppercase">${textoTag}</div>
-            <h3 class="font-black text-base text-[#001e50] uppercase">${c.C}</h3>
+        <div class="bg-white rounded-xl ${esTraslado ? 'border-l-8 border-orange-500' : (esDevolucion ? 'border-l-8 border-sky-600' : 'border-l-8 border-emerald-500')} p-5 shadow-sm mb-3 relative overflow-hidden">
+            <div class="flex items-start justify-between gap-2 mb-1">
+                <h3 class="font-black text-base text-[#001e50] uppercase">${c.C}</h3>
+                <span class="inline-flex items-center gap-1.5 ${bgTag} text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase shadow-sm"><i class="ph-bold ${iconTag}"></i> ${textoTag}</span>
+            </div>
             <p class="text-[10px] font-bold text-gray-400 tracking-widest mb-2">VIN: ${c.A} | MAT: ${c.B}</p>
             
             ${infoTraslado}
             
-            <p class="font-black ${esTraslado ? 'text-orange-600' : 'text-emerald-600'} text-sm mb-2"><i class="ph-bold ph-calendar-check"></i> ${c.fechaEntrega || 'Completado'}</p>
+            <p class="font-black ${esTraslado ? 'text-orange-600' : (esDevolucion ? 'text-sky-700' : 'text-emerald-600')} text-sm mb-2"><i class="ph-bold ph-calendar-check"></i> ${c.fechaEntrega || 'Completado'}</p>
             <div class="flex gap-2 text-[9px] font-bold text-gray-400 uppercase mb-4">
                 <span class="bg-gray-100 px-2 py-1 rounded border">${c.entregador || c.agente || 'N/A'}</span>
                 <span class="bg-gray-100 px-2 py-1 rounded border">${c.renting || '-'}</span>
             </div>
             
-            <button onclick="window.deshacerEntrega('${c.fila}')" class="absolute bottom-3 right-3 text-xs bg-amber-50 text-amber-600 font-bold px-3 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-100 transition-colors shadow-sm flex items-center gap-1">
+            ${esDevolucion ? '' : `<button onclick="window.deshacerEntrega('${c.fila}')" class="absolute bottom-3 right-3 text-xs bg-amber-50 text-amber-600 font-bold px-3 py-1.5 rounded-lg border border-amber-200 hover:bg-amber-100 transition-colors shadow-sm flex items-center gap-1">
                 <i class="ph-bold ph-arrow-u-up-left"></i> Revertir a Activo
-            </button>
+            </button>`}
         </div>
         `;
     }).join('');
@@ -1444,10 +1788,11 @@ window.descargarExcelHistorialRango = function() {
    let dateInicio = new Date(fInicioRaw); dateInicio.setHours(0,0,0,0);
    let dateFin = new Date(fFinRaw); dateFin.setHours(23,59,59,999);
    
-   let entregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
+   let entregados = window.obtenerMovimientosHistorial();
    let filtrados = entregados.filter(c => {
        if (!c.fechaEntrega) return false;
        let p = c.fechaEntrega.split('/');
+       if (p.length < 3) return false;
        let dateCoche = new Date(p[2], p[1] - 1, p[0]);
        return dateCoche >= dateInicio && dateCoche <= dateFin;
    });

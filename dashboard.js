@@ -56,6 +56,18 @@ window.renderizarDashboard = function() {
             return String(fecha.getFullYear()) === yearSel && String(fecha.getMonth() + 1).padStart(2, '0') === monthSel;
         };
 
+        const esFechaMesPorTsOTexto = (timestampRaw, fechaTextoRaw) => {
+            const fechaTs = normalizarFechaDashboard(timestampRaw);
+            if (fechaTs) {
+                return String(fechaTs.getFullYear()) === yearSel && String(fechaTs.getMonth() + 1).padStart(2, '0') === monthSel;
+            }
+            if (!fechaTextoRaw) return false;
+            return esDelMes(String(fechaTextoRaw));
+        };
+
+        const movimientosFuente = Array.isArray(window.movimientosHistorial) ? window.movimientosHistorial : [];
+        const hayMovimientos = movimientosFuente.length > 0;
+
         // 2. Filtrado de datos
         let todosEntregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
         let noEntregados = todosLosCoches.filter(c => c.entregado !== true && c.entregado !== "true");
@@ -77,10 +89,41 @@ window.renderizarDashboard = function() {
             return (vo === 'SÍ' || vo === 'SI') && esVODelMes(cita.fechaHora);
         }).length;
 
+        let devolucionesMes = (window.datosAgenda || []).filter(cita => {
+            let modelo = String(cita?.modelo || '').toUpperCase();
+            let tipoFin = String(cita?.tipoFinalizacion || '').toUpperCase();
+            let esDevolucion = tipoFin === 'DEVOLUCION' || modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
+            let estaCompletada = (cita?.entregado === true || cita?.entregado === "true");
+            return esDevolucion && estaCompletada && esFechaMesPorTsOTexto(cita?.fechaEntrega, cita?.fechaEntregaTexto);
+        }).length;
+
+        if (hayMovimientos) {
+            let entregasMesMov = 0;
+            let gruasMesMov = 0;
+            let devolucionesMesMov = 0;
+
+            movimientosFuente.forEach(mov => {
+                const tipo = String(mov.tipo || mov.tipoFinalizacion || '').toUpperCase();
+                const fechaMov = normalizarFechaDashboard(mov.ts || mov.fechaEntregaTs || mov.fechaEntrega) || normalizarFechaDashboard(mov.fechaTexto);
+                if (!fechaMov) return;
+                if (String(fechaMov.getFullYear()) !== yearSel || String(fechaMov.getMonth() + 1).padStart(2, '0') !== monthSel) return;
+
+                if (tipo === 'TRASLADO') gruasMesMov++;
+                else if (tipo === 'DEVOLUCION') devolucionesMesMov++;
+                else entregasMesMov++;
+            });
+
+            entregasMes = entregasMesMov;
+            gruasMes = gruasMesMov;
+            devolucionesMes = devolucionesMesMov;
+        }
+
         document.getElementById('kpi-entregas').innerText = entregasMes;
         document.getElementById('kpi-gruas').innerText = gruasMes;
         document.getElementById('kpi-reparados').innerText = pasosTallerRecambiosMes;
         document.getElementById('kpi-devueltos').innerText = citasVOMes;
+        const kpiDevoluciones = document.getElementById('kpi-devoluciones');
+        if (kpiDevoluciones) kpiDevoluciones.innerText = devolucionesMes;
 
         // 4. Cálculos para el Gráfico Donut (INVENTARIO ACTIVO - No depende del mes)
         let enTaller = noEntregados.filter(c => c.enTaller && !c.finTaller).length;
@@ -93,6 +136,7 @@ window.renderizarDashboard = function() {
         let mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         let entregasPorMes = new Array(12).fill(0);
         let recogidasPorMes = new Array(12).fill(0);
+        let devolucionesPorMes = new Array(12).fill(0);
 
         entregasClientesTotal.forEach(c => {
             if (c.fechaEntrega) {
@@ -114,6 +158,39 @@ window.renderizarDashboard = function() {
                 }
             }
         });
+
+        (window.datosAgenda || []).forEach(cita => {
+            let modelo = String(cita?.modelo || '').toUpperCase();
+            let tipoFin = String(cita?.tipoFinalizacion || '').toUpperCase();
+            let esDevolucion = tipoFin === 'DEVOLUCION' || modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
+            let estaCompletada = (cita?.entregado === true || cita?.entregado === "true");
+            if (!esDevolucion || !estaCompletada) return;
+
+            const fechaCita = normalizarFechaDashboard(cita?.fechaEntrega) || normalizarFechaDashboard(cita?.fechaHora);
+            if (fechaCita && String(fechaCita.getFullYear()) === yearSel) {
+                let mesIndex = fechaCita.getMonth();
+                if (mesIndex >= 0 && mesIndex <= 11) devolucionesPorMes[mesIndex]++;
+            }
+        });
+
+        if (hayMovimientos) {
+            entregasPorMes.fill(0);
+            recogidasPorMes.fill(0);
+            devolucionesPorMes.fill(0);
+
+            movimientosFuente.forEach(mov => {
+                const tipo = String(mov.tipo || mov.tipoFinalizacion || '').toUpperCase();
+                const fechaMov = normalizarFechaDashboard(mov.ts || mov.fechaEntregaTs || mov.fechaEntrega) || normalizarFechaDashboard(mov.fechaTexto);
+                if (!fechaMov || String(fechaMov.getFullYear()) !== yearSel) return;
+
+                const mesIndex = fechaMov.getMonth();
+                if (mesIndex < 0 || mesIndex > 11) return;
+
+                if (tipo === 'TRASLADO') recogidasPorMes[mesIndex]++;
+                else if (tipo === 'DEVOLUCION') devolucionesPorMes[mesIndex]++;
+                else entregasPorMes[mesIndex]++;
+            });
+        }
 
         // 6. Destruir y dibujar gráficos
         if(window.chartObjDonut) window.chartObjDonut.destroy();
@@ -145,7 +222,8 @@ window.renderizarDashboard = function() {
                     labels: mesesNombres,
                     datasets: [
                         { label: 'Entregas Clientes', data: entregasPorMes, backgroundColor: 'rgba(16, 185, 129, 0.85)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
-                        { label: 'Recogidas V.O.', data: recogidasPorMes, backgroundColor: 'rgba(168, 85, 247, 0.85)', borderColor: '#a855f7', borderWidth: 1, borderRadius: 4 }
+                        { label: 'Recogidas V.O.', data: recogidasPorMes, backgroundColor: 'rgba(168, 85, 247, 0.85)', borderColor: '#a855f7', borderWidth: 1, borderRadius: 4 },
+                        { label: 'Devoluciones Completadas', data: devolucionesPorMes, backgroundColor: 'rgba(8, 145, 178, 0.85)', borderColor: '#0891b2', borderWidth: 1, borderRadius: 4 }
                     ]
                 },
                 options: { 

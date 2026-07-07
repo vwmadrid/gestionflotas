@@ -85,6 +85,34 @@
         return fechaBase;
     };
 
+    window.enriquecerDatosCitaConVehiculo = function(data = {}) {
+        const matriculaLimpia = String(data.matricula || data.Matricula || data.B || '').replace(/\s/g, '').toUpperCase();
+        const bastidorLimpio = String(data.bastidor || data.A || '').replace(/\s/g, '').toUpperCase();
+
+        const cocheRelacionado = (typeof todosLosCoches !== 'undefined' ? todosLosCoches : []).find(c => {
+            const matVeh = String(c.B || c.matricula || c.Matricula || '').replace(/\s/g, '').toUpperCase();
+            const basVeh = String(c.A || c.bastidor || '').replace(/\s/g, '').toUpperCase();
+            return (matriculaLimpia && matVeh && matVeh === matriculaLimpia) || (bastidorLimpio && basVeh && basVeh === bastidorLimpio);
+        });
+
+        if (!cocheRelacionado) {
+            return { ...data };
+        }
+
+        return {
+            ...data,
+            cliente: data.cliente || cocheRelacionado.cliente || 'Cliente',
+            telefono: data.telefono || cocheRelacionado.telefono || cocheRelacionado.tlf || '',
+            email: data.email || cocheRelacionado.email || '',
+            matricula: data.matricula || data.Matricula || cocheRelacionado.B || cocheRelacionado.matricula || cocheRelacionado.Matricula || 'S/M',
+            modelo: data.modelo || cocheRelacionado.C || cocheRelacionado.modelo || 'Vehículo',
+            bastidor: data.bastidor || cocheRelacionado.A || cocheRelacionado.bastidor || '',
+            renting: data.renting || cocheRelacionado.renting || '',
+            entregaVO: data.entregaVO || cocheRelacionado.entregaVO || 'NO',
+            agente: data.agente || data.entregador || cocheRelacionado.agente || cocheRelacionado.entregador || 'MANUEL'
+        };
+    };
+
     window.formatearFechaAgenda = function(fecha) {
         const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         return fecha.toLocaleDateString('es-ES', opciones);
@@ -234,7 +262,7 @@
                             <div class="mt-4 grid grid-cols-3 gap-2">
                                 <button onclick="window.abrirWhatsAppAgenda('${telefono}', '${cliente}')" class="rounded-xl bg-emerald-600 px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">WhatsApp</button>
                                 <button onclick="window.llamarAgenda('${telefono}')" class="rounded-xl bg-sky-600 px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">Llamar</button>
-                                <button onclick="window.marcarEntregadoAgenda({fila:'${idFb}', modelo:'${modeloSeg}', matricula:'${matriculaSeg}', fechaHora:'${cita.fechaHora}'})" class="rounded-xl bg-[#001e50] px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">Entregado</button>
+                                <button onclick="window.marcarEntregadoAgenda({id:'${cita.id}', fila:'${idFb}', modelo:'${modeloSeg}', matricula:'${matriculaSeg}', bastidor:'${window.escapeJS(cita.bastidor || '')}', renting:'${window.escapeJS(cita.renting || '')}', fechaHora:'${cita.fechaHora}'})" class="rounded-xl bg-[#001e50] px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">Entregado</button>
                             </div>
                         </div>`;
                 }).join('')}
@@ -289,17 +317,45 @@
         // 1. Radar de Citas
         window.onSnapshot(window.collection(window.db, "citas_agenda"), (querySnapshot) => {
             window.datosAgenda = []; 
+            const actualizacionesPendientes = [];
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
-                const fechaHora = window.normalizarFechaHoraAgenda(data) || new Date();
+                const datosEnriquecidos = window.enriquecerDatosCitaConVehiculo(data);
+                const fechaHora = window.normalizarFechaHoraAgenda(datosEnriquecidos) || new Date();
+                const necesitaRelleno = ['cliente', 'telefono', 'email', 'matricula', 'modelo', 'bastidor', 'renting', 'entregaVO', 'agente'].some((campo) => {
+                    const valorOriginal = data?.[campo];
+                    const valorEnriquecido = datosEnriquecidos?.[campo];
+                    return (!valorOriginal || String(valorOriginal).trim() === '') && valorEnriquecido && String(valorEnriquecido).trim() !== '';
+                });
+
+                if (necesitaRelleno) {
+                    const patch = {};
+                    ['cliente', 'telefono', 'email', 'matricula', 'modelo', 'bastidor', 'renting', 'entregaVO', 'agente'].forEach((campo) => {
+                        const valorOriginal = data?.[campo];
+                        const valorEnriquecido = datosEnriquecidos?.[campo];
+                        if ((!valorOriginal || String(valorOriginal).trim() === '') && valorEnriquecido && String(valorEnriquecido).trim() !== '') {
+                            patch[campo] = valorEnriquecido;
+                        }
+                    });
+                    if (Object.keys(patch).length > 0) {
+                        actualizacionesPendientes.push(window.updateDoc(window.doc(window.db, "citas_agenda", doc.id), patch));
+                    }
+                }
+
                 window.datosAgenda.push({
                     id: doc.id, fechaHora,
-                    cliente: data.cliente || "Cliente", telefono: data.telefono || "", email: data.email || "",
-                    matricula: data.matricula || "S/M", modelo: data.modelo || "Vehículo", bastidor: data.bastidor || "",
-                    renting: data.renting || "", entregaVO: data.entregaVO || "NO", agente: data.agente || "MANUEL",
+                    cliente: datosEnriquecidos.cliente || "Cliente", telefono: datosEnriquecidos.telefono || "", email: datosEnriquecidos.email || "",
+                    matricula: datosEnriquecidos.matricula || "S/M", modelo: datosEnriquecidos.modelo || "Vehículo", bastidor: datosEnriquecidos.bastidor || "",
+                    renting: datosEnriquecidos.renting || "", entregaVO: datosEnriquecidos.entregaVO || "NO", agente: datosEnriquecidos.agente || "MANUEL",
                     notas: data.notas || "", estado: data.estado || "confirmada", isBlock: false
                 });
             });
+
+            if (actualizacionesPendientes.length > 0) {
+                Promise.allSettled(actualizacionesPendientes).catch((error) => {
+                    console.warn('No se pudieron guardar algunas citas enriquecidas:', error);
+                });
+            }
 
             if (window.tabActiva === 'agenda') {
                 renderizarVistaSegunDispositivo();
@@ -723,7 +779,8 @@ window.mostrarPopupAtrasados = function() {
         (basCita.length > 5 && basCita !== 'N/A' && c.A && String(c.A).toUpperCase() === basCita)
     ) : null;
     
-    let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
+    let citaMarcadaEntregada = (cita.entregado === true || cita.entregado === "true");
+    let yaEntregado = citaMarcadaEntregada || (cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true"));
     let estaRetenido = cocheEnBaseDatos && !yaEntregado && ((cocheEnBaseDatos.enTaller && !cocheEnBaseDatos.finTaller) || (cocheEnBaseDatos.enRecambios && !cocheEnBaseDatos.finRecambios));
     
     let ahora = new Date();
@@ -1575,9 +1632,122 @@ window.crearCitaManual = async function() {
 // ❓ PREGUNTA INTERMEDIA PARA CITAS ATRASADAS
 // ==========================================
 window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora, citaId) {
-    // Si la cita no tiene un coche vinculado en la base de datos activa
+    const citaEnAgenda = citaId && window.getDoc && window.doc && window.db
+        ? await (async () => {
+            try {
+                const snap = await window.getDoc(window.doc(window.db, 'citas_agenda', citaId));
+                return snap.exists() ? snap.data() : null;
+            } catch (error) {
+                console.warn('No se pudo leer la cita original.', error);
+                return null;
+            }
+        })()
+        : null;
+
+    const esCitaDevolucion = (function() {
+        const modeloBase = String(citaEnAgenda?.modelo || modelo || '').toUpperCase();
+        return modeloBase.includes('DEVOLUCION') || modeloBase.includes('DEVOLUCIÓN');
+    })();
+
+    // Si es devolución y no hay ficha de vehículo, permitimos completar desde agenda sin crear tarjeta.
+    if (idFb === 'no_db' && esCitaDevolucion && citaId) {
+        const confirmarDevolucion = await Swal.fire({
+            title: 'Completar Devolución',
+            html: `
+                <p class="text-sm text-gray-700">Esta devolución no tiene tarjeta de vehículo vinculada.</p>
+                <p class="mt-2 text-sm text-gray-700">¿Quieres marcarla como completada y enviarla al historial?</p>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, completar devolución',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!confirmarDevolucion.isConfirmed) return;
+
+        try {
+            const tsEntrega = typeof window.obtenerTimestamp === 'function' ? window.obtenerTimestamp() : new Date().getTime();
+            const fechaEntregaTexto = typeof window.formatearFechaES === 'function' ? window.formatearFechaES(tsEntrega) : new Date().toLocaleDateString('es-ES');
+            await window.updateDoc(window.doc(window.db, "citas_agenda", citaId), {
+                estado: "confirmada",
+                entregado: true,
+                fechaEntrega: tsEntrega,
+                fechaEntregaTexto: fechaEntregaTexto,
+                tipoFinalizacion: 'DEVOLUCION'
+            });
+
+            if (typeof window.registrarMovimientoHistorial === 'function') {
+                await window.registrarMovimientoHistorial({
+                    tipo: 'DEVOLUCION',
+                    citaId: citaId,
+                    vehiculoId: null,
+                    matricula: (citaEnAgenda && citaEnAgenda.matricula) || matricula || 'S/M',
+                    bastidor: (citaEnAgenda && citaEnAgenda.bastidor) || 'S/D',
+                    modelo: (citaEnAgenda && citaEnAgenda.modelo) || modelo || 'DEVOLUCION',
+                    renting: (citaEnAgenda && citaEnAgenda.renting) || '',
+                    detalle: 'Devolucion completada desde agenda sin tarjeta de vehiculo'
+                });
+            }
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Devolución completada',
+                text: 'La cita se ha marcado en verde y ya aparece en el historial de movimientos.',
+                confirmButtonColor: '#001e50'
+            });
+
+            if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+            if (typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes();
+            return;
+        } catch (errorDevolucion) {
+            console.error('Error al completar devolución desde agenda:', errorDevolucion);
+            Swal.fire('Error', 'No se pudo completar la devolución.', 'error');
+            return;
+        }
+    }
+
+    // Si la cita no tiene un coche vinculado en la base de datos activa, ofrecemos crearlo
     if (idFb === 'no_db') {
-        return Swal.fire('Aviso', 'Este vehículo no se encuentra en la base de datos activa.', 'info');
+        const confirmacionAlta = await Swal.fire({
+            title: 'Vehículo no encontrado',
+            html: `
+                <p class="text-sm text-gray-700">No existe este vehículo en GesCar.</p>
+                <p class="mt-2 text-sm text-gray-700">¿Quieres crear la tarjeta con los datos de esta cita y marcarla como entregada?</p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#001e50',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, crear vehículo',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!confirmacionAlta.isConfirmed) return;
+
+        try {
+            const resultadoAlta = await window.crearVehiculoDesdeCitaAgenda(citaEnAgenda || {
+                modelo,
+                matricula,
+                fecha: dia,
+                hora,
+                renting: citaEnAgenda?.renting || citaEnAgenda?.agencia || ''
+            }, { citaId, modelo, matricula, fecha: dia, hora, renting: citaEnAgenda?.renting || citaEnAgenda?.agencia || '' });
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Vehículo creado',
+                text: `Se ha creado la tarjeta de ${resultadoAlta.matricula} y se ha registrado la entrega.`,
+                confirmButtonColor: '#001e50'
+            });
+
+            return;
+        } catch (error) {
+            console.error('Error creando vehículo desde cita:', error);
+            Swal.fire('Error', 'No se pudo crear la tarjeta del vehículo.', 'error');
+            return;
+        }
     }
 
     // Desplegamos la ventana de decisión
