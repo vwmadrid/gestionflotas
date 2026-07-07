@@ -347,7 +347,8 @@
                     cliente: datosEnriquecidos.cliente || "Cliente", telefono: datosEnriquecidos.telefono || "", email: datosEnriquecidos.email || "",
                     matricula: datosEnriquecidos.matricula || "S/M", modelo: datosEnriquecidos.modelo || "Vehículo", bastidor: datosEnriquecidos.bastidor || "",
                     renting: datosEnriquecidos.renting || "", entregaVO: datosEnriquecidos.entregaVO || "NO", agente: datosEnriquecidos.agente || "MANUEL",
-                    notas: data.notas || "", estado: data.estado || "confirmada", isBlock: false
+                    notas: data.notas || "", estado: data.estado || "confirmada", entregado: data.entregado === true || data.entregado === "true",
+                    tipoFinalizacion: data.tipoFinalizacion || '', fechaEntrega: data.fechaEntrega || null, fechaEntregaTexto: data.fechaEntregaTexto || '', isBlock: false
                 });
             });
 
@@ -412,7 +413,7 @@
             (c.A && String(c.A).toUpperCase() === basCita)
         ) : null;
         
-        let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
+        let yaEntregado = (cita.entregado === true || cita.entregado === "true") || (cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true"));
         
         if (fechaCitaLimpia < hoyLimpio && !yaEntregado) {
             let fechaCitaRaw = `${fechaCitaPartes[0]}-${fechaCitaPartes[1]}-${fechaCitaPartes[2]}`;
@@ -804,7 +805,7 @@ window.mostrarPopupAtrasados = function() {
         let horaStr = fechaCitaObj.getHours() + ":00h";
         let idFb = cocheEnBaseDatos ? cocheEnBaseDatos.fila : 'no_db';
         let modeloSeguro = window.escapeJS(cita.modelo); let matriculaSegura = window.escapeJS(cita.matricula);
-        alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="if(window.event) window.event.stopPropagation(); window.preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}')"><i class="ph-bold ph-question text-lg"></i></div>`;
+        alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="if(window.event) window.event.stopPropagation(); window.preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}', '${cita.id || ''}')"><i class="ph-bold ph-question text-lg"></i></div>`;
         borderColor = "border-[#00b0f0] border-2"; 
     } else if (estaRetenido && cita.matricula !== "---" && !cita.isBlock) {
         let escMat = window.escapeJS(cita.matricula); let escMod = window.escapeJS(cita.modelo);
@@ -1649,8 +1650,8 @@ window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora,
         return modeloBase.includes('DEVOLUCION') || modeloBase.includes('DEVOLUCIÓN');
     })();
 
-    // Si es devolución y no hay ficha de vehículo, permitimos completar desde agenda sin crear tarjeta.
-    if (idFb === 'no_db' && esCitaDevolucion && citaId) {
+    // Si es devolución y no hay ficha de vehículo, completamos desde agenda sin crear tarjeta.
+    if (idFb === 'no_db' && esCitaDevolucion) {
         const confirmarDevolucion = await Swal.fire({
             title: 'Completar Devolución',
             html: `
@@ -1670,7 +1671,40 @@ window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora,
         try {
             const tsEntrega = typeof window.obtenerTimestamp === 'function' ? window.obtenerTimestamp() : new Date().getTime();
             const fechaEntregaTexto = typeof window.formatearFechaES === 'function' ? window.formatearFechaES(tsEntrega) : new Date().toLocaleDateString('es-ES');
-            await window.updateDoc(window.doc(window.db, "citas_agenda", citaId), {
+
+            let citaObjetivoId = String(citaId || '').trim();
+            if (!citaObjetivoId && Array.isArray(window.datosAgenda)) {
+                const matObj = String(matricula || '').replace(/\s/g, '').toUpperCase();
+                const modeloObj = String(modelo || '').toUpperCase();
+                const fechaObj = String(dia || '').trim();
+                const horaObj = String(hora || '').replace('h', '').trim();
+
+                const candidata = window.datosAgenda.find(c => {
+                    const matCita = String(c?.matricula || '').replace(/\s/g, '').toUpperCase();
+                    const modeloCita = String(c?.modelo || '').toUpperCase();
+                    const matchMat = matObj && matCita === matObj;
+                    const matchModelo = modeloObj && modeloCita.includes('DEVOLUCION');
+                    if (!matchMat && !matchModelo) return false;
+
+                    if (!c?.fechaHora) return true;
+                    const f = new Date(c.fechaHora);
+                    if (isNaN(f.getTime())) return true;
+                    const fechaTxt = f.toLocaleDateString('es-ES');
+                    const horaTxt = `${f.getHours()}:00`;
+                    const mismaFecha = !fechaObj || fechaTxt === fechaObj;
+                    const mismaHora = !horaObj || horaTxt === horaObj;
+                    return mismaFecha && mismaHora;
+                });
+
+                citaObjetivoId = candidata?.id || '';
+            }
+
+            if (!citaObjetivoId) {
+                Swal.fire('Aviso', 'No se ha encontrado la cita para marcar la devolución. Ábrela desde la agenda del día y repite la acción.', 'warning');
+                return;
+            }
+
+            await window.updateDoc(window.doc(window.db, "citas_agenda", citaObjetivoId), {
                 estado: "confirmada",
                 entregado: true,
                 fechaEntrega: tsEntrega,
@@ -1678,10 +1712,21 @@ window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora,
                 tipoFinalizacion: 'DEVOLUCION'
             });
 
+            if (Array.isArray(window.datosAgenda)) {
+                const idx = window.datosAgenda.findIndex(c => c && c.id === citaObjetivoId);
+                if (idx >= 0) {
+                    window.datosAgenda[idx].estado = 'confirmada';
+                    window.datosAgenda[idx].entregado = true;
+                    window.datosAgenda[idx].fechaEntrega = tsEntrega;
+                    window.datosAgenda[idx].fechaEntregaTexto = fechaEntregaTexto;
+                    window.datosAgenda[idx].tipoFinalizacion = 'DEVOLUCION';
+                }
+            }
+
             if (typeof window.registrarMovimientoHistorial === 'function') {
                 await window.registrarMovimientoHistorial({
                     tipo: 'DEVOLUCION',
-                    citaId: citaId,
+                    citaId: citaObjetivoId,
                     vehiculoId: null,
                     matricula: (citaEnAgenda && citaEnAgenda.matricula) || matricula || 'S/M',
                     bastidor: (citaEnAgenda && citaEnAgenda.bastidor) || 'S/D',

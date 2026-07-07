@@ -1249,9 +1249,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputChat) inputChat.addEventListener('keypress', function (e) { if (e.key === 'Enter') window.enviarMensajeGlobalUI(); });
 });
 // 🔥 Función mejorada para Entregas y Reagendamientos (Soporta Agenda y Tarjetas)
-window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda, fechaAgenda, horaAgenda) {
+window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda, fechaAgenda, horaAgenda, citaId) {
     let cocheC, cocheB, cocheA;
     let esDeAgendaSinDb = (fila === 'no_db');
+    const esDevolucion = String(modeloAgenda || '').toUpperCase().includes('DEVOLUCION') || String(modeloAgenda || '').toUpperCase().includes('DEVOLUCIÓN');
 
     // 1. Identificamos los datos dependiendo de si viene del Inventario o de una cita sin DB
     if (!esDeAgendaSinDb) {
@@ -1266,7 +1267,86 @@ window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda
         cocheA = 'S/B';
     }
 
-    // 2. Lanzamos la pregunta
+    // 2. Las devoluciones sin ficha no deben crear vehículo en inventario.
+    if (esDeAgendaSinDb && esDevolucion) {
+        const confirmar = await Swal.fire({
+            title: 'Completar Devolución',
+            html: `
+                <p class="text-sm text-gray-700">Esta devolución no pertenece al inventario interno.</p>
+                <p class="mt-2 text-sm text-gray-700">¿Quieres marcarla como completada y moverla al historial?</p>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, completar devolución',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!confirmar.isConfirmed) return;
+
+        try {
+            let idObjetivo = citaId || '';
+            if (!idObjetivo && Array.isArray(window.datosAgenda)) {
+                const matObj = String(matriculaAgenda || '').replace(/\s/g, '').toUpperCase();
+                const fechaObj = String(fechaAgenda || '').trim();
+                const horaObj = String(horaAgenda || '').replace('h', '').trim();
+                const candidata = window.datosAgenda.find(c => {
+                    const matCita = String(c?.matricula || '').replace(/\s/g, '').toUpperCase();
+                    const mismaMat = matObj && matCita && matObj === matCita;
+                    if (!mismaMat) return false;
+                    if (!c?.fechaHora) return true;
+                    const f = new Date(c.fechaHora);
+                    if (isNaN(f.getTime())) return true;
+                    const fechaTxt = f.toLocaleDateString('es-ES');
+                    const horaTxt = `${f.getHours()}:00`;
+                    const mismaFecha = !fechaObj || fechaTxt === fechaObj;
+                    const mismaHora = !horaObj || horaTxt === horaObj;
+                    return mismaFecha && mismaHora;
+                });
+                idObjetivo = candidata?.id || '';
+            }
+
+            if (!idObjetivo) {
+                Swal.fire('Aviso', 'No se ha podido localizar la cita para marcarla automáticamente. Ábrela desde Agenda y vuelve a confirmar.', 'warning');
+                return;
+            }
+
+            const tsEntrega = typeof window.obtenerTimestamp === 'function' ? window.obtenerTimestamp() : Date.now();
+            const fechaEntregaTexto = typeof window.formatearFechaES === 'function' ? window.formatearFechaES(tsEntrega) : new Date(tsEntrega).toLocaleDateString('es-ES');
+
+            await window.updateDoc(window.doc(window.db, 'citas_agenda', idObjetivo), {
+                estado: 'confirmada',
+                entregado: true,
+                fechaEntrega: tsEntrega,
+                fechaEntregaTexto,
+                tipoFinalizacion: 'DEVOLUCION'
+            });
+
+            if (typeof window.registrarMovimientoHistorial === 'function') {
+                await window.registrarMovimientoHistorial({
+                    tipo: 'DEVOLUCION',
+                    citaId: idObjetivo,
+                    vehiculoId: null,
+                    matricula: matriculaAgenda || 'S/M',
+                    bastidor: 'S/D',
+                    modelo: modeloAgenda || 'DEVOLUCION',
+                    detalle: 'Devolucion completada desde agenda sin tarjeta de vehiculo'
+                });
+            }
+
+            Swal.fire('Devolución completada', 'Se ha marcado en verde y enviada al historial.', 'success');
+            if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+            if (typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes();
+            return;
+        } catch (errorDevolucion) {
+            console.error('Error al completar devolución sin inventario:', errorDevolucion);
+            Swal.fire('Error', 'No se pudo completar la devolución.', 'error');
+            return;
+        }
+    }
+
+    // 3. Lanzamos la pregunta
     if (esDeAgendaSinDb) {
         const confirmacionAlta = await Swal.fire({
             title: 'Vehículo no encontrado',
