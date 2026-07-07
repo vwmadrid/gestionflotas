@@ -265,8 +265,8 @@
                 <input type="month" id="mesDashboard" onchange="window.renderizarDashboard()" class="border-none bg-gray-50 px-3 py-1.5 rounded text-sm font-bold text-[#001e50] outline-none cursor-pointer focus:ring-2 focus:ring-[#00b0f0]">
             </div>
         </div>
-        
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-emerald-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105 relative overflow-hidden">
                 <div class="absolute top-0 w-full h-1 bg-emerald-500"></div>
                 <i class="ph-fill ph-keys text-3xl text-emerald-500 mb-2 mt-2"></i>
@@ -290,6 +290,12 @@
                 <i class="ph-fill ph-car-profile text-3xl text-purple-500 mb-2 mt-2"></i>
                 <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Recogidas V.O.</h3>
                 <p id="kpi-devueltos" class="text-4xl font-black text-[#001e50]">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-cyan-200 flex flex-col items-center justify-center text-center transition-transform hover:scale-105 relative overflow-hidden">
+                <div class="absolute top-0 w-full h-1 bg-cyan-500"></div>
+                <i class="ph-fill ph-arrow-counter-clockwise text-3xl text-cyan-500 mb-2 mt-2"></i>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Devoluciones Completadas</h3>
+                <p id="kpi-devoluciones" class="text-4xl font-black text-[#001e50]">0</p>
             </div>
         </div>
 
@@ -392,7 +398,7 @@
     </div>
 </div>
 
-<script src="app.js?v=12"></script>
+    <script src="app.js?v=15"></script>
     <script src="chat.js?v=8"></script>
     <script src="dashboard.js?v=9"></script>
     <script src="agenda.js?v=16"></script>

@@ -26,14 +26,81 @@ let activeTab = 'logistica';
 let modoVistaActual = 'tarjetas'; 
 let primeraCargaDb = true;
 let unsubscribeFirebase = null; 
+let unsubscribeMovimientos = null;
 let todosLosCoches = []; 
 let filtroActual = 'todos';
 window.chatDestinoActual = ""; // Variable para el chat global
+window.movimientosHistorial = [];
 
 
 // 🔥 HERRAMIENTA CLAVE: Escapar variables
 window.escapeJS = function(str) {
     return String(str || '').replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+};
+
+window.obtenerTimestamp = function() {
+    return Date.now();
+};
+
+window.formatearFechaES = function(valor) {
+    const fecha = valor instanceof Date ? valor : new Date(valor || Date.now());
+    if (isNaN(fecha.getTime())) return '';
+    return fecha.toLocaleDateString('es-ES');
+};
+
+window.matrizPermisosRoles = {
+    entregas: { adelantar_peticion_transito: true, flujo_interdepartamental_transito: false },
+    backoffice: { adelantar_peticion_transito: true, flujo_interdepartamental_transito: false },
+    administracion: { adelantar_peticion_transito: true, flujo_interdepartamental_transito: false },
+    admin: { adelantar_peticion_transito: true, flujo_interdepartamental_transito: false },
+    taller: { adelantar_peticion_transito: false, flujo_interdepartamental_transito: true },
+    recambios: { adelantar_peticion_transito: false, flujo_interdepartamental_transito: true }
+};
+
+window.esAdminGlobal = function() {
+    const rol = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+    return rol === 'entregas';
+};
+
+window.tienePermiso = function(accion, contexto) {
+    if (typeof window.esAdminGlobal === 'function' && window.esAdminGlobal()) return true;
+
+    const rol = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+    const base = (window.matrizPermisosRoles[rol] && window.matrizPermisosRoles[rol][accion]) === true;
+    if (!base) return false;
+
+    if (accion !== 'flujo_interdepartamental_transito') return true;
+
+    const ctx = contexto || {};
+    const coche = ctx.coche || null;
+    const deptoDestino = String(ctx.deptoDestino || '').toLowerCase().trim();
+
+    if (!coche) return false;
+    if (rol === 'taller') return deptoDestino === 'recambios' && coche.enTaller === true && coche.finTaller !== true;
+    if (rol === 'recambios') return deptoDestino === 'taller' && coche.enRecambios === true && coche.finRecambios !== true;
+    return false;
+};
+
+window.registrarMovimientoHistorial = async function(payload) {
+    if (!window.db || !window.collection || !window.doc || !window.setDoc) return false;
+
+    try {
+        const ts = window.obtenerTimestamp();
+        const ref = window.doc(window.collection(window.db, 'movimientos_historial'));
+        const dataBase = {
+            ts,
+            fechaTexto: window.formatearFechaES(ts),
+            usuario: window.usuarioActivo || 'SISTEMA',
+            rol: window.rolActivo || '',
+            origen: 'GesCar OS'
+        };
+
+        await window.setDoc(ref, Object.assign(dataBase, payload || {}));
+        return true;
+    } catch (errorMov) {
+        console.warn('No se pudo registrar el movimiento en paralelo.', errorMov);
+        return false;
+    }
 };
 
 // Controla qué campos se muestran según el tipo de bloqueo
@@ -258,6 +325,7 @@ window.iniciarAppDirectamente = function(rol, usuario) {
     }
     
     window.cargar(); // Carga los coches de la app de forma normal
+    if (typeof window.suscribirMovimientosHistorial === 'function') window.suscribirMovimientosHistorial();
 
     if (document.body?.dataset?.vista === 'movil' && typeof window.cambiarPestana === 'function') {
         setTimeout(() => window.cambiarPestana('agenda'), 250);
@@ -827,6 +895,7 @@ window.marcarChatGlobalComoLeido = function() {
 window.cargarChatGlobal = function() {
     const chatRef = window.collection(window.db, "chat_concesionario");
     window.ultimaFechaLecturaGlobal = localStorage.getItem('vw_chat_leido_' + window.usuarioActivo) || 0;
+    let primeraCargaSnapshot = true;
     
     window.onSnapshot(chatRef, (snapshot) => {
         let mensajes = [];
@@ -867,8 +936,8 @@ window.cargarChatGlobal = function() {
                 let esNuevo = (msgNuevo.timestamp > window.ultimaFechaLecturaGlobal);
                 let chatCerrado = (!chatWidget || chatWidget.style.display === 'none');
 
-                // Solo avisamos si el mensaje es para nosotros, no lo hemos enviado nosotros, es reciente y tenemos el chat cerrado
-                if (meTocaAMi && !esMio && esNuevo && chatCerrado) {
+            // Evitamos avisos de mensajes históricos al arrancar: solo alertamos después del primer snapshot.
+            if (!primeraCargaSnapshot && meTocaAMi && !esMio && esNuevo && chatCerrado) {
                     
                     // Formateamos el nombre (convierte "FATIMA.GARCIA" en "Fatima Garcia")
                     let remitenteBonito = msgNuevo.remitente.replace('.', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
@@ -895,6 +964,8 @@ window.cargarChatGlobal = function() {
                 }
             }
         });
+
+        primeraCargaSnapshot = false;
     });
 };
 
@@ -953,36 +1024,70 @@ window.renderizarListaChats = function() {
 
 window.renderizarContactos = function() {
     const contenedor = document.getElementById('view-contactos');
+    if (!contenedor) return;
+    const filtro = String(window.filtroDirectorioChat || '').toUpperCase().trim();
+    const normalizarBusqueda = (txt) => String(txt || '')
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[.\s_-]+/g, '');
+    const filtroNormalizado = normalizarBusqueda(filtro);
     
     // 1. Estructuramos a los usuarios por sus departamentos correspondientes
     const departamentos = {
         "ENTREGAS": ["MANUEL.ARJONA", "ANTONIO.BERMEJO"],
-        "TALLER": ["MANUEL.LOPEZ", "ALVARO.BELTRAN"],
+        "TALLER": ["MANUEL.LOPEZ", "ALVARO.BELTRAN", "LORENA.LEOVEANU"],
         "RECAMBIOS": ["SERGIO.CABALLERO", "FERNANDO.CRESPO", "JAIME.JORGE", "FERNANDO.REMON", "ABRAHAM.CANIZARES"],
         "BACKOFFICE": ["FATIMA.GARCIA", "GEMA.GOMEZ", "ALBERTO.GUTIERREZ", "RABAB.JAADAR", "RUBEN.GARCIA"]
     };
 
-    let htmlGenerado = "";
+    let htmlGenerado = `
+    <div class="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 p-2.5">
+        <div class="relative">
+            <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+            <input
+                type="text"
+                value="${window.escapeJS(window.filtroDirectorioChat || '')}"
+                oninput="window.filtrarDirectorioChat(this.value)"
+                placeholder="Buscar contacto o departamento..."
+                class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-[11px] font-bold text-[#001e50] outline-none focus:ring-2 focus:ring-[#00b0f0]"
+            >
+        </div>
+    </div>`;
+    let totalCoincidencias = 0;
 
     // 2. Recorremos cada departamento usando un bucle
     for (const [nombreDpto, usuarios] of Object.entries(departamentos)) {
+        const rolDestino = nombreDpto.toLowerCase();
+        const coincideDpto = filtro === '' ||
+            nombreDpto.includes(filtro) ||
+            rolDestino.includes(filtro) ||
+            normalizarBusqueda(nombreDpto).includes(filtroNormalizado) ||
+            normalizarBusqueda(rolDestino).includes(filtroNormalizado);
+        const usuariosFiltrados = filtro === ''
+            ? usuarios
+            : usuarios.filter(u => u.includes(filtro) || normalizarBusqueda(u).includes(filtroNormalizado));
+
+        if (!coincideDpto && usuariosFiltrados.length === 0) continue;
+        totalCoincidencias += (coincideDpto ? 1 : 0) + usuariosFiltrados.length;
         
         // A) Dibujamos la cabecera del departamento
         htmlGenerado += `<div class="bg-gray-200 text-[#001e50] text-[10px] font-black p-1.5 pl-3 uppercase tracking-widest mt-2 first:mt-0 shadow-inner">${nombreDpto}</div>`;
         
         // B) Dibujamos el botón especial para enviar mensajes a todo el grupo.
         // Convertimos el nombre a minúsculas ('taller', 'entregas') para que coincida con los roles de tu base de datos.
-        let rolDestino = nombreDpto.toLowerCase(); 
-        htmlGenerado += `
-        <div class="p-3 border-b border-gray-300 bg-blue-50 hover:bg-blue-100 cursor-pointer text-xs font-black flex items-center gap-3 text-[#001e50] transition-colors" onclick="window.abrirChatEspecifico('${rolDestino}')">
-            <div class="w-8 h-8 rounded-full bg-[#001e50] flex items-center justify-center text-white text-sm shadow-sm">
-                <i class="ph-bold ph-users"></i>
-            </div>
-            GRUPO ${nombreDpto}
-        </div>`;
+        if (coincideDpto) {
+            htmlGenerado += `
+            <div class="p-3 border-b border-gray-300 bg-blue-50 hover:bg-blue-100 cursor-pointer text-xs font-black flex items-center gap-3 text-[#001e50] transition-colors" onclick="window.abrirChatEspecifico('${rolDestino}')">
+                <div class="w-8 h-8 rounded-full bg-[#001e50] flex items-center justify-center text-white text-sm shadow-sm">
+                    <i class="ph-bold ph-users"></i>
+                </div>
+                GRUPO ${nombreDpto}
+            </div>`;
+        }
 
         // C) Dibujamos a los usuarios individuales pertenecientes a este departamento
-        usuarios.forEach(contacto => {
+        usuariosFiltrados.forEach(contacto => {
             htmlGenerado += `
             <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer text-xs font-bold flex items-center gap-3 text-gray-700 transition-colors" onclick="window.abrirChatEspecifico('${contacto}')">
                 <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[#001e50] text-[9px] font-black shadow-sm">${contacto.substring(0,2)}</div>
@@ -991,8 +1096,17 @@ window.renderizarContactos = function() {
         });
     }
 
+    if (totalCoincidencias === 0) {
+        htmlGenerado += `<div class="p-6 text-center text-[11px] font-bold text-gray-500">Sin resultados para "${window.escapeJS(window.filtroDirectorioChat || '')}"</div>`;
+    }
+
     // 3. Inyectamos todo el HTML construido de golpe en la pantalla
     contenedor.innerHTML = htmlGenerado;
+};
+
+window.filtrarDirectorioChat = function(valor) {
+    window.filtroDirectorioChat = String(valor || '');
+    if (typeof window.renderizarContactos === 'function') window.renderizarContactos();
 };
 
 window.abrirChatEspecifico = function(usuario) {
@@ -1153,6 +1267,48 @@ window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda
     }
 
     // 2. Lanzamos la pregunta
+    if (esDeAgendaSinDb) {
+        const confirmacionAlta = await Swal.fire({
+            title: 'Vehículo no encontrado',
+            html: `
+                <p class="text-sm text-gray-700">No existe este vehículo en GesCar.</p>
+                <p class="mt-2 text-sm text-gray-700">¿Quieres crear la tarjeta con los datos de esta cita y marcarla como entregada?</p>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#001e50',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, crear vehículo',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!confirmacionAlta.isConfirmed) return;
+
+        try {
+            const resultadoAlta = await window.crearVehiculoDesdeCitaAgenda({
+                modelo: modeloAgenda,
+                matricula: matriculaAgenda,
+                fecha: fechaAgenda,
+                hora: horaAgenda,
+                cliente: window.usuarioActivo || 'Cliente'
+            }, { modelo: modeloAgenda, matricula: matriculaAgenda, fecha: fechaAgenda, hora: horaAgenda });
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Vehículo creado',
+                text: `Se ha creado la tarjeta de ${resultadoAlta.matricula} y se ha registrado la entrega.`,
+                confirmButtonColor: '#001e50'
+            });
+
+            if (typeof window.cargar === 'function') window.cargar();
+            return;
+        } catch (error) {
+            console.error('Error creando vehículo desde cita:', error);
+            Swal.fire('Error', 'No se pudo crear la tarjeta del vehículo.', 'error');
+            return;
+        }
+    }
+
     const accion = await Swal.fire({
         title: '¿Qué ha pasado con este vehículo?',
         html: `<b class="text-lg text-[#001e50]">${cocheC}</b><br>Matrícula: <b>${cocheB}</b><br><br>Su fecha de entrega planificada ya ha llegado o ha pasado.`,
@@ -1401,5 +1557,36 @@ window.generarListadoDiario = function() {
             ventanaImpresion.document.write(htmlImprimir);
             ventanaImpresion.document.close();
         }
+    });
+};
+
+window.suscribirMovimientosHistorial = function() {
+    if (!window.db || !window.collection || !window.onSnapshot) return;
+    if (unsubscribeMovimientos) unsubscribeMovimientos();
+
+    unsubscribeMovimientos = window.onSnapshot(window.collection(window.db, "movimientos_historial"), (snapshot) => {
+        const lista = [];
+        snapshot.forEach(doc => {
+            const data = doc.data() || {};
+            data.id = doc.id;
+            lista.push(data);
+        });
+
+        lista.sort((a, b) => {
+            const tsA = Number(a.ts || a.fechaEntregaTs || 0) || 0;
+            const tsB = Number(b.ts || b.fechaEntregaTs || 0) || 0;
+            return tsB - tsA;
+        });
+
+        window.movimientosHistorial = lista;
+
+        if (activeTab === 'entregados' && typeof window.renderEntregados === 'function') {
+            window.renderEntregados();
+        }
+        if (activeTab === 'dashboard' && typeof window.renderizarDashboard === 'function') {
+            window.renderizarDashboard();
+        }
+    }, (error) => {
+        console.warn('Aviso: no se pudo sincronizar movimientos_historial.', error);
     });
 };
