@@ -15,7 +15,6 @@
 
     <title>GesCar OS - Entregas</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
@@ -114,7 +113,7 @@
             </div>
         </header>
         
-        <main class="flex-1 min-h-0 overflow-y-auto p-4 w-full relative pb-24 custom-scrollbar" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
+       <main class="flex-1 min-h-0 overflow-y-auto p-4 w-full relative pb-24 custom-scrollbar transform-gpu will-change-transform" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
             <div class="flex items-center justify-between mb-3">
                 <div>
                     <p class="text-[10px] uppercase tracking-[0.3em] text-gray-500 font-semibold">Vista rápida</p>
@@ -133,7 +132,7 @@
                     <input type="date" id="selector-fecha-movil" class="bg-white px-3 py-1.5 rounded text-[#001e50] font-black text-sm border-none outline-none shadow-inner">
                 </div>
 
-                <div id="lista-entregas-movil" class="space-y-4 pb-24 overflow-y-auto custom-scrollbar" style="-webkit-overflow-scrolling: touch;"></div>
+                <div id="lista-entregas-movil" class="space-y-4 pb-24 overflow-y-auto custom-scrollbar transform-gpu will-change-transform" style="-webkit-overflow-scrolling: touch;"></div>
             </div>
             
             <div id="botonesAgenda" style="display: none;">
@@ -192,7 +191,7 @@
                     <i class="ph-bold ph-arrow-left text-[#001e50] text-lg"></i>
                     <span class="text-xs font-black text-[#001e50] uppercase tracking-wider">Atrás</span>
                 </div>
-                <div id="chatGlobalMensajes" class="flex-1 overflow-y-auto p-3 flex flex-col custom-scrollbar bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] bg-opacity-50"></div>
+           <div id="chatGlobalMensajes" class="flex-1 overflow-y-auto p-3 flex flex-col custom-scrollbar transform-gpu will-change-transform bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] bg-opacity-50"></div>     
                 <div class="bg-gray-100 p-2 flex items-center gap-2 shrink-0 border-t border-gray-200">
                     <input type="text" id="chatGlobalInput" class="flex-1 rounded-full border border-gray-300 px-4 py-2 text-xs focus:ring-2 focus:ring-[#00b0f0] focus:border-transparent outline-none shadow-sm transition-all" placeholder="Escribe tu mensaje aquí...">
                     <button onclick="window.enviarMensajeGlobalUI()" class="w-9 h-9 rounded-full bg-[#00b0f0] text-white flex items-center justify-center hover:bg-[#001e50] shadow-sm flex-shrink-0 transition-colors">
