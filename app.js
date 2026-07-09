@@ -136,6 +136,7 @@ window.gestionarCamposLogin = function() {
     else if (depto === 'taller') inputUser.placeholder = "Operario Taller (Ej: MANUEL, ALVARO)";
     else if (depto === 'recambios') inputUser.placeholder = "Operario Recambios (Ej: JUAN, LUIS)";
     else if (depto === 'backoffice') inputUser.placeholder = "Nombre de Usuario";
+    else if (depto === 'comercial') inputUser.placeholder = "Nombre Comercial (Ej: ROBERTO, MARINA)";
 };
 
 window.normalizarUsuarioLogin = function(valor) {
@@ -172,7 +173,13 @@ window.iniciar = async function() {
         "GEMA.GOMEZ": "backoffice",
         "ALBERTO.GUTIERREZ": "backoffice",
         "RABAB.JAADAR": "backoffice",
-        "RUBEN.GARCIA": "backoffice"
+        "RUBEN.GARCIA": "backoffice",
+        "ROBERTO.ABAD": "comercial",
+        "JORGE.AGUDO": "comercial",
+        "BLANCA.SANCHEZ": "comercial",
+        "ADRIA.HUGAS": "comercial",
+        "JAVIER.MARTINEZ": "comercial",
+        "MARINA.RODRIGUEZ": "comercial",
     };
     
     let rolVerdadero = directorioPersonal[usuarioInput];
@@ -253,8 +260,8 @@ window.iniciar = async function() {
 };
 
 window.aplicarPermisosPorRol = function() {
-    if (window.rolActivo === "backoffice") {
-        const botonesOcultar = document.querySelectorAll('#botonesLogistica, .btn-guardar, button[onclick*="guardar"], button[onclick*="eliminar"], button[onclick*="anadirVehiculoManual"], button[onclick*="abrirGestorVacaciones"], button[onclick*="generarListadoDiario"]');
+   if (window.rolActivo === "backoffice" || window.rolActivo === "comercial") {
+        const botonesOcultar = document.querySelectorAll('#botonesLogistica, .btn-guardar, button[onclick*="guardar"], button[onclick*="eliminar"], button[onclick*="anadirVehiculoManual"], button[onclick*="abrirGestorVacaciones"], button[onclick*="generarListadoDiario"], #contenedorPendientesPedir, .seccion-pedir-campa');
         botonesOcultar.forEach(btn => {
             btn.style.setProperty('display', 'none', 'important');
         });
@@ -278,11 +285,12 @@ window.aplicarPermisosPorRol = function() {
             botonesInternos.forEach(btn => {
                 const clickAccion = (btn.getAttribute('onclick') || '').toLowerCase();
                 
-                // 🔥 SALVOCONDUCTO: Añadimos pedirinst para que Back Office pueda hacer clic
+                // 🔥 SALVOCONDUCTO: Permitimos abrir chat, notas, citas y COPIAR al portapapeles
                 if (!clickAccion.includes('abrirchat') && 
                     !clickAccion.includes('nota') && 
                     !clickAccion.includes('crearcitamanual') &&
-                    !clickAccion.includes('pedirinst')) {
+                    !clickAccion.includes('pedirinst') &&
+                    !clickAccion.includes('copiaralportapapeles')) { // <-- ¡Salvoconducto añadido!
                     btn.disabled = true;
                     btn.style.opacity = '0.4';
                     btn.style.cursor = 'not-allowed';
@@ -336,7 +344,7 @@ window.iniciarAppDirectamente = function(rol, usuario) {
         window.cargarChatGlobal();
     }
 
-    if (rol === 'entregas' || rol === 'backoffice') {
+    if (rol === 'entregas' || rol === 'backoffice' || rol === 'comercial') {
         if (typeof window.iniciarMotorAlertas === 'function') { window.iniciarMotorAlertas(); }
         if (rol === 'backoffice' && typeof window.escucharNotificacionesBackOffice === 'function') {
             window.escucharNotificacionesBackOffice();
@@ -635,7 +643,7 @@ window.cargar = function() {
             if(typeof window.renderizarDepartamentos === 'function') window.renderizarDepartamentos(window.rolActivo);
             if (activeTab === 'historial-dpto') { window.cargarUltimosHistorialDpto(); }
             
-        } else if (window.rolActivo === 'entregas' || window.rolActivo === 'backoffice') {
+       } else if (window.rolActivo === 'entregas' || window.rolActivo === 'backoffice' || window.rolActivo === 'comercial') {
             if (activeTab === 'logistica') {
                 if(typeof window.renderLogistica === 'function') window.renderLogistica();
             } else if (activeTab === 'todos') { 
@@ -668,10 +676,10 @@ window.cargar = function() {
                 setTimeout(() => { if(typeof window.sincronizarCitasSilencioso === 'function') window.sincronizarCitasSilencioso(); }, 1500); 
             }
 
-            // Aviso diario: coches con cita dentro de 3 días aún sin pedir a campa.
-            if (typeof window.mostrarAvisoPedidosHoySiOSi === 'function') {
-                setTimeout(() => window.mostrarAvisoPedidosHoySiOSi(), 900);
-            }
+            // Aviso diario: SOLO PARA EL EQUIPO DE ENTREGAS
+         if (window.rolActivo === 'entregas' && typeof window.mostrarAvisoPedidosHoySiOSi === 'function') {
+             setTimeout(() => window.mostrarAvisoPedidosHoySiOSi(), 900);
+         }
         }
 
         window.aplicarPermisosPorRol();
@@ -744,8 +752,8 @@ window.renderLogistica = function() {
                let htmlNotaAgenda = notaAgendaLimpia ? `<div class="text-[10px] bg-yellow-50 border border-yellow-200 text-yellow-900 px-2 py-1.5 rounded mb-3 font-bold"><i class="ph-bold ph-note"></i> Nota Agenda: ${notaAgendaLimpia}</div>` : '';
 
                let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
-                             let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
-                             let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion');
+                             let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '')
+                             let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion' || rolLimpio === 'comercial');
 
                              if (esBackoffice) {
                                      return `
@@ -1025,6 +1033,30 @@ window.renderizarListaChats = function() {
 window.renderizarContactos = function() {
     const contenedor = document.getElementById('view-contactos');
     if (!contenedor) return;
+
+    // 1. Separamos el buscador de la lista para que el DOM no destruya el <input> al escribir
+    let contenedorLista = document.getElementById('contenedor-lista-contactos');
+    
+    if (!contenedorLista) {
+        // Si no existe, creamos la estructura base: Buscador estático + Contenedor de lista dinámico
+        contenedor.innerHTML = `
+        <div class="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 p-2.5">
+            <div class="relative">
+                <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input
+                    type="text"
+                    value="${window.escapeJS(window.filtroDirectorioChat || '')}"
+                    oninput="window.filtrarDirectorioChat(this.value)"
+                    placeholder="Buscar contacto o departamento..."
+                    class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-[11px] font-bold text-[#001e50] outline-none focus:ring-2 focus:ring-[#00b0f0]"
+                >
+            </div>
+        </div>
+        <div id="contenedor-lista-contactos"></div>`; // <-- Aquí se inyectarán solo los resultados
+        
+        contenedorLista = document.getElementById('contenedor-lista-contactos');
+    }
+
     const filtro = String(window.filtroDirectorioChat || '').toUpperCase().trim();
     const normalizarBusqueda = (txt) => String(txt || '')
         .toUpperCase()
@@ -1033,30 +1065,19 @@ window.renderizarContactos = function() {
         .replace(/[.\s_-]+/g, '');
     const filtroNormalizado = normalizarBusqueda(filtro);
     
-    // 1. Estructuramos a los usuarios por sus departamentos correspondientes
+    // Diccionario de usuarios con el nuevo departamento de Comerciales
     const departamentos = {
         "ENTREGAS": ["MANUEL.ARJONA", "ANTONIO.BERMEJO"],
         "TALLER": ["MANUEL.LOPEZ", "ALVARO.BELTRAN", "LORENA.LEOVEANU"],
         "RECAMBIOS": ["SERGIO.CABALLERO", "FERNANDO.CRESPO", "JAIME.JORGE", "FERNANDO.REMON", "ABRAHAM.CANIZARES"],
-        "BACKOFFICE": ["FATIMA.GARCIA", "GEMA.GOMEZ", "ALBERTO.GUTIERREZ", "RABAB.JAADAR", "RUBEN.GARCIA"]
+        "BACKOFFICE": ["FATIMA.GARCIA", "GEMA.GOMEZ", "ALBERTO.GUTIERREZ", "RABAB.JAADAR", "RUBEN.GARCIA"],
+        "COMERCIAL": ["ROBERTO.ABAD", "JORGE.AGUDO", "BLANCA.SANCHEZ", "ADRIA.HUGAS", "JAVIER.MARTINEZ", "MARINA.RODRIGUEZ"]
     };
 
-    let htmlGenerado = `
-    <div class="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 p-2.5">
-        <div class="relative">
-            <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-            <input
-                type="text"
-                value="${window.escapeJS(window.filtroDirectorioChat || '')}"
-                oninput="window.filtrarDirectorioChat(this.value)"
-                placeholder="Buscar contacto o departamento..."
-                class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-[11px] font-bold text-[#001e50] outline-none focus:ring-2 focus:ring-[#00b0f0]"
-            >
-        </div>
-    </div>`;
+    let htmlListaResultados = '';
     let totalCoincidencias = 0;
 
-    // 2. Recorremos cada departamento usando un bucle
+    // 2. Construimos solo el HTML de los contactos
     for (const [nombreDpto, usuarios] of Object.entries(departamentos)) {
         const rolDestino = nombreDpto.toLowerCase();
         const coincideDpto = filtro === '' ||
@@ -1064,6 +1085,7 @@ window.renderizarContactos = function() {
             rolDestino.includes(filtro) ||
             normalizarBusqueda(nombreDpto).includes(filtroNormalizado) ||
             normalizarBusqueda(rolDestino).includes(filtroNormalizado);
+        
         const usuariosFiltrados = filtro === ''
             ? usuarios
             : usuarios.filter(u => u.includes(filtro) || normalizarBusqueda(u).includes(filtroNormalizado));
@@ -1071,13 +1093,10 @@ window.renderizarContactos = function() {
         if (!coincideDpto && usuariosFiltrados.length === 0) continue;
         totalCoincidencias += (coincideDpto ? 1 : 0) + usuariosFiltrados.length;
         
-        // A) Dibujamos la cabecera del departamento
-        htmlGenerado += `<div class="bg-gray-200 text-[#001e50] text-[10px] font-black p-1.5 pl-3 uppercase tracking-widest mt-2 first:mt-0 shadow-inner">${nombreDpto}</div>`;
+        htmlListaResultados += `<div class="bg-gray-200 text-[#001e50] text-[10px] font-black p-1.5 pl-3 uppercase tracking-widest mt-2 first:mt-0 shadow-inner">${nombreDpto}</div>`;
         
-        // B) Dibujamos el botón especial para enviar mensajes a todo el grupo.
-        // Convertimos el nombre a minúsculas ('taller', 'entregas') para que coincida con los roles de tu base de datos.
         if (coincideDpto) {
-            htmlGenerado += `
+            htmlListaResultados += `
             <div class="p-3 border-b border-gray-300 bg-blue-50 hover:bg-blue-100 cursor-pointer text-xs font-black flex items-center gap-3 text-[#001e50] transition-colors" onclick="window.abrirChatEspecifico('${rolDestino}')">
                 <div class="w-8 h-8 rounded-full bg-[#001e50] flex items-center justify-center text-white text-sm shadow-sm">
                     <i class="ph-bold ph-users"></i>
@@ -1086,9 +1105,8 @@ window.renderizarContactos = function() {
             </div>`;
         }
 
-        // C) Dibujamos a los usuarios individuales pertenecientes a este departamento
         usuariosFiltrados.forEach(contacto => {
-            htmlGenerado += `
+            htmlListaResultados += `
             <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer text-xs font-bold flex items-center gap-3 text-gray-700 transition-colors" onclick="window.abrirChatEspecifico('${contacto}')">
                 <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[#001e50] text-[9px] font-black shadow-sm">${contacto.substring(0,2)}</div>
                 ${contacto}
@@ -1097,11 +1115,11 @@ window.renderizarContactos = function() {
     }
 
     if (totalCoincidencias === 0) {
-        htmlGenerado += `<div class="p-6 text-center text-[11px] font-bold text-gray-500">Sin resultados para "${window.escapeJS(window.filtroDirectorioChat || '')}"</div>`;
+        htmlListaResultados += `<div class="p-6 text-center text-[11px] font-bold text-gray-500">Sin resultados para "${window.escapeJS(window.filtroDirectorioChat || '')}"</div>`;
     }
 
-    // 3. Inyectamos todo el HTML construido de golpe en la pantalla
-    contenedor.innerHTML = htmlGenerado;
+    // 3. Inyectamos los resultados en el contenedor inferior, sin tocar el buscador superior
+    contenedorLista.innerHTML = htmlListaResultados;
 };
 
 window.filtrarDirectorioChat = function(valor) {

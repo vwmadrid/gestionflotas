@@ -523,7 +523,7 @@ window.mostrarPopupAtrasados = function() {
         let agendaEstructurada = {};
         const horasLaborales = ['10', '11', '12', '13', '16', '17', '18', '19'];
         let rolAgenda = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
-        let esBackoffice = (rolAgenda === 'backoffice' || rolAgenda === 'administracion');
+        let esBackoffice = (rolAgenda === 'backoffice' || rolAgenda === 'administracion' || rolAgenda === 'comercial');
 
         window.datosAgenda.forEach(cita => {
             if (!cita.fechaHora) return;
@@ -824,8 +824,8 @@ window.mostrarPopupAtrasados = function() {
     
     let opacidad = "opacity-100"; let onclickCode = ""; let cursorClass = "";
     
-    if (cita.isBlock) {
-        if (rolUsuarioLogueado === 'backoffice' || rolUsuarioLogueado === 'administracion') {
+   if (cita.isBlock) {
+        if (rolUsuarioLogueado === 'backoffice' || rolUsuarioLogueado === 'administracion' || rolUsuarioLogueado === 'comercial') {
             cursorClass = "cursor-default";
         } else {
             onclickCode = `onclick="window.borrarBloqueo('${cita.idBloqueo}')"`;
@@ -851,7 +851,7 @@ window.mostrarPopupAtrasados = function() {
     }
 
     let botonesAprobacion = "";
-    if (esPendiente && (rolUsuarioLogueado === 'entregas' || rolUsuarioLogueado === 'admin')) {
+    if (esPendiente && (rolUsuarioLogueado === 'entregas' || rolUsuarioLogueado === 'admin') && rolUsuarioLogueado !== 'comercial') {
         botonesAprobacion = `
         <div class="flex gap-2 mt-2 pt-2 border-t border-amber-200" onclick="if(window.event) window.event.stopPropagation();">
             <button onclick="window.aprobarCitaPendiente('${cita.id}', '${matCita}')" class="flex-1 bg-emerald-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-emerald-600 transition-colors pointer-events-auto"><i class="ph-bold ph-check"></i> ACEPTAR</button>
@@ -1482,7 +1482,7 @@ window.crearCitaManual = async function() {
         
         let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
         
-        const estadoAsignado = (rolLimpio === "backoffice" || rolLimpio === "administracion") ? "pendiente" : "confirmada";
+        const estadoAsignado = (rolLimpio === "backoffice" || rolLimpio === "administracion" || rolLimpio === "comercial") ? "pendiente" : "confirmada";
         
         try {
             Swal.fire({ title: 'Guardando cita en tiempo real...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
