@@ -1597,32 +1597,36 @@ window.crearCitaManual = async function() {
 
         if (motivo !== undefined) {
             try {
-                // 1. Recuperamos los datos de la cita antes de borrarla para saber quién la creó
+                // 1. Recuperamos los datos de la cita antes de borrarla
                 const docRef = window.doc(window.db, "citas_agenda", idCita);
                 const docSnap = await window.getDoc(docRef);
                 
                 if (docSnap.exists()) {
                     const datosCita = docSnap.data();
                     
-                    // 2. Si la cita la creó un usuario de Back Office, le creamos una notificación
+                    // 2. Intentamos crear la notificación, pero la BLINDAMOS por si falla Firebase
                     if (datosCita.creadoPor) {
-                        const refNotificacion = window.doc(window.collection(window.db, "notificaciones_agenda"));
-                        await window.setDoc(refNotificacion, {
-                            vehiculo: modeloVehiculo,
-                            matricula: datosCita.matricula || "S/M",
-                            fechaCita: `${datosCita.fecha} a las ${datosCita.hora}h`,
-                            solicitadoPor: datosCita.creadoPor, // Guardará el nombre del Back Office
-                            motivoRechazo: motivo || "No especificado por el agente",
-                            fechaRegistro: new Date().toLocaleString(),
-                            leido: false // Para saber si ya vio el aviso
-                        });
+                        try {
+                            const refNotificacion = window.doc(window.collection(window.db, "notificaciones_agenda"));
+                            await window.setDoc(refNotificacion, {
+                                vehiculo: modeloVehiculo,
+                                matricula: datosCita.matricula || "S/M",
+                                fechaCita: `${datosCita.fecha} a las ${datosCita.hora}h`,
+                                solicitadoPor: datosCita.creadoPor,
+                                motivoRechazo: motivo || "No especificado por el agente",
+                                fechaRegistro: new Date().toLocaleString(),
+                                leido: false
+                            });
+                        } catch (errorNotificacion) {
+                            console.warn("Aviso: La cita se borrará, pero no se pudo enviar la notificación a Back Office", errorNotificacion);
+                        }
                     }
                 }
 
-                // 3. Ahora sí, borramos la cita pendiente para liberar el hueco en el cuadrante
+                // 3. Ahora sí, borramos la cita (esta línea se ejecutará SIEMPRE, aunque la notificación falle)
                 await window.deleteDoc(window.doc(window.db, "citas_agenda", idCita));
                 
-                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Cita rechazada y notificada', showConfirmButton: false, timer: 3000 });
+                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Cita rechazada y eliminada', showConfirmButton: false, timer: 3000 });
             } catch (error) {
                 console.error(error);
                 Swal.fire('Error', 'No se pudo procesar el rechazo de la cita.', 'error');

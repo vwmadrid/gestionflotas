@@ -1113,6 +1113,11 @@ window.marcarComoEntregado = function(id, opciones) {
                     }
                     // Refrescamos la pantalla al final de todo el proceso
                     if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+                    
+                    // 🔥 PARCHE M2: Forzamos la recarga de la agenda si se ejecuta desde el iPhone de los entregadores
+                    if (document.body.dataset.vista === 'movil' && typeof window.cargarEntregasHoy === 'function') {
+                        window.cargarEntregasHoy();
+                    }
                 });
             };
 

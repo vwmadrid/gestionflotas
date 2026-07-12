@@ -126,7 +126,6 @@ body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; }
 
 #contenedorAgenda,
 #lista-entregas-movil {
-    touch-action: pan-y;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
 }

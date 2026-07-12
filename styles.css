@@ -2945,7 +2945,6 @@ body {
 
 #contenedorAgenda,
 #lista-entregas-movil {
-  touch-action: pan-y;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
