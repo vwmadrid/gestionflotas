@@ -2,7 +2,131 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================
+   Ajustes Globales y Cristal
+   ========================================= */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #030014; }
 ::-webkit-scrollbar-thumb { background: #8b5cf6; border-radius: 4px; }
-.glass-panel { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.05); }
+.glass-panel { 
+    background: rgba(255, 255, 255, 0.03); 
+    backdrop-filter: blur(16px); 
+    -webkit-backdrop-filter: blur(16px); 
+    border: 1px solid rgba(255,255,255,0.05); 
+}
+
+/* =========================================
+   Estilos Personalizados de GesCar OS
+   ========================================= */
+body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; }
+.card-mini { background: white; border-radius: 12px; border: 1px solid #e2e8f0; transition: transform 0.2s; display: flex; flex-direction: column; }
+.card-mini:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #001e50; }
+.status-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; width: 100%; }
+
+.tabla-excel { width: 100%; min-width: max-content; border-collapse: separate; border-spacing: 0; font-size: 11px; background: white; }
+.tabla-excel th { background-color: #001e50; color: white; font-weight: bold; text-transform: uppercase; padding: 10px 12px; border: 1px solid #cbd5e1; border-top: none; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 2px -1px rgba(0,0,0,0.2); }
+.tabla-excel th:first-child { border-left: none; }
+.tabla-excel th:last-child { border-right: none; }
+.tabla-excel td { padding: 6px 12px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; color: #1e293b; vertical-align: middle; }
+.tabla-excel td:first-child { border-left: 1px solid #e2e8f0; }
+.tabla-excel tr:nth-child(even) td { background-color: #f8fafc; }
+.tabla-excel tr:hover td { background-color: #e0f2fe; }
+
+.excel-check { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 2px solid #94a3b8; border-radius: 3px; margin-right: 6px; font-size: 12px; font-weight: bold; background: white;}
+.check-curso { border-color: #f59e0b; color: #f59e0b; }
+.check-fin { border-color: #10b981; color: white; background-color: #10b981; }
+
+.bg-whatsapp { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-repeat: repeat; }
+.wa-bubble { position: relative; padding: 6px 12px 20px 12px; border-radius: 8px; font-size: 13px; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); max-width: 85%; }
+.wa-time { position: absolute; bottom: 4px; right: 8px; font-size: 9px; color: #667781; }
+.wa-me { background-color: #dcf8c6; border-top-right-radius: 0; align-self: flex-end; }
+.wa-other { background-color: #ffffff; border-top-left-radius: 0; align-self: flex-start; }
+
+.tabla-excel td, 
+#contenedorAgenda table td, 
+#contenedorAgenda .flex-1,
+.card-mini {
+    cursor: pointer !important;
+}
+
+#contenedorAgenda table td div {
+    cursor: pointer !important;
+}
+.swal2-backdrop-show {
+    cursor: default !important;
+}
+
+.mobile-hero-card {
+    background: linear-gradient(135deg, #f8fbff 0%, #eef7ff 100%);
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    box-shadow: 0 8px 20px rgba(0, 30, 80, 0.08);
+}
+
+.mobile-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #001e50;
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+}
+
+.mobile-nav button {
+    transition: all 0.2s ease;
+    border-radius: 0;
+}
+
+.mobile-nav button.active {
+    background: linear-gradient(180deg, #f2f8ff 0%, #e9f5ff 100%);
+    color: #001e50;
+}
+
+.mobile-nav button.active i {
+    color: #00b0f0;
+}
+
+#contenedorTarjetas {
+    padding-bottom: 0.25rem;
+}
+
+#contenedorTarjetas .card-mini {
+    border-radius: 16px;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+#buscadorInput:focus {
+    box-shadow: 0 0 0 3px rgba(0, 176, 240, 0.16);
+}
+
+.agenda-mobile-header {
+    backdrop-filter: blur(8px);
+}
+
+.agenda-mobile-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.agenda-mobile-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+#contenedorAgenda,
+#lista-entregas-movil {
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+}
