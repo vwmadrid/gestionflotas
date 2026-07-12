@@ -689,17 +689,28 @@ window.mostrarPopupAtrasados = function() {
                 };
 
                 if (hora === '19') {
-                    const listaUnica = [...(cM || []), ...(cA || [])];
+                    // 🔥 CORRECCIÓN: Rescatamos las citas reales de Antonio (por si ya tenía alguna asignada), 
+                    // pero ignoramos por completo su objeto de bloqueo por vacaciones.
+                    let citasAntonioReales = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? (agendaEstructurada[dateKey][hora].ANTONIO || []) : [];
+                    
+                    // Unimos las citas de Manuel (que incluyen sus vacaciones) con las citas REALES de Antonio
+                    const listaUnica = [...(cM || []), ...citasAntonioReales];
+                    
                     if (listaUnica.length > 0) {
                         html += listaUnica.map((item) => {
-                            const agenteReal = String(item.entregador || item.agente || 'MANUEL').toUpperCase();
+                            // Identificamos de quién es la cita para pintarla de su color correspondiente
+                            const agenteReal = item.isBlock ? 'MANUEL' : String(item.entregador || item.agente || 'MANUEL').toUpperCase();
                             const esAntonio = agenteReal === 'ANTONIO';
+                            
+                            // Aplicamos los colores corporativos: Naranja para Antonio, Azul para Manuel
                             const bgBase = esAntonio ? '#f9cb9c' : '#c9daf8';
                             const txtBase = esAntonio ? 'text-orange-900' : 'text-blue-900';
                             const borderBase = esAntonio ? 'border-orange-300' : 'border-blue-200';
+                            
                             const citaConMeta = (listaUnica.length > 1 && !item.isBlock)
                                 ? { ...item, _slotConflictCount: listaUnica.length }
                                 : item;
+                                
                             return window.renderizarCeldaCita(citaConMeta, agenteReal, item.isBlock ? '#e5e7eb' : bgBase, item.isBlock ? 'text-gray-500' : txtBase, item.isBlock ? 'border-gray-300' : borderBase, true);
                         }).join('');
                     } else {
@@ -1029,7 +1040,9 @@ window.mostrarPopupAtrasados = function() {
                 
                 if (!f) return Swal.showValidationMessage('La fecha es obligatoria');
                 if (!c) return Swal.showValidationMessage('El cliente es obligatorio');
-
+                if (h === '19:00' && a === 'ANTONIO') {
+                    return Swal.showValidationMessage('A las 19:00h solo Manuel realiza entregas. Reasigna la cita a MANUEL o cambia la hora.');
+                }
                 const conflictoEdicion = (window.datosAgenda || []).find(cita => {
                     if (!cita || !cita.id || cita.id === idCita || !cita.fechaHora) return false;
                     const fechaCita = new Date(cita.fechaHora);
@@ -1415,6 +1428,10 @@ window.crearCitaManual = async function() {
             const agenteAsignado = document.getElementById('n-age') ? document.getElementById('n-age').value : '';
             if (!mat || !cli || !fec || !hor) { Swal.showValidationMessage('Matrícula, nombre, fecha y hora son obligatorios.'); return false; }
             if (!agenteAsignado) { Swal.showValidationMessage('Debes asignar un entregador.'); return false; }
+            if (hor === '19:00' && agenteAsignado === 'ANTONIO') {
+                Swal.showValidationMessage('A las 19:00h solo Manuel realiza entregas. Selecciona a MANUEL o cambia la hora.');
+                return false;
+            }
             try {
                 const bloqueosSnapshot = await window.getDocs(window.collection(window.db, "bloqueos_agenda"));
                 let conflicto = null;
