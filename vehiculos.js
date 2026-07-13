@@ -1646,70 +1646,97 @@ window.renderEntregados = function() {
 }
 
 window.obtenerMovimientosHistorial = function() {
-   if (Array.isArray(window.movimientosHistorial) && window.movimientosHistorial.length > 0) {
-       return window.movimientosHistorial.map(m => {
-           const tipo = String(m.tipo || m.tipoFinalizacion || '').toUpperCase();
-           const ts = Number(m.ts || m.fechaEntregaTs || 0) || 0;
-           let fechaTxt = m.fechaTexto || m.fechaEntrega || '';
-           if (!fechaTxt && ts > 0) {
-               const d = new Date(ts);
-               if (!isNaN(d.getTime())) fechaTxt = d.toLocaleDateString('es-ES');
-           }
+    // 1. Procesar el nuevo historial de Firebase (El Presente - Julio)
+    let listaNuevos = [];
+    if (Array.isArray(window.movimientosHistorial) && window.movimientosHistorial.length > 0) {
+        listaNuevos = window.movimientosHistorial.map(m => {
+            const tipo = String(m.tipo || m.tipoFinalizacion || '').toUpperCase();
+            const ts = Number(m.ts || m.fechaEntregaTs || 0) || 0;
+            let fechaTxt = m.fechaTexto || m.fechaEntrega || '';
+            if (!fechaTxt && ts > 0) {
+                const d = new Date(ts);
+                if (!isNaN(d.getTime())) fechaTxt = d.toLocaleDateString('es-ES');
+            }
 
-           return {
-               fila: m.vehiculoId || m.id || ('mov_' + Math.random().toString(36).slice(2)),
-               C: m.modelo || 'MOVIMIENTO',
-               A: m.bastidor || 'S/D',
-               B: m.matricula || 'S/M',
-               agente: m.usuario || m.agente || 'N/A',
-               entregador: m.usuario || m.agente || 'N/A',
-               renting: m.renting || '-',
-               fechaEntrega: fechaTxt || 'Completado',
-               fechaEntregaTs: ts,
-               tipoFinalizacion: tipo === 'TRASLADO' ? 'TRASLADO' : (tipo === 'DEVOLUCION' ? 'DEVOLUCION' : 'ENTREGA'),
-               concesionarioDestino: m.concesionarioDestino || null,
-               urlActaTraslado: m.urlActaTraslado || null,
-               esRegistroAgenda: !m.vehiculoId
-           };
-       });
-   }
+            return {
+                fila: m.vehiculoId || m.id || ('mov_' + Math.random().toString(36).slice(2)),
+                C: m.modelo || 'MOVIMIENTO',
+                A: m.bastidor || 'S/D',
+                B: m.matricula || 'S/M',
+                agente: m.usuario || m.agente || 'N/A',
+                entregador: m.usuario || m.agente || 'N/A',
+                renting: m.renting || '-',
+                fechaEntrega: fechaTxt || 'Completado',
+                fechaEntregaTs: ts,
+                tipoFinalizacion: tipo === 'TRASLADO' ? 'TRASLADO' : (tipo === 'DEVOLUCION' ? 'DEVOLUCION' : 'ENTREGA'),
+                concesionarioDestino: m.concesionarioDestino || null,
+                urlActaTraslado: m.urlActaTraslado || null,
+                esRegistroAgenda: !m.vehiculoId
+            };
+        });
+    }
 
-   let entregadosVehiculos = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
-   let devolucionesAgenda = (window.datosAgenda || []).filter(cita => {
-       let modelo = String(cita && cita.modelo ? cita.modelo : '').toUpperCase();
-       let esDevolucion = modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
-       return esDevolucion && (cita.entregado === true || cita.entregado === "true");
-   }).map(cita => {
-       let fechaTxt = cita.fechaEntregaTexto || '';
-       if (!fechaTxt && cita.fechaEntrega) {
-           let d = new Date(Number(cita.fechaEntrega));
-           if (!isNaN(d.getTime())) fechaTxt = d.toLocaleDateString('es-ES');
-       }
-       if (!fechaTxt && cita.fecha) {
-           let p = String(cita.fecha).split('-');
-           if (p.length === 3) fechaTxt = `${p[2]}/${p[1]}/${p[0]}`;
-       }
-       return {
-           fila: cita.id || ('cita_' + Math.random().toString(36).slice(2)),
-           C: cita.modelo || 'DEVOLUCIÓN',
-           A: cita.bastidor || 'S/D',
-           B: cita.matricula || 'S/M',
-           agente: cita.entregador || cita.agente || 'N/A',
-           renting: cita.renting || '-',
-           fechaEntrega: fechaTxt || 'Completado',
-           fechaEntregaTs: Number(cita.fechaEntrega || 0) || 0,
-           tipoFinalizacion: 'DEVOLUCION',
-           esRegistroAgenda: true
-       };
-   });
+    // 2. Procesar los vehículos antiguos ya entregados (El Pasado - Junio)
+    let entregadosVehiculos = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
 
-   let combinado = entregadosVehiculos.concat(devolucionesAgenda);
-   combinado.sort((a, b) => {
-       const tsA = Number(a.fechaEntregaTs || 0) || 0;
-       const tsB = Number(b.fechaEntregaTs || 0) || 0;
-       return tsB - tsA;
-   });
-   return combinado;
+    // 3. Procesar las devoluciones antiguas desde la agenda
+    let devolucionesAgenda = (window.datosAgenda || []).filter(cita => {
+        let modelo = String(cita && cita.modelo ? cita.modelo : '').toUpperCase();
+        let esDevolucion = modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
+        return esDevolucion && (cita.entregado === true || cita.entregado === "true");
+    }).map(cita => {
+        let fechaTxt = cita.fechaEntregaTexto || '';
+        if (!fechaTxt && cita.fechaEntrega) {
+            let d = new Date(Number(cita.fechaEntrega));
+            if (!isNaN(d.getTime())) fechaTxt = d.toLocaleDateString('es-ES');
+        }
+        if (!fechaTxt && cita.fecha) {
+            let p = String(cita.fecha).split('-');
+            if (p.length === 3) fechaTxt = `${p[2]}/${p[1]}/${p[0]}`;
+        }
+        return {
+            fila: cita.id || ('cita_' + Math.random().toString(36).slice(2)),
+            C: cita.modelo || 'DEVOLUCIÓN',
+            A: cita.bastidor || 'S/D',
+            B: cita.matricula || 'S/M',
+            agente: cita.entregador || cita.agente || 'N/A',
+            renting: cita.renting || '-',
+            fechaEntrega: fechaTxt || 'Completado',
+            fechaEntregaTs: Number(cita.fechaEntrega || 0) || 0,
+            tipoFinalizacion: 'DEVOLUCION',
+            esRegistroAgenda: true
+        };
+    });
+
+    // 4. 🛡️ FILTRO DE CRUCE: Evitamos duplicar en pantalla coches que estén en ambas listas
+    let llavesNuevas = new Set();
+    listaNuevos.forEach(m => {
+        if (m.B && m.B !== 'S/M') llavesNuevas.add(String(m.B).replace(/\s/g, '').toUpperCase());
+        if (m.A && m.A !== 'S/D') llavesNuevas.add(String(m.A).replace(/\s/g, '').toUpperCase());
+    });
+
+    let antiguosSinDuplicar = entregadosVehiculos.filter(c => {
+        let mat = String(c.B || c.matricula || '').replace(/\s/g, '').toUpperCase();
+        let bas = String(c.A || c.bastidor || '').replace(/\s/g, '').toUpperCase();
+        return !llavesNuevas.has(mat) && !llavesNuevas.has(bas);
+    });
+
+    let devolucionesSinDuplicar = devolucionesAgenda.filter(c => {
+        let mat = String(c.B || '').replace(/\s/g, '').toUpperCase();
+        return !llavesNuevas.has(mat);
+    });
+
+    // 5. Unimos el Pasado y el Presente
+    let combinado = [...listaNuevos, ...antiguosSinDuplicar, ...devolucionesSinDuplicar];
+    
+    // 6. Ordenar cronológicamente (los más nuevos arriba)
+    combinado.sort((a, b) => {
+        const tsA = Number(a.fechaEntregaTs || 0) || 0;
+        const tsB = Number(b.fechaEntregaTs || 0) || 0;
+        return tsB - tsA;
+    });
+    
+    return combinado;
 };
 
 window.buscarEnHistorial = function() {
