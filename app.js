@@ -180,6 +180,8 @@ window.iniciar = async function() {
         "ADRIA.HUGAS": "comercial",
         "JAVIER.MARTINEZ": "comercial",
         "MARINA.RODRIGUEZ": "comercial",
+        "ALBA.DORIA": "comercial",
+        "JOSEMARIA.MARTINEZ": "comercial",
     };
     
     let rolVerdadero = directorioPersonal[usuarioInput];
@@ -623,21 +625,34 @@ window.cargar = function() {
         todosLosCoches = [];
         snapshot.forEach(doc => { 
             let c = doc.data(); 
-            c.fila = doc.id; 
-            c.A = c.bastidor || "Sin Bastidor"; 
-            c.B = c.matricula || c.Matricula || "S/M"; 
-            c.C = c.modelo || "VW"; 
             
-            let chatProcess = c.chatInfo;
-            if (!chatProcess && c.chat && typeof c.chat === 'string') {
-                try { chatProcess = JSON.parse(c.chat); } catch(e) {}
+            // 🔥 ESCUDO ANTIFANTASMAS: Comprobamos que el documento tenga información real
+            let tieneBastidor = c.bastidor && String(c.bastidor).trim() !== '';
+            let tieneMatricula = (c.matricula && String(c.matricula).trim() !== '') || (c.Matricula && String(c.Matricula).trim() !== '');
+            let esValido = tieneBastidor || tieneMatricula;
+
+            // Solo metemos el coche en la app si pasó la prueba
+            if (esValido) {
+                c.fila = doc.id; 
+                c.A = c.bastidor || "Sin Bastidor"; 
+                c.B = c.matricula || c.Matricula || "S/M"; 
+                c.C = c.modelo || "VW"; 
+                
+                let chatProcess = c.chatInfo;
+                if (!chatProcess && c.chat && typeof c.chat === 'string') {
+                    try { chatProcess = JSON.parse(c.chat); } catch(e) {}
+                }
+                c.chatData = chatProcess || {history: [], lastOpened: {}};
+                
+                todosLosCoches.push(c); 
+            } else {
+                console.warn("Se ha ignorado un vehículo fantasma en Firebase con ID:", doc.id);
             }
-            c.chatData = chatProcess || {history: [], lastOpened: {}};
-            todosLosCoches.push(c); 
         });
         
         todosLosCoches.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
 
+        // ... (El resto de tu función window.cargar sigue exactamente igual hacia abajo con la distribución por departamentos)
         // 🔥 DISTRIBUCIÓN DE DATOS SEGÚN EL DEPARTAMENTO
         if (window.rolActivo === 'taller' || window.rolActivo === 'recambios') {
             if(typeof window.renderizarDepartamentos === 'function') window.renderizarDepartamentos(window.rolActivo);
@@ -720,121 +735,152 @@ window.actualizarContadores = function() {
 window.renderLogistica = function() {
    let logistica = todosLosCoches.filter(c => c.pasoAInventario !== true && c.pasoAInventario !== "true" && c.entregado !== true && c.entregado !== "true");
    let div = document.getElementById('contenedorLogistica');
-   
+
    if (logistica.length === 0) {
        div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay vehículos en fase de logística previa.</p></div>`;
    } else {
-       if(typeof window.renderTarjetaCompacta === 'function') {
-           div.innerHTML = logistica.map(c => {
-               let btnDoc = c.fechaDoc ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Doc: ${c.fechaDoc}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaDoc')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">Documentación</button>`;
-               let btnTrans = c.fechaTransporte ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Trans: ${c.fechaTransporte}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaTransporte')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Transporte</button>`;
-               let btnPrep = c.fechaPreparacion ? `<div class="bg-amber-100 text-amber-800 text-[9px] font-bold py-1.5 px-2 rounded border border-amber-300 text-center">⚠️ Prep: ${c.fechaPreparacion}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaPreparacion')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Preparación</button>`;
+       // 🔥 ORDENACIÓN INTELIGENTE (Los listos van arriba del todo)
+       logistica.sort((a, b) => {
+           let enTa = a.enTaller && !a.finTaller;
+           let enRa = a.enRecambios && !a.finRecambios;
+           let aListo = !!a.fechaDoc && !!a.fechaTransporte && !!a.fechaPreparacion && !enTa && !enRa ? 1 : 0;
 
-               let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27"); 
-               let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
-               let maS = encodeURIComponent(c.B || '').replace(/'/g, "%27");
-               
-               let escA = window.escapeJS(c.A); let escB = window.escapeJS(c.B); let escC = window.escapeJS(c.C);
-               let escRen = window.escapeJS(c.renting); let escAge = window.escapeJS(c.agencia);
+           let enTb = b.enTaller && !b.finTaller;
+           let enRb = b.enRecambios && !b.finRecambios;
+           let bListo = !!b.fechaDoc && !!b.fechaTransporte && !!b.fechaPreparacion && !enTb && !enRb ? 1 : 0;
 
-               let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shadow-sm"><i class="ph-bold ph-plus"></i> Añadir Petición</button>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
-               let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-teal-100 text-teal-800 hover:bg-teal-200 border border-teal-200 shadow-sm"><i class="ph-bold ph-plus"></i> Añadir Petición</button>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
+           return bListo - aListo; // Coloca los 1 (Listos) antes que los 0
+       });
 
-               let arrTaller = c.peticionesTaller || (c.instruccionTaller ? [{fecha: c.fechaEntradaTaller || '-', motivo: c.instruccionTaller, url: c.urlParte}] : []);
-               let arrRecambios = c.peticionesRecambios || (c.instruccionRecambios ? [{fecha: c.fechaEntradaRecambios || '-', motivo: c.instruccionRecambios, url: c.urlParte}] : []);
+       div.innerHTML = logistica.map(c => {
+           let enT = c.enTaller && !c.finTaller;
+           let enR = c.enRecambios && !c.finRecambios;
+           let tieneCita = !!c.fechaCita;
+           let isAlerta = tieneCita && (enT || enR);
 
-               let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
-               let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
+           // 🔥 DETECTAMOS SI EL COCHE ESTÁ LISTO
+           let isListo = !!c.fechaDoc && !!c.fechaTransporte && !!c.fechaPreparacion && !enT && !enR;
 
-               txtTallerInfo += arrTaller.map(p => `<div class="text-[9px] leading-tight text-gray-600 mt-1 border-l-2 border-amber-400 pl-1.5"><b class="text-amber-700">${p.fecha}:</b> ${p.motivo} ${p.url ? `<a href="${p.url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1" title="Ver Acta"><i class="ph-bold ph-paperclip"></i></a>` : ''}</div>`).join('');
-               txtRecambiosInfo += arrRecambios.map(p => `<div class="text-[9px] leading-tight text-gray-600 mt-1 border-l-2 border-teal-500 pl-1.5"><b class="text-teal-700">${p.fecha}:</b> ${p.motivo} ${p.url ? `<a href="${p.url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1" title="Ver Acta"><i class="ph-bold ph-paperclip"></i></a>` : ''}</div>`).join('');
-               let notaAgendaLimpia = String(c.notaAgenda || '').replace(/[<>]/g, '').trim();
-               let htmlNotaAgenda = notaAgendaLimpia ? `<div class="text-[10px] bg-yellow-50 border border-yellow-200 text-yellow-900 px-2 py-1.5 rounded mb-3 font-bold"><i class="ph-bold ph-note"></i> Nota Agenda: ${notaAgendaLimpia}</div>` : '';
+           // MODIFICAMOS EL COLOR DEL BORDE Y LA SOMBRA
+           let borderAlerta = isAlerta ? 'border-l-8 border-red-600 bg-red-50/50' : 
+                              (isListo ? 'border-l-8 border-emerald-500 bg-emerald-50/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-l-8 border-gray-200');
 
-               let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
-                             let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '')
-                             let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion' || rolLimpio === 'comercial');
+           // 🔥 ETIQUETAS VISUALES DE ALERTA O LISTO
+           let htmlAlerta = isAlerta ? `<div class="bg-red-600 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-warning-circle text-sm"></i> ¡URGENTE! TIENE CITA EL ${c.fechaCita}</div>` : '';
+           if (isListo && !isAlerta) {
+               htmlAlerta = `<div class="bg-emerald-500 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-star text-sm"></i> ¡LISTO PARA CONCESIONARIO!</div>`;
+           }
 
-                             if (esBackoffice) {
-                                     return `
-                                     <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm fila-coche flex flex-col relative">
-                                         <div class="flex justify-between items-start mb-2 gap-2">
-                                                <div class="min-w-0 pr-2">
-                                                        <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
-                                                        <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
-                                                </div>
-                                                <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-9 h-9 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm" title="Chat interno"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
-                                         </div>
+           let btnDoc = c.fechaDoc ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Doc: ${c.fechaDoc}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaDoc')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">Documentación</button>`;
+           let btnTrans = c.fechaTransporte ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Trans: ${c.fechaTransporte}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaTransporte')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Transporte</button>`;
+           let btnPrep = c.fechaPreparacion ? `<div class="bg-amber-100 text-amber-800 text-[9px] font-bold py-1.5 px-2 rounded border border-amber-300 text-center">⚠️ Prep: ${c.fechaPreparacion}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaPreparacion')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Preparación</button>`;
 
-                                         <div class="flex gap-2 mb-3">
-                                                <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</div>
-                                                <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</div>
-                                         </div>
+           let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27"); 
+           let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
+           let maS = encodeURIComponent(c.B || '').replace(/'/g, "%27");
+           
+           let escA = window.escapeJS(c.A); let escB = window.escapeJS(c.B); let escC = window.escapeJS(c.C);
+           let escRen = window.escapeJS(c.renting); let escAge = window.escapeJS(c.agencia);
 
-                                             ${htmlNotaAgenda}
+           let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shadow-sm"><i class="ph-bold ph-plus"></i> Añadir Petición</button>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
+           let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-teal-100 text-teal-800 hover:bg-teal-200 border border-teal-200 shadow-sm"><i class="ph-bold ph-plus"></i> Añadir Petición</button>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
 
-                                        <div class="flex flex-col gap-1.5 mb-3 min-w-0">
-                                            <button onclick="window.copiarAlPortapapeles('${escB}')" title="Copiar matrícula" class="cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
-                                                <span class="truncate">${c.B}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
-                                            </button>
-                                            <button onclick="window.copiarAlPortapapeles('${escA}')" title="Copiar bastidor" class="cursor-pointer hover:bg-gray-100 transition-colors bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
-                                                <span class="truncate">VIN: ${c.A}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
-                                            </button>
-                                        </div>
+           let arrTaller = c.peticionesTaller || (c.instruccionTaller ? [{fecha: c.fechaEntradaTaller || '-', motivo: c.instruccionTaller, url: c.urlParte}] : []);
+           let arrRecambios = c.peticionesRecambios || (c.instruccionRecambios ? [{fecha: c.fechaEntradaRecambios || '-', motivo: c.instruccionRecambios, url: c.urlParte}] : []);
 
-                                         <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
-                                                <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Doc: ${c.fechaDoc || 'Pte'}</div>
-                                                <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Trans: ${c.fechaTransporte || 'Pte'}</div>
-                                                <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Prep: ${c.fechaPreparacion || 'Pte'}</div>
-                                         </div>
+           let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
+           let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
 
-                                         <div class="flex flex-col gap-2">
-                                             <div class="flex gap-2 w-full">
-                                                 <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
-                                                 <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
-                                             </div>
-                                         </div>
-                                     </div>`;
-                             }
+           txtTallerInfo += arrTaller.map(p => `<div class="text-[9px] leading-tight text-gray-600 mt-1 border-l-2 border-amber-400 pl-1.5"><b class="text-amber-700">${p.fecha}:</b> ${p.motivo} ${p.url ? `<a href="${p.url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1" title="Ver Acta"><i class="ph-bold ph-paperclip"></i></a>` : ''}</div>`).join('');
+           txtRecambiosInfo += arrRecambios.map(p => `<div class="text-[9px] leading-tight text-gray-600 mt-1 border-l-2 border-teal-500 pl-1.5"><b class="text-teal-700">${p.fecha}:</b> ${p.motivo} ${p.url ? `<a href="${p.url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1" title="Ver Acta"><i class="ph-bold ph-paperclip"></i></a>` : ''}</div>`).join('');
+           let notaAgendaLimpia = String(c.notaAgenda || '').replace(/[<>]/g, '').trim();
+           let htmlNotaAgenda = notaAgendaLimpia ? `<div class="text-[10px] bg-yellow-50 border border-yellow-200 text-yellow-900 px-2 py-1.5 rounded mb-3 font-bold"><i class="ph-bold ph-note"></i> Nota Agenda: ${notaAgendaLimpia}</div>` : '';
 
+           let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
+           let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+           let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion' || rolLimpio === 'comercial');
+
+           if (esBackoffice) {
                return `
-               <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm fila-coche flex flex-col relative">
-                 <div class="flex justify-between items-start mb-2 gap-2">
-                    <div class="min-w-0 pr-2">
-                        <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
-                        <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
-                    </div>
-                    <div class="flex gap-1 flex-shrink-0">
-                        <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
-                        <button onclick="window.editarVehiculoBasico('${c.fila}', '${escA}', '${escB}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info del vehículo"><i class="ph-bold ph-pencil-simple text-lg"></i></button> 
-                        <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>              
-                    </div>
-                 </div>
-
-                 <div class="flex gap-2 mb-3">
-                    <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
-                    <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
-                 </div>
-
-                      ${htmlNotaAgenda}
-
-                 <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
-                    ${btnDoc} ${btnTrans} ${btnPrep}
-                 </div>
-
-                 <div class="flex flex-col gap-2 mb-4">
-                   <div class="flex gap-2 w-full">
-                     <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
-                     <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+               <div class="bg-white rounded-xl ${borderAlerta} border p-5 shadow-sm fila-coche flex flex-col relative">
+                   ${htmlAlerta}
+                   <div class="flex justify-between items-start mb-2 gap-2">
+                       <div class="min-w-0 pr-2">
+                           <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
+                           <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
+                       </div>
+                       <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-9 h-9 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm" title="Chat interno"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
                    </div>
-                 </div>
 
-                 <button onclick="window.pasarAInventario('${c.fila}')" class="w-full mt-auto bg-[#001e50] text-white font-bold py-3 rounded-lg text-xs hover:bg-blue-900 shadow-sm flex items-center justify-center gap-2">
-                    <i class="ph-bold ph-check"></i> Marcar como "Listo para Entrega"
-                 </button>
+                   <div class="flex gap-2 mb-3">
+                       <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</div>
+                       <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</div>
+                   </div>
+
+                   ${htmlNotaAgenda}
+
+                   <div class="flex flex-col gap-1.5 mb-3 min-w-0">
+                       <button onclick="window.copiarAlPortapapeles('${escB}')" title="Copiar matrícula" class="cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+                           <span class="truncate">${c.B}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+                       </button>
+                       <button onclick="window.copiarAlPortapapeles('${escA}')" title="Copiar bastidor" class="cursor-pointer hover:bg-gray-100 transition-colors bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+                           <span class="truncate">VIN: ${c.A}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+                       </button>
+                   </div>
+
+                   <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
+                       <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Doc: ${c.fechaDoc || 'Pte'}</div>
+                       <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Trans: ${c.fechaTransporte || 'Pte'}</div>
+                       <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Prep: ${c.fechaPreparacion || 'Pte'}</div>
+                   </div>
+
+                   <div class="flex flex-col gap-2">
+                       <div class="flex gap-2 w-full">
+                           <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
+                           <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+                       </div>
+                   </div>
                </div>`;
-           }).join('');
-       }
+           }
+
+           return `
+           <div class="bg-white rounded-xl ${borderAlerta} p-5 shadow-sm fila-coche flex flex-col relative">
+             ${htmlAlerta}
+             <div class="flex justify-between items-start mb-2 gap-2">
+                <div class="min-w-0 pr-2">
+                    <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
+                    <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
+                </div>
+                <div class="flex gap-1 flex-shrink-0">
+                    <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
+                    <button onclick="window.editarVehiculoBasico('${c.fila}', '${escA}', '${escB}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info del vehículo"><i class="ph-bold ph-pencil-simple text-lg"></i></button> 
+                    <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>              
+                </div>
+             </div>
+
+             <div class="flex gap-2 mb-3">
+                <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
+                <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
+             </div>
+
+             ${htmlNotaAgenda}
+
+             <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
+                ${btnDoc} ${btnTrans} ${btnPrep}
+             </div>
+
+             <div class="flex flex-col gap-2 mb-4">
+               <div class="flex gap-2 w-full">
+                 <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
+                 <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+               </div>
+             </div>
+
+             <button onclick="window.pasarAInventario('${c.fila}')" class="w-full mt-auto bg-[#001e50] text-white font-bold py-3 rounded-lg text-xs hover:bg-blue-900 shadow-sm flex items-center justify-center gap-2">
+                <i class="ph-bold ph-check"></i> Marcar como "Listo para Entrega"
+             </button>
+           </div>`;
+       }).join('');
    }
 };
 
@@ -1071,7 +1117,7 @@ window.renderizarContactos = function() {
         "TALLER": ["MANUEL.LOPEZ", "ALVARO.BELTRAN", "LORENA.LEOVEANU"],
         "RECAMBIOS": ["SERGIO.CABALLERO", "FERNANDO.CRESPO", "JAIME.JORGE", "FERNANDO.REMON", "ABRAHAM.CANIZARES"],
         "BACKOFFICE": ["FATIMA.GARCIA", "GEMA.GOMEZ", "ALBERTO.GUTIERREZ", "RABAB.JAADAR", "RUBEN.GARCIA"],
-        "COMERCIAL": ["ROBERTO.ABAD", "JORGE.AGUDO", "BLANCA.SANCHEZ", "ADRIA.HUGAS", "JAVIER.MARTINEZ", "MARINA.RODRIGUEZ"]
+        "COMERCIAL": ["ROBERTO.ABAD", "JORGE.AGUDO", "BLANCA.SANCHEZ", "ADRIA.HUGAS", "JAVIER.MARTINEZ", "MARINA.RODRIGUEZ", "ALBA.DORIA", "JOSEMARIA.MARTINEZ"]
     };
 
     let htmlListaResultados = '';

@@ -239,6 +239,7 @@
         });
 
         // 🔥 MAGIA: Sobrescribimos la orden general para que en móvil pinte tu vista clásica
+        // 🔥 MAGIA: Sobrescribimos la orden general para que en móvil pinte tu vista clásica
         window.renderAgenda = function() {
             const div = document.getElementById('contenedorAgenda');
             if (div) {
@@ -248,11 +249,14 @@
             window.cargarEntregasHoy();
         };
 
-        window.cargarEntregasHoy = async function() {
+        // Variable global para almacenar el radar activo y poder cancelarlo si cambiamos de día
+        window.radarEntregasMovil = null;
+
+        window.cargarEntregasHoy = function() {
             const contenedor = document.getElementById('lista-entregas-movil');
             if(!contenedor) return;
             
-            contenedor.innerHTML = `<div class="text-center p-10"><i class="ph-bold ph-spinner animate-spin text-4xl text-[#001e50]"></i><p class="mt-2 text-gray-500 font-bold text-sm">Sincronizando...</p></div>`;
+            contenedor.innerHTML = `<div class="text-center p-10"><i class="ph-bold ph-spinner animate-spin text-4xl text-[#001e50]"></i><p class="mt-2 text-gray-500 font-bold text-sm">Sincronizando entregas pendientes...</p></div>`;
 
             if (!window.db) {
                 setTimeout(window.cargarEntregasHoy, 500);
@@ -262,7 +266,12 @@
             let diaLimpio = document.getElementById('selector-fecha-movil').value;
 
             try {
-                // Compatibilidad con las consultas si "query" no existe a nivel global
+                // Cancelamos el radar anterior si existe, para no solapar datos al cambiar de día
+                if (window.radarEntregasMovil) {
+                    window.radarEntregasMovil();
+                }
+
+                // Creamos la consulta para el día seleccionado
                 let qRef;
                 if(window.query && window.where) {
                     qRef = window.query(window.collection(window.db, "citas_agenda"), window.where("fecha", "==", diaLimpio));
@@ -270,33 +279,49 @@
                     qRef = window.collection(window.db, "citas_agenda");
                 }
                 
-                const snap = await window.getDocs(qRef);
-                
-                let citas = [];
-                snap.forEach((doc) => { 
-                    let data = doc.data();
-                    // Si hicimos query por where no hace falta este IF, pero si no, lo filtramos manualmente
-                    if(data.fecha === diaLimpio || (data.fechaHora && data.fechaHora.startsWith(diaLimpio))) {
-                        citas.push({ id: doc.id, ...data }); 
+                // 🔥 SUSTITUIMOS getDocs POR onSnapshot PARA TIEMPO REAL
+                window.radarEntregasMovil = window.onSnapshot(qRef, (snap) => {
+                    let citasPendientes = [];
+                    
+                    snap.forEach((doc) => { 
+                        let data = doc.data();
+                        
+                        // Validamos la fecha (por si usamos la colección completa)
+                        const coincideFecha = data.fecha === diaLimpio || (data.fechaHora && data.fechaHora.startsWith(diaLimpio));
+                        
+                        if (coincideFecha) {
+                            // 🔥 FILTRO CLAVE: Solo guardamos las que NO están entregadas
+                            const estaEntregado = data.entregado === true || data.entregado === "true";
+                            
+                            if (!estaEntregado) {
+                                citasPendientes.push({ id: doc.id, ...data }); 
+                            }
+                        }
+                    });
+
+                    // Ordenamos por hora
+                    citasPendientes.sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
+
+                    if (citasPendientes.length === 0) {
+                        contenedor.innerHTML = `
+                            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 text-center mt-4">
+                                <i class="ph-fill ph-check-circle text-6xl text-emerald-500 mb-3"></i>
+                                <h2 class="text-[#001e50] font-black text-xl">Día Limpio</h2>
+                                <p class="text-gray-500 text-sm mt-1 font-bold">No quedan entregas pendientes en el cuadrante para hoy.</p>
+                            </div>`;
+                        return;
                     }
+
+                    // Renderizamos las tarjetas de las pendientes
+                    contenedor.innerHTML = citasPendientes.map(cita => window.renderizarTarjetaMovil(cita)).join('');
+                }, (error) => {
+                    console.error("Error en radar Firebase:", error);
+                    contenedor.innerHTML = `<div class="bg-red-50 p-6 rounded-xl border border-red-200 text-center mt-4"><i class="ph-bold ph-wifi-slash text-4xl text-red-500 mb-2"></i><p class="text-red-700 font-bold text-sm">Sin conexión con la central.</p></div>`;
                 });
 
-                citas.sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
-
-                if (citas.length === 0) {
-                    contenedor.innerHTML = `
-                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 text-center mt-4">
-                            <i class="ph-fill ph-check-circle text-6xl text-emerald-500 mb-3"></i>
-                            <h2 class="text-[#001e50] font-black text-xl">Día Libre</h2>
-                            <p class="text-gray-500 text-sm mt-1 font-bold">No hay entregas programadas en el cuadrante para hoy.</p>
-                        </div>`;
-                    return;
-                }
-
-                contenedor.innerHTML = citas.map(cita => window.renderizarTarjetaMovil(cita)).join('');
             } catch (error) {
-                console.error("Error de lectura Firebase:", error);
-                contenedor.innerHTML = `<div class="bg-red-50 p-6 rounded-xl border border-red-200 text-center mt-4"><i class="ph-bold ph-wifi-slash text-4xl text-red-500 mb-2"></i><p class="text-red-700 font-bold text-sm">Sin conexión con la central.</p></div>`;
+                console.error("Error al iniciar radar:", error);
+                contenedor.innerHTML = `<div class="bg-red-50 p-6 rounded-xl border border-red-200 text-center mt-4"><i class="ph-bold ph-warning text-4xl text-red-500 mb-2"></i><p class="text-red-700 font-bold text-sm">Error de sincronización.</p></div>`;
             }
         };
 

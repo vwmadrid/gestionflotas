@@ -680,38 +680,52 @@ window.mostrarPopupAtrasados = function() {
                     if (!lista || lista.length === 0) {
                         return window.renderizarCeldaCita(null, agente, '#f3f4f6', 'text-gray-400', 'border-gray-300', unico);
                     }
+                    
+                    // 🔥 NUEVA LÓGICA: Si hay más de 1 vehículo (y no es un bloqueo), mostramos la tarjeta resumen
+                    if (lista.length > 1 && !lista[0].isBlock) {
+                        const idsStr = lista.map(c => c.id).join(',');
+                        const altura = unico ? "min-h-[220px]" : "min-h-[140px]";
+                        const borderColorClass = agente === 'ANTONIO' ? 'border-orange-400' : 'border-blue-400';
+                        const textColorClass = agente === 'ANTONIO' ? 'text-orange-900' : 'text-blue-900';
+                        const bgColorHex = agente === 'ANTONIO' ? '#ffedd5' : '#e0e7ff';
+                        
+                        return `
+                        <div onclick="window.verEntregaConjunta('${idsStr}', '${agente}')" class="cita-tarjeta flex-1 rounded-lg p-3 border-2 border-dashed ${borderColorClass} flex flex-col justify-center items-center cursor-pointer hover:scale-[1.02] transition-transform shadow-sm ${altura}" style="background-color: ${bgColorHex};">
+                            <div class="bg-purple-100 text-purple-800 text-[10px] font-black px-2 py-1 rounded mb-2 border border-purple-300 uppercase tracking-widest animate-pulse flex items-center gap-1 shadow-sm"><i class="ph-bold ph-stack"></i> Conjunta</div>
+                            <div class="text-3xl font-black ${textColorClass} mb-1">${lista.length}</div>
+                            <div class="text-[10px] font-bold ${textColorClass} uppercase tracking-widest mb-3">Vehículos</div>
+                            <button class="bg-[#001e50] text-white text-[10px] font-black py-1.5 px-4 rounded shadow-sm hover:bg-blue-900 uppercase tracking-widest flex items-center gap-1"><i class="ph-bold ph-eye"></i> Ver Grupo</button>
+                        </div>`;
+                    }
+                    
+                    // Si solo hay 1, se pinta la tarjeta normal
                     return lista.map((item) => {
-                        const citaConMeta = (lista.length > 1 && !item.isBlock)
-                            ? { ...item, _slotConflictCount: lista.length }
-                            : item;
+                        const citaConMeta = (lista.length > 1 && !item.isBlock) ? { ...item, _slotConflictCount: lista.length } : item;
                         return window.renderizarCeldaCita(citaConMeta, agente, bg, textClass, border, unico);
                     }).join('');
                 };
 
                 if (hora === '19') {
-                    // 🔥 CORRECCIÓN: Rescatamos las citas reales de Antonio (por si ya tenía alguna asignada), 
-                    // pero ignoramos por completo su objeto de bloqueo por vacaciones.
                     let citasAntonioReales = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? (agendaEstructurada[dateKey][hora].ANTONIO || []) : [];
-                    
-                    // Unimos las citas de Manuel (que incluyen sus vacaciones) con las citas REALES de Antonio
                     const listaUnica = [...(cM || []), ...citasAntonioReales];
                     
-                    if (listaUnica.length > 0) {
+                    if (listaUnica.length > 1 && !listaUnica[0].isBlock) {
+                        const idsStr = listaUnica.map(c => c.id).join(',');
+                        html += `
+                        <div onclick="window.verEntregaConjunta('${idsStr}', 'MANUEL')" class="cita-tarjeta flex-1 rounded-lg p-3 border-2 border-dashed border-purple-400 flex flex-col justify-center items-center cursor-pointer hover:scale-[1.02] transition-transform shadow-sm min-h-[220px]" style="background-color: #f3e8ff;">
+                            <div class="bg-purple-100 text-purple-800 text-[10px] font-black px-2 py-1 rounded mb-2 border border-purple-300 uppercase tracking-widest animate-pulse flex items-center gap-1 shadow-sm"><i class="ph-bold ph-stack"></i> Conjunta</div>
+                            <div class="text-3xl font-black text-purple-900 mb-1">${listaUnica.length}</div>
+                            <div class="text-[10px] font-bold text-purple-800 uppercase tracking-widest mb-3">Vehículos</div>
+                            <button class="bg-[#001e50] text-white text-[10px] font-black py-1.5 px-4 rounded shadow-sm hover:bg-blue-900 uppercase tracking-widest flex items-center gap-1"><i class="ph-bold ph-eye"></i> Ver Grupo</button>
+                        </div>`;
+                    } else if (listaUnica.length === 1) {
                         html += listaUnica.map((item) => {
-                            // Identificamos de quién es la cita para pintarla de su color correspondiente
                             const agenteReal = item.isBlock ? 'MANUEL' : String(item.entregador || item.agente || 'MANUEL').toUpperCase();
                             const esAntonio = agenteReal === 'ANTONIO';
-                            
-                            // Aplicamos los colores corporativos: Naranja para Antonio, Azul para Manuel
                             const bgBase = esAntonio ? '#f9cb9c' : '#c9daf8';
                             const txtBase = esAntonio ? 'text-orange-900' : 'text-blue-900';
                             const borderBase = esAntonio ? 'border-orange-300' : 'border-blue-200';
-                            
-                            const citaConMeta = (listaUnica.length > 1 && !item.isBlock)
-                                ? { ...item, _slotConflictCount: listaUnica.length }
-                                : item;
-                                
-                            return window.renderizarCeldaCita(citaConMeta, agenteReal, item.isBlock ? '#e5e7eb' : bgBase, item.isBlock ? 'text-gray-500' : txtBase, item.isBlock ? 'border-gray-300' : borderBase, true);
+                            return window.renderizarCeldaCita(item, agenteReal, item.isBlock ? '#e5e7eb' : bgBase, item.isBlock ? 'text-gray-500' : txtBase, item.isBlock ? 'border-gray-300' : borderBase, true);
                         }).join('');
                     } else {
                         html += window.renderizarCeldaCita(null, 'UNICA ENTREGA', '#f3f4f6', 'text-gray-400', 'border-gray-300', true);
@@ -772,6 +786,39 @@ window.mostrarPopupAtrasados = function() {
                 inline: 'center'    
             });
         }
+    };
+
+window.verEntregaConjunta = function(idsStr, agenteUI) {
+        if (!idsStr) return;
+        const ids = idsStr.split(',');
+        const citasGrupo = (window.datosAgenda || []).filter(c => ids.includes(c.id));
+        
+        if (citasGrupo.length === 0) return;
+        
+        let htmlCitas = citasGrupo.map(cita => {
+            const agenteCita = String(cita.entregador || cita.agente || 'MANUEL').toUpperCase();
+            const esAntonio = agenteCita === 'ANTONIO';
+            const bgBase = esAntonio ? '#f9cb9c' : '#c9daf8';
+            const txtBase = esAntonio ? 'text-orange-900' : 'text-blue-900';
+            const borderBase = esAntonio ? 'border-orange-300' : 'border-blue-200';
+            
+            // Usamos false para que las tarjetas salgan en formato compacto dentro del popup
+            return `<div class="mb-3 w-full text-left">${window.renderizarCeldaCita(cita, agenteCita, bgBase, txtBase, borderBase, false)}</div>`;
+        }).join('');
+        
+        Swal.fire({
+            title: 'ENTREGA CONJUNTA',
+            html: `
+                <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-3 text-center">Gestión de ${citasGrupo.length} vehículos</p>
+                <div class="max-h-[60vh] overflow-y-auto custom-scrollbar p-1 flex flex-col gap-2">
+                    ${htmlCitas}
+                </div>
+            `,
+            width: '450px',
+            showConfirmButton: false,
+            showCloseButton: true,
+            background: '#f8fafc'
+        });
     };
 
    window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
@@ -1020,6 +1067,10 @@ window.mostrarPopupAtrasados = function() {
                     <label class="text-[10px] uppercase font-bold text-gray-500 mb-1 flex items-center gap-1"><i class="ph-bold ph-note"></i> Notas (Opcional)</label>
                     <textarea id="e-notas" class="swal2-textarea !w-full !m-0 text-sm p-4" style="min-height: 80px;" placeholder="Detalles, retrasos, avisos...">${notas && notas !== 'undefined' ? notas : ''}</textarea>
                 </div>
+                <div class="mt-4 text-left flex items-center gap-2 bg-purple-50/50 p-3 rounded-lg border border-purple-200 select-none">
+                    <input type="checkbox" id="e-conjunta" class="w-4 h-4 accent-purple-600 cursor-pointer">
+                    <label for="e-conjunta" class="text-xs font-black text-purple-900 cursor-pointer uppercase tracking-wider">Forzar entrega conjunta (Permitir solapes)</label>
+                </div>
             `,
             showCancelButton: true,
             showDenyButton: true,
@@ -1059,10 +1110,12 @@ window.mostrarPopupAtrasados = function() {
                     return agenteCita === a;
                 });
 
-                if (conflictoEdicion) {
+                const forzarConjunta = document.getElementById('e-conjunta') ? document.getElementById('e-conjunta').checked : false;
+
+                if (conflictoEdicion && !forzarConjunta) {
                     if(typeof window.registrarMetricaM2 === 'function') window.registrarMetricaM2('choques_agenda_evitados');
                     const vehiculoConflicto = conflictoEdicion.matricula || conflictoEdicion.modelo || 'otra cita';
-                    return Swal.showValidationMessage(`Ese hueco ya está ocupado por ${vehiculoConflicto}. Elige otra hora o entregador.`);
+                    return Swal.showValidationMessage(`Ese hueco ya está ocupado por ${vehiculoConflicto}. Elige otra hora, o marca "Forzar entrega conjunta".`);
                 }
                 
                 return { fecha: f, hora: h, agente: a, cliente: c, telefono: t, email: em, entregaVO: v, notas: n };
@@ -1387,6 +1440,10 @@ window.crearCitaManual = async function() {
                 <option value="ANTONIO">ANTONIO</option>
             </select>
         </div>
+        <div class="mb-3 text-left flex items-center gap-2 bg-purple-50/50 p-3 rounded-lg border border-purple-200 select-none">
+            <input type="checkbox" id="n-conjunta" class="w-4 h-4 accent-purple-600 cursor-pointer">
+            <label for="n-conjunta" class="text-xs font-black text-purple-900 cursor-pointer uppercase tracking-wider">Forzar entrega conjunta (Permitir solapes)</label>
+        </div>
     `;
 
     if (!esDevolucion) {
@@ -1451,6 +1508,8 @@ window.crearCitaManual = async function() {
                 }
             } catch (err) { console.error("Error al consultar bloqueos", err); }
 
+            const forzarConjunta = document.getElementById('n-conjunta') ? document.getElementById('n-conjunta').checked : false;
+
             const conflictoCita = (window.datosAgenda || []).find(cita => {
                 if (!cita || !cita.fechaHora) return false;
                 const fechaCita = new Date(cita.fechaHora);
@@ -1467,10 +1526,11 @@ window.crearCitaManual = async function() {
                 return agenteCita === agenteAsignado;
             });
 
-            if (conflictoCita) {
+            // Si hay conflicto PERO no han marcado la casilla conjunta, bloqueamos
+            if (conflictoCita && !forzarConjunta) {
                 if(typeof window.registrarMetricaM2 === 'function') window.registrarMetricaM2('choques_agenda_evitados');
                 const vehiculoConflicto = conflictoCita.matricula || conflictoCita.modelo || 'otra cita';
-                Swal.showValidationMessage(`Ese hueco ya está ocupado por ${vehiculoConflicto}. Elige otra hora o entregador.`);
+                Swal.showValidationMessage(`Ese hueco ya está ocupado por ${vehiculoConflicto}. Elige otra hora o marca "Forzar entrega conjunta".`);
                 return false;
             }
 
