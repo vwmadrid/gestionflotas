@@ -348,7 +348,8 @@
                     matricula: datosEnriquecidos.matricula || "S/M", modelo: datosEnriquecidos.modelo || "Vehículo", bastidor: datosEnriquecidos.bastidor || "",
                     renting: datosEnriquecidos.renting || "", entregaVO: datosEnriquecidos.entregaVO || "NO", agente: datosEnriquecidos.agente || "MANUEL",
                     notas: data.notas || "", estado: data.estado || "confirmada", entregado: data.entregado === true || data.entregado === "true",
-                    tipoFinalizacion: data.tipoFinalizacion || '', fechaEntrega: data.fechaEntrega || null, fechaEntregaTexto: data.fechaEntregaTexto || '', isBlock: false
+                    tipoFinalizacion: data.tipoFinalizacion || '', fechaEntrega: data.fechaEntrega || null, fechaEntregaTexto: data.fechaEntregaTexto || '', isBlock: false,
+                    esConjunta: data.esConjunta === true || data.esConjunta === "true" // 🔥 NUEVO: Descargamos si es conjunta
                 });
             });
 
@@ -469,26 +470,36 @@ window.mostrarPopupAtrasados = function() {
     };
 
     window.obtenerConflictosAgenda = function() {
-        const conflictosMap = {};
+    const conflictosMap = {};
 
-        (window.datosAgenda || []).forEach(cita => {
-            if (!cita || !cita.fechaHora) return;
-            const fecha = new Date(cita.fechaHora);
-            if (isNaN(fecha.getTime())) return;
+    (window.datosAgenda || []).forEach(cita => {
+        if (!cita || !cita.fechaHora) return;
+        const fecha = new Date(cita.fechaHora);
+        if (isNaN(fecha.getTime())) return;
 
-            const dateKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
-            const horaKey = `${String(fecha.getHours()).padStart(2, '0')}:00`;
-            const agente = String(cita.entregador || cita.agente || 'MANUEL').toUpperCase();
-            const clave = (horaKey === '19:00') ? `${dateKey}|${horaKey}|UNICA` : `${dateKey}|${horaKey}|${agente}`;
+        const dateKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+        const horaKey = `${String(fecha.getHours()).padStart(2, '0')}:00`;
+        const agente = String(cita.entregador || cita.agente || 'MANUEL').toUpperCase();
+        const clave = (horaKey === '19:00') ? `${dateKey}|${horaKey}|UNICA` : `${dateKey}|${horaKey}|${agente}`;
 
-            if (!conflictosMap[clave]) {
-                conflictosMap[clave] = { dateKey, horaKey, agente: horaKey === '19:00' ? 'UNICA' : agente, citas: [] };
-            }
-            conflictosMap[clave].citas.push(cita);
-        });
+        if (!conflictosMap[clave]) {
+            conflictosMap[clave] = { dateKey, horaKey, agente: horaKey === '19:00' ? 'UNICA' : agente, citas: [] };
+        }
+        conflictosMap[clave].citas.push(cita);
+    });
 
-        return Object.values(conflictosMap).filter(item => item.citas.length > 1);
-    };
+    // 🔥 FILTRO INTELIGENTE: Diferencia entre conflicto y entrega conjunta
+    return Object.values(conflictosMap).filter(item => {
+        // Si solo hay 1 coche, no hay solape
+        if (item.citas.length <= 1) return false; 
+
+        // Comprobamos si AL MENOS UNO de los coches en esta hora tiene la casilla de conjunta marcada
+        let esEntregaIntencionada = item.citas.some(c => c.esConjunta === true || c.esConjunta === "true");
+        
+        // Si marcaste la casilla, le decimos al banner naranja que NO lo cuente (false)
+        return !esEntregaIntencionada; 
+    });
+};
 
     window.mostrarPopupConflictosAgenda = function() {
         const conflictos = window.obtenerConflictosAgenda();
@@ -1004,6 +1015,11 @@ window.verEntregaConjunta = function(idsStr, agenteUI) {
         }
     };
     window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agenteActual, cliente, matricula, telefono, email, vo, notas) {
+        // 🔥 Buscamos la cita para saber si ya era conjunta y dejar el check marcado
+        let citaOriginal = (window.datosAgenda || []).find(c => c.id === idCita);
+        let estabaMarcadaConjunta = citaOriginal ? citaOriginal.esConjunta : false;
+        let checkHtml = estabaMarcadaConjunta ? 'checked' : '';
+
         const { value: formValues, isDenied } = await Swal.fire({
             title: 'Gestionar Cita',
             width: '700px',
@@ -1068,7 +1084,7 @@ window.verEntregaConjunta = function(idsStr, agenteUI) {
                     <textarea id="e-notas" class="swal2-textarea !w-full !m-0 text-sm p-4" style="min-height: 80px;" placeholder="Detalles, retrasos, avisos...">${notas && notas !== 'undefined' ? notas : ''}</textarea>
                 </div>
                 <div class="mt-4 text-left flex items-center gap-2 bg-purple-50/50 p-3 rounded-lg border border-purple-200 select-none">
-                    <input type="checkbox" id="e-conjunta" class="w-4 h-4 accent-purple-600 cursor-pointer">
+                    <input type="checkbox" id="e-conjunta" class="w-4 h-4 accent-purple-600 cursor-pointer" ${checkHtml}>
                     <label for="e-conjunta" class="text-xs font-black text-purple-900 cursor-pointer uppercase tracking-wider">Forzar entrega conjunta (Permitir solapes)</label>
                 </div>
             `,
@@ -1118,7 +1134,7 @@ window.verEntregaConjunta = function(idsStr, agenteUI) {
                     return Swal.showValidationMessage(`Ese hueco ya está ocupado por ${vehiculoConflicto}. Elige otra hora, o marca "Forzar entrega conjunta".`);
                 }
                 
-                return { fecha: f, hora: h, agente: a, cliente: c, telefono: t, email: em, entregaVO: v, notas: n };
+                return { fecha: f, hora: h, agente: a, cliente: c, telefono: t, email: em, entregaVO: v, notas: n, esConjunta: forzarConjunta };
             }
         });
 
@@ -1537,7 +1553,8 @@ window.crearCitaManual = async function() {
             let resultadoFormat = {
                 matricula: mat, cliente: cli, fecha: fec, hora: hor,
                 telefono: document.getElementById('n-tlf') ? document.getElementById('n-tlf').value.trim() : '',
-                renting: document.getElementById('n-renting') ? document.getElementById('n-renting').value.toUpperCase().trim() : ''
+                renting: document.getElementById('n-renting') ? document.getElementById('n-renting').value.toUpperCase().trim() : '',
+                esConjunta: forzarConjunta // 🔥 GUARDAMOS EL VALOR DEL CHECKBOX EN MEMORIA
             };
 
             if (esDevolucion) {
@@ -1558,7 +1575,6 @@ window.crearCitaManual = async function() {
     if (formValues) {
         
         let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
-        
         const estadoAsignado = (rolLimpio === "backoffice" || rolLimpio === "administracion" || rolLimpio === "comercial") ? "pendiente" : "confirmada";
         
         try {
@@ -1571,7 +1587,8 @@ window.crearCitaManual = async function() {
                 telefono: formValues.telefono || "", email: formValues.email || "", bastidor: formValues.bastidor || "",
                 renting: formValues.renting || "", entregaVO: formValues.devuelveVehiculo || "NO", 
                 notas: formValues.notas || "", creadoPor: window.usuarioActivo, 
-                estado: estadoAsignado 
+                estado: estadoAsignado,
+                esConjunta: formValues.esConjunta // 🔥 LO ENVIAMOS DEFINITIVAMENTE A FIREBASE
             });
 
             let matLimpiaForm = formValues.matricula.replace(/\s/g, '').toUpperCase();
