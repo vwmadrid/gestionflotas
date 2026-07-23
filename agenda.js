@@ -349,8 +349,10 @@
                     renting: datosEnriquecidos.renting || "", entregaVO: datosEnriquecidos.entregaVO || "NO", agente: datosEnriquecidos.agente || "MANUEL",
                     notas: data.notas || "", estado: data.estado || "confirmada", entregado: data.entregado === true || data.entregado === "true",
                     tipoFinalizacion: data.tipoFinalizacion || '', fechaEntrega: data.fechaEntrega || null, fechaEntregaTexto: data.fechaEntregaTexto || '', isBlock: false,
-                    esConjunta: data.esConjunta === true || data.esConjunta === "true" // 🔥 NUEVO: Descargamos si es conjunta
-                });
+                    isBlock: false,
+                    esConjunta: data.esConjunta === true || data.esConjunta === "true",
+                    creadoPor: data.creadoPor || "SISTEMA" 
+                    });
             });
 
             if (actualizacionesPendientes.length > 0) {
@@ -921,10 +923,18 @@ window.verEntregaConjunta = function(idsStr, agenteUI) {
 
     let botonesAprobacion = "";
     if (esPendiente && (rolUsuarioLogueado === 'entregas' || rolUsuarioLogueado === 'admin') && rolUsuarioLogueado !== 'comercial') {
+        
+        let creadorCita = cita.creadoPor ? String(cita.creadoPor).toUpperCase() : 'COMPAÑERO';
+        
         botonesAprobacion = `
-        <div class="flex gap-2 mt-2 pt-2 border-t border-amber-200" onclick="if(window.event) window.event.stopPropagation();">
-            <button onclick="window.aprobarCitaPendiente('${cita.id}', '${matCita}')" class="flex-1 bg-emerald-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-emerald-600 transition-colors pointer-events-auto"><i class="ph-bold ph-check"></i> ACEPTAR</button>
-            <button onclick="window.rechazarCitaPendiente('${cita.id}', '${window.escapeJS(cita.modelo)}')" class="flex-1 bg-red-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-red-600 transition-colors pointer-events-auto"><i class="ph-bold ph-x"></i> RECHAZAR</button>
+        <div class="mt-2 pt-2 border-t border-amber-200" onclick="if(window.event) window.event.stopPropagation();">
+            <p class="text-[9px] font-black text-amber-900 mb-1.5 uppercase tracking-widest text-center">
+                <i class="ph-fill ph-user-circle text-amber-700"></i> Solicitado por: ${creadorCita}
+            </p>
+            <div class="flex gap-2">
+                <button onclick="window.aprobarCitaPendiente('${cita.id}', '${matCita}')" class="flex-1 bg-emerald-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-emerald-600 transition-colors pointer-events-auto"><i class="ph-bold ph-check"></i> ACEPTAR</button>
+                <button onclick="window.rechazarCitaPendiente('${cita.id}', '${window.escapeJS(cita.modelo)}')" class="flex-1 bg-red-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-red-600 transition-colors pointer-events-auto"><i class="ph-bold ph-x"></i> RECHAZAR</button>
+            </div>
         </div>`;
     }
 
