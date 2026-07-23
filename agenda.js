@@ -1261,7 +1261,14 @@ window.borrarBloqueo = async function(idBloqueo) {
     }
 };
 
-window.abrirGestorVacaciones = async function() {
+// ========================================================
+// 🔒 ABRIR GESTOR DE VACACIONES Y BLOQUEOS (CON AUTOCOMPLETADO)
+// ========================================================
+window.abrirGestorVacaciones = async function(fechaPredefinida = '', horaPredefinida = '', agentePredefinido = '') {
+    // Ajustamos el formato de la hora para que coincida con los selectores
+    let horaFormateada = horaPredefinida ? (horaPredefinida.includes(':') ? horaPredefinida : `${horaPredefinida}:00`) : '';
+    let esHoraSuelta = horaFormateada !== '';
+
     const { value: formValues } = await Swal.fire({
         title: '🔒 Bloquear Fechas / Horas',
         html: `
@@ -1269,53 +1276,53 @@ window.abrirGestorVacaciones = async function() {
                 
                 <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Afecta a:</label>
                 <select id="bv-operario" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:45px; font-weight:bold; color:#001e50;">
-                    <option value="AMBOS">Ambos (Manuel y Antonio)</option>
-                    <option value="MANUEL">Manuel</option>
-                    <option value="ANTONIO">Antonio</option>
+                    <option value="AMBOS" ${!agentePredefinido || agentePredefinido === 'AMBOS' ? 'selected' : ''}>Ambos (Manuel y Antonio)</option>
+                    <option value="MANUEL" ${agentePredefinido === 'MANUEL' ? 'selected' : ''}>Manuel</option>
+                    <option value="ANTONIO" ${agentePredefinido === 'ANTONIO' ? 'selected' : ''}>Antonio</option>
                 </select>
 
                 <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Tipo de Bloqueo:</label>
                 <select id="bv-tipo" onchange="window.toggleBloqueoForm(this.value)" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:45px; font-weight:bold; color:#001e50;">
-                    <option value="vacaciones">Día(s) Completo(s)</option>
-                    <option value="hora_suelta">Horas Sueltas (Día Determinado)</option>
+                    <option value="vacaciones" ${!esHoraSuelta ? 'selected' : ''}>Día(s) Completo(s)</option>
+                    <option value="hora_suelta" ${esHoraSuelta ? 'selected' : ''}>Horas Sueltas (Día Determinado)</option>
                 </select>
 
                 <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Fecha Inicio / Día:</label>
-                <input type="date" id="bv-fecha-inicio" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:40px;">
+                <input type="date" id="bv-fecha-inicio" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:40px;" value="${fechaPredefinida}">
 
-                <div id="bv-fecha-fin-container">
+                <div id="bv-fecha-fin-container" style="display: ${esHoraSuelta ? 'none' : 'block'};">
                     <label id="bv-fecha-fin-label" style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Fecha Fin (Inclusive):</label>
-                    <input type="date" id="bv-fecha-fin" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:40px;">
+                    <input type="date" id="bv-fecha-fin" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:40px;" value="${fechaPredefinida}">
                 </div>
 
-                <div id="bv-hora-container" style="display: none; margin-bottom: 15px;">
+                <div id="bv-hora-container" style="display: ${esHoraSuelta ? 'block' : 'none'}; margin-bottom: 15px;">
                     <div style="display: flex; gap: 10px;">
                         <div style="flex: 1;">
                             <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Desde:</label>
                             <select id="bv-hora-inicio" class="swal2-input" style="width:100%; margin:0; height:40px;">
-                                <option value="" disabled selected>Elige hora...</option>
-                                <option value="09:00">09:00</option>
-                                <option value="10:00">10:00</option>
-                                <option value="11:00">11:00</option>
-                                <option value="12:00">12:00</option>
-                                <option value="13:00">13:00</option>
-                                <option value="16:00">16:00</option>
-                                <option value="17:00">17:00</option>
-                                <option value="18:00">18:00</option>
+                                <option value="" disabled ${!horaFormateada ? 'selected' : ''}>Elige hora...</option>
+                                <option value="09:00" ${horaFormateada === '09:00' ? 'selected' : ''}>09:00</option>
+                                <option value="10:00" ${horaFormateada === '10:00' ? 'selected' : ''}>10:00</option>
+                                <option value="11:00" ${horaFormateada === '11:00' ? 'selected' : ''}>11:00</option>
+                                <option value="12:00" ${horaFormateada === '12:00' ? 'selected' : ''}>12:00</option>
+                                <option value="13:00" ${horaFormateada === '13:00' ? 'selected' : ''}>13:00</option>
+                                <option value="16:00" ${horaFormateada === '16:00' ? 'selected' : ''}>16:00</option>
+                                <option value="17:00" ${horaFormateada === '17:00' ? 'selected' : ''}>17:00</option>
+                                <option value="18:00" ${horaFormateada === '18:00' ? 'selected' : ''}>18:00</option>
                             </select>
                         </div>
                         <div style="flex: 1;">
                             <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Hasta:</label>
                             <select id="bv-hora-fin" class="swal2-input" style="width:100%; margin:0; height:40px;">
-                                <option value="" disabled selected>Elige hora...</option>
-                                <option value="10:00">10:00</option>
-                                <option value="11:00">11:00</option>
-                                <option value="12:00">12:00</option>
-                                <option value="13:00">13:00</option>
-                                <option value="14:00">14:00</option>
-                                <option value="17:00">17:00</option>
-                                <option value="18:00">18:00</option>
-                                <option value="19:00">19:00</option>
+                                <option value="" disabled ${!horaFormateada ? 'selected' : ''}>Elige hora...</option>
+                                <option value="10:00" ${horaFormateada === '10:00' ? 'selected' : ''}>10:00</option>
+                                <option value="11:00" ${horaFormateada === '11:00' ? 'selected' : ''}>11:00</option>
+                                <option value="12:00" ${horaFormateada === '12:00' ? 'selected' : ''}>12:00</option>
+                                <option value="13:00" ${horaFormateada === '13:00' ? 'selected' : ''}>13:00</option>
+                                <option value="14:00" ${horaFormateada === '14:00' ? 'selected' : ''}>14:00</option>
+                                <option value="17:00" ${horaFormateada === '17:00' ? 'selected' : ''}>17:00</option>
+                                <option value="18:00" ${horaFormateada === '18:00' ? 'selected' : ''}>18:00</option>
+                                <option value="19:00" ${horaFormateada === '19:00' ? 'selected' : ''}>19:00</option>
                             </select>
                         </div>
                     </div>
@@ -1353,7 +1360,7 @@ window.abrirGestorVacaciones = async function() {
             }
 
             let datosBloqueo = {
-                operarioAfectado: operario, // Guardamos a quién afecta
+                operarioAfectado: operario,
                 tipo: tipo,
                 fechaInicio: fechaInicio,
                 motivo: motivo,
@@ -1391,11 +1398,10 @@ window.abrirGestorVacaciones = async function() {
     }
 };
 // ==========================================
-// ➕ CREACIÓN DE CITA MANUAL (CON FILTROS DE CITAS Y BLOQUEOS)
+// ➕ CREACIÓN DE CITA MANUAL (CON FILTROS Y AUTOCOMPLETADO CORREGIDO)
 // ==========================================
 window.crearCitaManual = async function(fechaPredefinida = '', horaPredefinida = '', agentePredefinido = '') {
     let horaFormateada = horaPredefinida ? (horaPredefinida.includes(':') ? horaPredefinida : `${horaPredefinida}:00`) : '';
-    let hoyLimpio = new Date().toISOString().split('T')[0];
 
     const paso1 = await Swal.fire({
         title: 'Programar Nueva Cita (V2)',
@@ -1447,11 +1453,12 @@ window.crearCitaManual = async function(fechaPredefinida = '', horaPredefinida =
         `;
     }
 
+    // 🔥 MODIFICADO: Eliminado el 'min' de n-fec para que no borre fechas predefinidas
     htmlCampos += `
         <div class="grid grid-cols-2 gap-3 mb-3">
             <div class="text-left">
                 <label class="text-xs font-bold text-gray-500 uppercase">Fecha Cita</label>
-                <input type="date" id="n-fec" min="${hoyLimpio}" class="swal2-input !w-full !m-0 !mt-1" value="${fechaPredefinida}">
+                <input type="date" id="n-fec" class="swal2-input !w-full !m-0 !mt-1" value="${fechaPredefinida}">
             </div>
             <div class="text-left">
                 <label class="text-xs font-bold text-gray-500 uppercase">Hora Libre</label>
@@ -1493,7 +1500,6 @@ window.crearCitaManual = async function(fechaPredefinida = '', horaPredefinida =
             const selectAge = document.getElementById('n-age');
             const checkConjunta = document.getElementById('n-conjunta');
             
-            // 🔥 NUEVO: Función para comprobar si un agente está de vacaciones o bloqueado
             const agenteEstaBloqueado = (agenteABuscar, fechaStr, horaStr) => {
                 if (!window.datosVacaciones) return false;
                 return window.datosVacaciones.some(b => {
@@ -1559,7 +1565,6 @@ window.crearCitaManual = async function(fechaPredefinida = '', horaPredefinida =
                 let horasEncontradas = 0;
 
                 horasBase.forEach(h => {
-                    // 🔥 MODIFICADO: Comprobamos citas Y bloqueos simultáneamente
                     let manuelLleno = (ocupacion[h] && ocupacion[h]['MANUEL']) || agenteEstaBloqueado('MANUEL', fechaElegida, h);
                     let antonioLleno = (ocupacion[h] && ocupacion[h]['ANTONIO']) || agenteEstaBloqueado('ANTONIO', fechaElegida, h);
 
@@ -1596,7 +1601,6 @@ window.crearCitaManual = async function(fechaPredefinida = '', horaPredefinida =
                 
                 if (!horaElegida) return;
 
-                // 🔥 MODIFICADO: Empezamos asumiendo el estado del bloqueo de vacaciones
                 let manuelLleno = agenteEstaBloqueado('MANUEL', fechaElegida, horaElegida);
                 let antonioLleno = agenteEstaBloqueado('ANTONIO', fechaElegida, horaElegida);
 
@@ -1652,8 +1656,11 @@ window.crearCitaManual = async function(fechaPredefinida = '', horaPredefinida =
                 });
             }
 
+            // 🔥 MODIFICADO: Añadimos un pequeño retraso para asegurar que los elementos del DOM han cargado
             if (fechaPredefinida) {
-                calcularDisponibilidad();
+                setTimeout(() => {
+                    calcularDisponibilidad();
+                }, 50);
             }
         },
 
@@ -1747,12 +1754,11 @@ window.crearCitaManual = async function(fechaPredefinida = '', horaPredefinida =
 // 🎯 MENÚ INTERACTIVO PARA HUECOS LIBRES
 // ==========================================
 window.opcionesHuecoLibre = async function(fecha, hora, agente) {
-    // Formateamos la fecha para que sea visualmente atractiva (DD/MM/AAAA)
     const partesFecha = fecha.split('-');
     const fechaVisual = `${partesFecha[2]}/${partesFecha[1]}/${partesFecha[0]}`;
 
-    // Le mostramos al usuario el menú de decisión
-    const { value: accion } = await Swal.fire({
+    // 🔥 MODIFICADO: Guardamos la respuesta completa en la variable "result"
+    const result = await Swal.fire({
         title: 'Gestión de Hueco Libre',
         html: `
             <p class="text-sm text-gray-600 mb-3">Has seleccionado el <b>${fechaVisual}</b> a las <b>${hora}:00h</b> para <b>${agente}</b>.</p>
@@ -1772,16 +1778,13 @@ window.opcionesHuecoLibre = async function(fecha, hora, agente) {
         }
     });
 
-    // Evaluamos qué botón ha pulsado
-    if (accion) {
-        // Pulsó Agendar Cita -> Abrimos tu formulario de creación
-        window.crearCitaManual(); 
-        
-        // (Nota: En el siguiente paso te enseñaré a modificar crearCitaManual 
-        // para que absorba la fecha y hora y te la rellene sola 😉)
-    } else if (Swal.isDenied) {
-        // Pulsó Bloquear Franja -> Abrimos tu formulario de vacaciones/bloqueos
-        window.abrirGestorVacaciones();
+    // 🔥 MODIFICADO: Evaluamos correctamente qué botón se ha pulsado y pasamos los datos
+    if (result.isConfirmed) {
+        // Pulsó Agendar Cita -> Enviamos datos al formulario (Si es el hueco general, asignamos Manuel)
+        window.crearCitaManual(fecha, hora, agente === 'UNICA ENTREGA' ? 'MANUEL' : agente); 
+    } else if (result.isDenied) {
+        // Pulsó Bloquear Franja -> Enviamos datos al Gestor de Vacaciones
+        window.abrirGestorVacaciones(fecha, hora, agente === 'UNICA ENTREGA' ? 'AMBOS' : agente);
     }
 };
 // ==========================================
