@@ -866,8 +866,22 @@ window.verEntregaConjunta = function(idsStr, agenteUI) {
         (basCita.length > 5 && basCita !== 'N/A' && c.A && String(c.A).toUpperCase() === basCita)
     ) : null;
     
+    // 🔥 ARREGLO DEL COLOR VERDE: Distinguimos entre Entregas y Devoluciones
+    let modeloCitaUpper = String(cita.modelo || '').toUpperCase();
+    let esDevolucionPura = modeloCitaUpper.includes('DEVOLUCION') || modeloCitaUpper.includes('DEVOLUCIÓN') || cita.tipoCita === 'SOLO_DEVOLUCION_CLIENTE';
+    let esMixtaEntregaDevolucion = !esDevolucionPura && (String(cita.entregaVO || '').toUpperCase() === 'SÍ' || String(cita.entregaVO || '').toUpperCase() === 'SI');
+
     let citaMarcadaEntregada = (cita.entregado === true || cita.entregado === "true");
-    let yaEntregado = citaMarcadaEntregada || (cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true"));
+    let yaEntregado = false;
+
+    if (esDevolucionPura) {
+        // Si es devolución, la ficha del coche dirá que se entregó hace años. Lo ignoramos.
+        yaEntregado = citaMarcadaEntregada || cita.tipoFinalizacion === 'DEVOLUCION';
+    } else {
+        // Si es entrega nueva, validamos la cita o la base de datos
+        yaEntregado = citaMarcadaEntregada || (cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true"));
+    }
+    
     let estaRetenido = cocheEnBaseDatos && !yaEntregado && ((cocheEnBaseDatos.enTaller && !cocheEnBaseDatos.finTaller) || (cocheEnBaseDatos.enRecambios && !cocheEnBaseDatos.finRecambios));
     
     let ahora = new Date();
@@ -899,9 +913,6 @@ window.verEntregaConjunta = function(idsStr, agenteUI) {
     }
 
     let textoVO = (cita.entregaVO) ? String(cita.entregaVO).toUpperCase().trim() : '';
-    let modeloCitaUpper = String(cita.modelo || '').toUpperCase();
-    let esDevolucionPura = modeloCitaUpper.includes('DEVOLUCION') || modeloCitaUpper.includes('DEVOLUCIÓN');
-    let esMixtaEntregaDevolucion = !esDevolucionPura && (textoVO === 'SÍ' || textoVO === 'SI');
     let tagVO = (textoVO === 'SÍ' || textoVO === 'SI') ? `<span class="bg-purple-200 text-purple-900 border border-purple-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest"><i class="ph-bold ph-car-profile"></i> VO</span>` : '';
     let tagFlujoMixto = esMixtaEntregaDevolucion ? `<span class="bg-[#001e50] text-white border border-[#001e50] text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1"><i class="ph-bold ph-key"></i> ENTREGA</span><span class="bg-sky-100 text-sky-800 border border-sky-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1"><i class="ph-bold ph-arrow-counter-clockwise"></i> DEVOLUCIÓN</span>` : '';
     let tagNotas = cita.notas ? `<span class="bg-yellow-200 text-yellow-900 border border-yellow-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1" title="${window.escapeJS(cita.notas)}"><i class="ph-bold ph-note"></i> NOTAS</span>` : '';
@@ -941,9 +952,7 @@ window.verEntregaConjunta = function(idsStr, agenteUI) {
 
     let botonesAprobacion = "";
     if (esPendiente && (rolUsuarioLogueado === 'entregas' || rolUsuarioLogueado === 'admin') && rolUsuarioLogueado !== 'comercial') {
-        
         let creadorCita = cita.creadoPor ? String(cita.creadoPor).toUpperCase() : 'COMPAÑERO';
-        
         botonesAprobacion = `
         <div class="mt-2 pt-2 border-t border-amber-200" onclick="if(window.event) window.event.stopPropagation();">
             <p class="text-[9px] font-black text-amber-900 mb-1.5 uppercase tracking-widest text-center">
