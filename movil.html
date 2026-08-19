@@ -15,7 +15,6 @@
 
     <title>GesCar OS - Entregas</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
@@ -34,7 +33,12 @@
           appId: "1:1070891769268:web:47b04e6d62e576038966e1"
         };
 
+        const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(location.hostname);
+
         const app = initializeApp(firebaseConfig);
+        if (isLocalHost) {
+            console.log("🛠️ App Check desactivado para desarrollo local.");
+        }
         window.db = getFirestore(app);
         window.auth = getAuth(app);
         
@@ -114,7 +118,7 @@
             </div>
         </header>
         
-        <main class="flex-1 min-h-0 overflow-y-auto p-4 w-full relative pb-24 custom-scrollbar" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
+       <main class="flex-1 min-h-0 overflow-y-auto p-4 w-full relative pb-24 custom-scrollbar" style="-webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;">
             <div class="flex items-center justify-between mb-3">
                 <div>
                     <p class="text-[10px] uppercase tracking-[0.3em] text-gray-500 font-semibold">Vista rápida</p>
@@ -133,7 +137,7 @@
                     <input type="date" id="selector-fecha-movil" class="bg-white px-3 py-1.5 rounded text-[#001e50] font-black text-sm border-none outline-none shadow-inner">
                 </div>
 
-                <div id="lista-entregas-movil" class="space-y-4 pb-24 overflow-y-auto custom-scrollbar" style="-webkit-overflow-scrolling: touch;"></div>
+                <div id="lista-entregas-movil" class="space-y-4 pb-24 overflow-y-auto custom-scrollbar transform-gpu will-change-transform" style="-webkit-overflow-scrolling: touch;"></div>
             </div>
             
             <div id="botonesAgenda" style="display: none;">
@@ -192,7 +196,7 @@
                     <i class="ph-bold ph-arrow-left text-[#001e50] text-lg"></i>
                     <span class="text-xs font-black text-[#001e50] uppercase tracking-wider">Atrás</span>
                 </div>
-                <div id="chatGlobalMensajes" class="flex-1 overflow-y-auto p-3 flex flex-col custom-scrollbar bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] bg-opacity-50"></div>
+           <div id="chatGlobalMensajes" class="flex-1 overflow-y-auto p-3 flex flex-col custom-scrollbar transform-gpu will-change-transform bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] bg-opacity-50"></div>     
                 <div class="bg-gray-100 p-2 flex items-center gap-2 shrink-0 border-t border-gray-200">
                     <input type="text" id="chatGlobalInput" class="flex-1 rounded-full border border-gray-300 px-4 py-2 text-xs focus:ring-2 focus:ring-[#00b0f0] focus:border-transparent outline-none shadow-sm transition-all" placeholder="Escribe tu mensaje aquí...">
                     <button onclick="window.enviarMensajeGlobalUI()" class="w-9 h-9 rounded-full bg-[#00b0f0] text-white flex items-center justify-center hover:bg-[#001e50] shadow-sm flex-shrink-0 transition-colors">
@@ -224,10 +228,11 @@
             </div>
         </div>
 
-        <script src="app.js?v=15"></script>
+        <script src="app.js?v=20"></script>
         <script src="chat.js?v=8"></script>
-        <script src="agenda.js?v=16"></script>
-        <script src="vehiculos.js?v=14"></script>
+        <script src="agenda.js?v=24"></script>
+        <script src="devoluciones.js?v=11"></script>
+        <script src="vehiculos.js?v=19"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -240,6 +245,7 @@
         });
 
         // 🔥 MAGIA: Sobrescribimos la orden general para que en móvil pinte tu vista clásica
+        // 🔥 MAGIA: Sobrescribimos la orden general para que en móvil pinte tu vista clásica
         window.renderAgenda = function() {
             const div = document.getElementById('contenedorAgenda');
             if (div) {
@@ -249,11 +255,14 @@
             window.cargarEntregasHoy();
         };
 
-        window.cargarEntregasHoy = async function() {
+        // Variable global para almacenar el radar activo y poder cancelarlo si cambiamos de día
+        window.radarEntregasMovil = null;
+
+        window.cargarEntregasHoy = function() {
             const contenedor = document.getElementById('lista-entregas-movil');
             if(!contenedor) return;
             
-            contenedor.innerHTML = `<div class="text-center p-10"><i class="ph-bold ph-spinner animate-spin text-4xl text-[#001e50]"></i><p class="mt-2 text-gray-500 font-bold text-sm">Sincronizando...</p></div>`;
+            contenedor.innerHTML = `<div class="text-center p-10"><i class="ph-bold ph-spinner animate-spin text-4xl text-[#001e50]"></i><p class="mt-2 text-gray-500 font-bold text-sm">Sincronizando entregas pendientes...</p></div>`;
 
             if (!window.db) {
                 setTimeout(window.cargarEntregasHoy, 500);
@@ -263,7 +272,12 @@
             let diaLimpio = document.getElementById('selector-fecha-movil').value;
 
             try {
-                // Compatibilidad con las consultas si "query" no existe a nivel global
+                // Cancelamos el radar anterior si existe, para no solapar datos al cambiar de día
+                if (window.radarEntregasMovil) {
+                    window.radarEntregasMovil();
+                }
+
+                // Creamos la consulta para el día seleccionado
                 let qRef;
                 if(window.query && window.where) {
                     qRef = window.query(window.collection(window.db, "citas_agenda"), window.where("fecha", "==", diaLimpio));
@@ -271,33 +285,49 @@
                     qRef = window.collection(window.db, "citas_agenda");
                 }
                 
-                const snap = await window.getDocs(qRef);
-                
-                let citas = [];
-                snap.forEach((doc) => { 
-                    let data = doc.data();
-                    // Si hicimos query por where no hace falta este IF, pero si no, lo filtramos manualmente
-                    if(data.fecha === diaLimpio || (data.fechaHora && data.fechaHora.startsWith(diaLimpio))) {
-                        citas.push({ id: doc.id, ...data }); 
+                // 🔥 SUSTITUIMOS getDocs POR onSnapshot PARA TIEMPO REAL
+                window.radarEntregasMovil = window.onSnapshot(qRef, (snap) => {
+                    let citasPendientes = [];
+                    
+                    snap.forEach((doc) => { 
+                        let data = doc.data();
+                        
+                        // Validamos la fecha (por si usamos la colección completa)
+                        const coincideFecha = data.fecha === diaLimpio || (data.fechaHora && data.fechaHora.startsWith(diaLimpio));
+                        
+                        if (coincideFecha) {
+                            // 🔥 FILTRO CLAVE: Solo guardamos las que NO están entregadas
+                            const estaEntregado = data.entregado === true || data.entregado === "true";
+                            
+                            if (!estaEntregado) {
+                                citasPendientes.push({ id: doc.id, ...data }); 
+                            }
+                        }
+                    });
+
+                    // Ordenamos por hora
+                    citasPendientes.sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
+
+                    if (citasPendientes.length === 0) {
+                        contenedor.innerHTML = `
+                            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 text-center mt-4">
+                                <i class="ph-fill ph-check-circle text-6xl text-emerald-500 mb-3"></i>
+                                <h2 class="text-[#001e50] font-black text-xl">Día Limpio</h2>
+                                <p class="text-gray-500 text-sm mt-1 font-bold">No quedan entregas pendientes en el cuadrante para hoy.</p>
+                            </div>`;
+                        return;
                     }
+
+                    // Renderizamos las tarjetas de las pendientes
+                    contenedor.innerHTML = citasPendientes.map(cita => window.renderizarTarjetaMovil(cita)).join('');
+                }, (error) => {
+                    console.error("Error en radar Firebase:", error);
+                    contenedor.innerHTML = `<div class="bg-red-50 p-6 rounded-xl border border-red-200 text-center mt-4"><i class="ph-bold ph-wifi-slash text-4xl text-red-500 mb-2"></i><p class="text-red-700 font-bold text-sm">Sin conexión con la central.</p></div>`;
                 });
 
-                citas.sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
-
-                if (citas.length === 0) {
-                    contenedor.innerHTML = `
-                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 text-center mt-4">
-                            <i class="ph-fill ph-check-circle text-6xl text-emerald-500 mb-3"></i>
-                            <h2 class="text-[#001e50] font-black text-xl">Día Libre</h2>
-                            <p class="text-gray-500 text-sm mt-1 font-bold">No hay entregas programadas en el cuadrante para hoy.</p>
-                        </div>`;
-                    return;
-                }
-
-                contenedor.innerHTML = citas.map(cita => window.renderizarTarjetaMovil(cita)).join('');
             } catch (error) {
-                console.error("Error de lectura Firebase:", error);
-                contenedor.innerHTML = `<div class="bg-red-50 p-6 rounded-xl border border-red-200 text-center mt-4"><i class="ph-bold ph-wifi-slash text-4xl text-red-500 mb-2"></i><p class="text-red-700 font-bold text-sm">Sin conexión con la central.</p></div>`;
+                console.error("Error al iniciar radar:", error);
+                contenedor.innerHTML = `<div class="bg-red-50 p-6 rounded-xl border border-red-200 text-center mt-4"><i class="ph-bold ph-warning text-4xl text-red-500 mb-2"></i><p class="text-red-700 font-bold text-sm">Error de sincronización.</p></div>`;
             }
         };
 
@@ -407,7 +437,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=8')
+                navigator.serviceWorker.register('./sw.js?v=9')
                     .then((registration) => {
                         registration.update();
 

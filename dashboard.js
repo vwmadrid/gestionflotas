@@ -18,222 +18,167 @@
     // 📊 FUNCIONES DE DASHBOARD
     // ==========================================
 window.renderizarDashboard = function() {
-        // 1. Establecer y obtener el mes seleccionado
-        let inputMes = document.getElementById('mesDashboard');
-        if (!inputMes.value) {
-            let hoy = new Date();
-            let mesActualStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
-            inputMes.value = mesActualStr;
-        }
-        let [yearSel, monthSel] = inputMes.value.split('-');
+    // 1. Establecer y obtener el mes seleccionado
+    let inputMes = document.getElementById('mesDashboard');
+    if (!inputMes.value) {
+        let hoy = new Date();
+        let mesActualStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+        inputMes.value = mesActualStr;
+    }
+    let [yearSel, monthSel] = inputMes.value.split('-');
 
-        const esDelMes = (fechaStr) => {
-            if (!fechaStr) return false;
-            let p = fechaStr.split('/'); 
-            if (p.length !== 3) return false;
-            let m = String(parseInt(p[1], 10)).padStart(2, '0');
-            return p[2] === yearSel && m === monthSel;
-        };
-
-        const normalizarFechaDashboard = (valor) => {
-            if (!valor) return null;
-            if (valor instanceof Date) return isNaN(valor.getTime()) ? null : valor;
-            if (typeof valor?.toDate === 'function') {
-                const f = valor.toDate();
-                return isNaN(f.getTime()) ? null : f;
-            }
-            if (typeof valor?.seconds === 'number') {
-                const f = new Date(valor.seconds * 1000);
-                return isNaN(f.getTime()) ? null : f;
-            }
-            const f = new Date(String(valor).replace(' ', 'T'));
+    const normalizarFechaDashboard = (valor) => {
+        if (!valor) return null;
+        if (valor instanceof Date) return isNaN(valor.getTime()) ? null : valor;
+        if (typeof valor?.toDate === 'function') {
+            const f = valor.toDate();
             return isNaN(f.getTime()) ? null : f;
-        };
-
-        const esVODelMes = (fechaHoraRaw) => {
-            const fecha = normalizarFechaDashboard(fechaHoraRaw);
-            if (!fecha) return false;
-            return String(fecha.getFullYear()) === yearSel && String(fecha.getMonth() + 1).padStart(2, '0') === monthSel;
-        };
-
-        const esFechaMesPorTsOTexto = (timestampRaw, fechaTextoRaw) => {
-            const fechaTs = normalizarFechaDashboard(timestampRaw);
-            if (fechaTs) {
-                return String(fechaTs.getFullYear()) === yearSel && String(fechaTs.getMonth() + 1).padStart(2, '0') === monthSel;
-            }
-            if (!fechaTextoRaw) return false;
-            return esDelMes(String(fechaTextoRaw));
-        };
-
-        const movimientosFuente = Array.isArray(window.movimientosHistorial) ? window.movimientosHistorial : [];
-        const hayMovimientos = movimientosFuente.length > 0;
-
-        // 2. Filtrado de datos
-        let todosEntregados = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
-        let noEntregados = todosLosCoches.filter(c => c.entregado !== true && c.entregado !== "true");
-        
-        let entregasClientesTotal = todosEntregados.filter(c => c.tipoFinalizacion !== 'TRASLADO');
-        let trasladosGruaTotal = todosEntregados.filter(c => c.tipoFinalizacion === 'TRASLADO');
-
-        // 3. Cálculos EXCLUSIVOS para el MES SELECCIONADO (Cifras de arriba)
-        let entregasMes = entregasClientesTotal.filter(c => esDelMes(c.fechaEntrega)).length;
-        let gruasMes = trasladosGruaTotal.filter(c => esDelMes(c.fechaEntrega)).length;
-        
-        let pasosTallerRecambiosMes = todosLosCoches.filter(c => 
-            esDelMes(c.fechaEntradaTaller) || esDelMes(c.fechaFinTaller) || 
-            esDelMes(c.fechaEntradaRecambios) || esDelMes(c.fechaFinRecambios)
-        ).length;
-
-        let citasVOMes = (window.datosAgenda || []).filter(cita => {
-            let vo = String(cita.entregaVO || '').toUpperCase().trim();
-            return (vo === 'SÍ' || vo === 'SI') && esVODelMes(cita.fechaHora);
-        }).length;
-
-        let devolucionesMes = (window.datosAgenda || []).filter(cita => {
-            let modelo = String(cita?.modelo || '').toUpperCase();
-            let tipoFin = String(cita?.tipoFinalizacion || '').toUpperCase();
-            let esDevolucion = tipoFin === 'DEVOLUCION' || modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
-            let estaCompletada = (cita?.entregado === true || cita?.entregado === "true");
-            return esDevolucion && estaCompletada && esFechaMesPorTsOTexto(cita?.fechaEntrega, cita?.fechaEntregaTexto);
-        }).length;
-
-        if (hayMovimientos) {
-            let entregasMesMov = 0;
-            let gruasMesMov = 0;
-            let devolucionesMesMov = 0;
-
-            movimientosFuente.forEach(mov => {
-                const tipo = String(mov.tipo || mov.tipoFinalizacion || '').toUpperCase();
-                const fechaMov = normalizarFechaDashboard(mov.ts || mov.fechaEntregaTs || mov.fechaEntrega) || normalizarFechaDashboard(mov.fechaTexto);
-                if (!fechaMov) return;
-                if (String(fechaMov.getFullYear()) !== yearSel || String(fechaMov.getMonth() + 1).padStart(2, '0') !== monthSel) return;
-
-                if (tipo === 'TRASLADO') gruasMesMov++;
-                else if (tipo === 'DEVOLUCION') devolucionesMesMov++;
-                else entregasMesMov++;
-            });
-
-            entregasMes = entregasMesMov;
-            gruasMes = gruasMesMov;
-            devolucionesMes = devolucionesMesMov;
         }
-
-        document.getElementById('kpi-entregas').innerText = entregasMes;
-        document.getElementById('kpi-gruas').innerText = gruasMes;
-        document.getElementById('kpi-reparados').innerText = pasosTallerRecambiosMes;
-        document.getElementById('kpi-devueltos').innerText = citasVOMes;
-        const kpiDevoluciones = document.getElementById('kpi-devoluciones');
-        if (kpiDevoluciones) kpiDevoluciones.innerText = devolucionesMes;
-
-        // 4. Cálculos para el Gráfico Donut (INVENTARIO ACTIVO - No depende del mes)
-        let enTaller = noEntregados.filter(c => c.enTaller && !c.finTaller).length;
-        let enRecambios = noEntregados.filter(c => c.enRecambios && !c.finRecambios).length;
-        let pteLogistica = noEntregados.filter(c => c.pasoAInventario === false && !(c.enTaller && !c.finTaller) && !(c.enRecambios && !c.finRecambios)).length;
-        let listos = noEntregados.filter(c => c.pasoAInventario !== false && !(c.enTaller && !c.finTaller) && !(c.enRecambios && !c.finRecambios)).length;
-
-        // 5. Cálculos para el Gráfico de Barras Comparativo (Todo el Año)
-        document.getElementById('tituloGraficoAnual').innerText = `Comparativa Mensual del Año ${yearSel}`;
-        let mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-        let entregasPorMes = new Array(12).fill(0);
-        let recogidasPorMes = new Array(12).fill(0);
-        let devolucionesPorMes = new Array(12).fill(0);
-
-        entregasClientesTotal.forEach(c => {
-            if (c.fechaEntrega) {
-                let partes = c.fechaEntrega.split('/');
-                if (partes.length === 3 && partes[2] === yearSel) {
-                    let mesIndex = parseInt(partes[1], 10) - 1;
-                    if (mesIndex >= 0 && mesIndex <= 11) entregasPorMes[mesIndex]++;
-                }
-            }
-        });
-
-        (window.datosAgenda || []).forEach(cita => {
-            let vo = String(cita.entregaVO || '').toUpperCase().trim();
-            if ((vo === 'SÍ' || vo === 'SI') && cita.fechaHora) {
-                const fechaCita = normalizarFechaDashboard(cita.fechaHora);
-                if (fechaCita && String(fechaCita.getFullYear()) === yearSel) {
-                    let mesIndex = fechaCita.getMonth();
-                    if (mesIndex >= 0 && mesIndex <= 11) recogidasPorMes[mesIndex]++;
-                }
-            }
-        });
-
-        (window.datosAgenda || []).forEach(cita => {
-            let modelo = String(cita?.modelo || '').toUpperCase();
-            let tipoFin = String(cita?.tipoFinalizacion || '').toUpperCase();
-            let esDevolucion = tipoFin === 'DEVOLUCION' || modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
-            let estaCompletada = (cita?.entregado === true || cita?.entregado === "true");
-            if (!esDevolucion || !estaCompletada) return;
-
-            const fechaCita = normalizarFechaDashboard(cita?.fechaEntrega) || normalizarFechaDashboard(cita?.fechaHora);
-            if (fechaCita && String(fechaCita.getFullYear()) === yearSel) {
-                let mesIndex = fechaCita.getMonth();
-                if (mesIndex >= 0 && mesIndex <= 11) devolucionesPorMes[mesIndex]++;
-            }
-        });
-
-        if (hayMovimientos) {
-            entregasPorMes.fill(0);
-            recogidasPorMes.fill(0);
-            devolucionesPorMes.fill(0);
-
-            movimientosFuente.forEach(mov => {
-                const tipo = String(mov.tipo || mov.tipoFinalizacion || '').toUpperCase();
-                const fechaMov = normalizarFechaDashboard(mov.ts || mov.fechaEntregaTs || mov.fechaEntrega) || normalizarFechaDashboard(mov.fechaTexto);
-                if (!fechaMov || String(fechaMov.getFullYear()) !== yearSel) return;
-
-                const mesIndex = fechaMov.getMonth();
-                if (mesIndex < 0 || mesIndex > 11) return;
-
-                if (tipo === 'TRASLADO') recogidasPorMes[mesIndex]++;
-                else if (tipo === 'DEVOLUCION') devolucionesPorMes[mesIndex]++;
-                else entregasPorMes[mesIndex]++;
-            });
+        if (typeof valor?.seconds === 'number') {
+            const f = new Date(valor.seconds * 1000);
+            return isNaN(f.getTime()) ? null : f;
         }
-
-        // 6. Destruir y dibujar gráficos
-        if(window.chartObjDonut) window.chartObjDonut.destroy();
-        if(window.chartObjMeses) window.chartObjMeses.destroy();
-
-        const canvasDonut = document.getElementById('graficoDonut');
-        if (canvasDonut) {
-            const ctxDonut = canvasDonut.getContext('2d');
-            window.chartObjDonut = new Chart(ctxDonut, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Listos/Cita', 'Taller', 'Recambios', 'Logística Ptea.'],
-                    datasets: [{
-                        data: [listos, enTaller, enRecambios, pteLogistica],
-                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#94a3b8'],
-                        borderWidth: 0, hoverOffset: 8
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 10 } } } }, cutout: '65%' }
-            });
+        if (typeof valor === 'number') {
+            const f = new Date(valor);
+            return isNaN(f.getTime()) ? null : f;
         }
-
-        const canvasMeses = document.getElementById('graficoMeses');
-        if (canvasMeses) {
-            const ctxMeses = canvasMeses.getContext('2d');
-            window.chartObjMeses = new Chart(ctxMeses, {
-                type: 'bar',
-                data: {
-                    labels: mesesNombres,
-                    datasets: [
-                        { label: 'Entregas Clientes', data: entregasPorMes, backgroundColor: 'rgba(16, 185, 129, 0.85)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
-                        { label: 'Recogidas V.O.', data: recogidasPorMes, backgroundColor: 'rgba(168, 85, 247, 0.85)', borderColor: '#a855f7', borderWidth: 1, borderRadius: 4 },
-                        { label: 'Devoluciones Completadas', data: devolucionesPorMes, backgroundColor: 'rgba(8, 145, 178, 0.85)', borderColor: '#0891b2', borderWidth: 1, borderRadius: 4 }
-                    ]
-                },
-                options: { 
-                    responsive: true, maintainAspectRatio: false, 
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }, x: { grid: { display: false } } }, 
-                    plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } }, tooltip: { mode: 'index', intersect: false } } 
-                }
-            });
+        const texto = String(valor).trim();
+        if (/^\d+$/.test(texto)) {
+            const f = new Date(Number(texto));
+            return isNaN(f.getTime()) ? null : f;
         }
+        if (texto.includes('/')) {
+            const partes = texto.split('/');
+            if (partes.length === 3) {
+                const f = new Date(Number(partes[2]), Number(partes[1]) - 1, Number(partes[0]));
+                if (!isNaN(f.getTime())) return f;
+            }
+        }
+        const f = new Date(texto.replace(' ', 'T'));
+        return isNaN(f.getTime()) ? null : f;
     };
+
+    // 2. Extraer TODA la fuente de datos fusionada (Pasado + Presente)
+    const movimientosFuente = typeof window.obtenerMovimientosHistorial === 'function' ? window.obtenerMovimientosHistorial() : [];
+
+    // Contadores para el Mes Seleccionado
+    let entregasMes = 0, gruasMes = 0, devolucionesMes = 0, citasVOMes = 0;
+    
+    // Contadores para el Gráfico Anual
+    let entregasPorMes = new Array(12).fill(0);
+    let gruasPorMes = new Array(12).fill(0);
+    let devolucionesPorMes = new Array(12).fill(0);
+    let voPorMes = new Array(12).fill(0);
+
+    // 3. 🧠 MOTOR DE CÁLCULO INTELIGENTE (Cruza historial con vehículos originales)
+    movimientosFuente.forEach(mov => {
+        const tipo = String(mov.tipo || mov.tipoFinalizacion || '').toUpperCase();
+        const modelo = String(mov.C || mov.modelo || '').toUpperCase();
+        const fechaMov = normalizarFechaDashboard(mov.ts || mov.fechaEntregaTs || mov.fechaEntrega) || normalizarFechaDashboard(mov.fechaTexto);
+        
+        if (!fechaMov) return;
+        
+        const esMismoAno = String(fechaMov.getFullYear()) === yearSel;
+        const esMismoMes = esMismoAno && String(fechaMov.getMonth() + 1).padStart(2, '0') === monthSel;
+        const mesIndex = fechaMov.getMonth();
+
+        // Clasificación del tipo de operación
+        let esTraslado = (tipo === 'TRASLADO');
+        let esDevolucion = (tipo === 'DEVOLUCION' || modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN'));
+        
+        // Búsqueda profunda: ¿Este coche tenía V.O.?
+        let cocheOriginal = todosLosCoches.find(c => c.fila === mov.fila);
+        let teniaVO = cocheOriginal ? String(cocheOriginal.entregaVO || '').toUpperCase().trim() : 'NO';
+        let esVO = (teniaVO === 'SÍ' || teniaVO === 'SI');
+
+        // Sumar al Gráfico Anual
+        if (esMismoAno) {
+            if (esTraslado) gruasPorMes[mesIndex]++;
+            else if (esDevolucion) devolucionesPorMes[mesIndex]++;
+            else entregasPorMes[mesIndex]++;
+
+            if (esVO) voPorMes[mesIndex]++;
+        }
+
+        // Sumar a los KPIs del Mes
+        if (esMismoMes) {
+            if (esTraslado) gruasMes++;
+            else if (esDevolucion) devolucionesMes++;
+            else entregasMes++;
+
+            if (esVO) citasVOMes++;
+        }
+    });
+
+    // 4. Renderizar KPIs Superiores
+    if(document.getElementById('kpi-entregas')) document.getElementById('kpi-entregas').innerText = entregasMes;
+    if(document.getElementById('kpi-gruas')) document.getElementById('kpi-gruas').innerText = gruasMes;
+    if(document.getElementById('kpi-devueltos')) document.getElementById('kpi-devueltos').innerText = citasVOMes;
+    if(document.getElementById('kpi-devoluciones')) document.getElementById('kpi-devoluciones').innerText = devolucionesMes;
+
+    // Calcular Pasos por Taller/Recambios del mes actual
+    let pasosTallerRecambiosMes = todosLosCoches.filter(c => {
+        let ft = normalizarFechaDashboard(c.fechaEntradaTaller) || normalizarFechaDashboard(c.fechaFinTaller);
+        let fr = normalizarFechaDashboard(c.fechaEntradaRecambios) || normalizarFechaDashboard(c.fechaFinRecambios);
+        let tOk = ft && String(ft.getFullYear()) === yearSel && String(ft.getMonth() + 1).padStart(2, '0') === monthSel;
+        let rOk = fr && String(fr.getFullYear()) === yearSel && String(fr.getMonth() + 1).padStart(2, '0') === monthSel;
+        return tOk || rOk;
+    }).length;
+    if(document.getElementById('kpi-reparados')) document.getElementById('kpi-reparados').innerText = pasosTallerRecambiosMes;
+
+    // 5. Cálculos para el Gráfico Donut (INVENTARIO ACTIVO - No depende del mes)
+    let noEntregados = todosLosCoches.filter(c => c.entregado !== true && c.entregado !== "true");
+    let enTaller = noEntregados.filter(c => c.enTaller && !c.finTaller).length;
+    let enRecambios = noEntregados.filter(c => c.enRecambios && !c.finRecambios).length;
+    let pteLogistica = noEntregados.filter(c => c.pasoAInventario === false && !(c.enTaller && !c.finTaller) && !(c.enRecambios && !c.finRecambios)).length;
+    let listos = noEntregados.filter(c => c.pasoAInventario !== false && !(c.enTaller && !c.finTaller) && !(c.enRecambios && !c.finRecambios)).length;
+
+    // 6. Destruir y dibujar gráficos
+    if(document.getElementById('tituloGraficoAnual')) document.getElementById('tituloGraficoAnual').innerText = `Comparativa Mensual del Año ${yearSel}`;
+    let mesesNombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+    if(window.chartObjDonut) window.chartObjDonut.destroy();
+    if(window.chartObjMeses) window.chartObjMeses.destroy();
+
+    const canvasDonut = document.getElementById('graficoDonut');
+    if (canvasDonut) {
+        const ctxDonut = canvasDonut.getContext('2d');
+        window.chartObjDonut = new Chart(ctxDonut, {
+            type: 'doughnut',
+            data: {
+                labels: ['Listos/Cita', 'Taller', 'Recambios', 'Logística Ptea.'],
+                datasets: [{
+                    data: [listos, enTaller, enRecambios, pteLogistica],
+                    backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#94a3b8'],
+                    borderWidth: 0, hoverOffset: 8
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 10 } } } }, cutout: '65%' }
+        });
+    }
+
+    const canvasMeses = document.getElementById('graficoMeses');
+    if (canvasMeses) {
+        const ctxMeses = canvasMeses.getContext('2d');
+        window.chartObjMeses = new Chart(ctxMeses, {
+            type: 'bar',
+            data: {
+                labels: mesesNombres,
+                datasets: [
+                    { label: 'Entregas Clientes', data: entregasPorMes, backgroundColor: 'rgba(16, 185, 129, 0.85)', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
+                    { label: 'Traslados (Grúa)', data: gruasPorMes, backgroundColor: 'rgba(249, 115, 22, 0.85)', borderColor: '#f97316', borderWidth: 1, borderRadius: 4 },
+                    { label: 'Recogidas V.O.', data: voPorMes, backgroundColor: 'rgba(168, 85, 247, 0.85)', borderColor: '#a855f7', borderWidth: 1, borderRadius: 4 },
+                    { label: 'Devoluciones Completadas', data: devolucionesPorMes, backgroundColor: 'rgba(8, 145, 178, 0.85)', borderColor: '#0891b2', borderWidth: 1, borderRadius: 4 }
+                ]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }, x: { grid: { display: false } } }, 
+                plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } }, tooltip: { mode: 'index', intersect: false } } 
+            }
+        });
+    }
+};
     // ==========================================
 // 📝 SISTEMA DE ENCUESTAS DE CLIENTES
 // ==========================================

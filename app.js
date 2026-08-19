@@ -136,6 +136,7 @@ window.gestionarCamposLogin = function() {
     else if (depto === 'taller') inputUser.placeholder = "Operario Taller (Ej: MANUEL, ALVARO)";
     else if (depto === 'recambios') inputUser.placeholder = "Operario Recambios (Ej: JUAN, LUIS)";
     else if (depto === 'backoffice') inputUser.placeholder = "Nombre de Usuario";
+    else if (depto === 'comercial') inputUser.placeholder = "Nombre Comercial (Ej: ROBERTO, MARINA)";
 };
 
 window.normalizarUsuarioLogin = function(valor) {
@@ -172,7 +173,15 @@ window.iniciar = async function() {
         "GEMA.GOMEZ": "backoffice",
         "ALBERTO.GUTIERREZ": "backoffice",
         "RABAB.JAADAR": "backoffice",
-        "RUBEN.GARCIA": "backoffice"
+        "RUBEN.GARCIA": "backoffice",
+        "ROBERTO.ABAD": "comercial",
+        "JORGE.AGUDO": "comercial",
+        "BLANCA.SANCHEZ": "comercial",
+        "ADRIA.HUGAS": "comercial",
+        "JAVIER.MARTINEZ": "comercial",
+        "MARINA.RODRIGUEZ": "comercial",
+        "ALBA.DORIA": "comercial",
+        "JOSEMARIA.MARTINEZ": "comercial",
     };
     
     let rolVerdadero = directorioPersonal[usuarioInput];
@@ -253,44 +262,30 @@ window.iniciar = async function() {
 };
 
 window.aplicarPermisosPorRol = function() {
-    if (window.rolActivo === "backoffice") {
-        const botonesOcultar = document.querySelectorAll('#botonesLogistica, .btn-guardar, button[onclick*="guardar"], button[onclick*="eliminar"], button[onclick*="anadirVehiculoManual"], button[onclick*="abrirGestorVacaciones"], button[onclick*="generarListadoDiario"]');
-        botonesOcultar.forEach(btn => {
-            btn.style.setProperty('display', 'none', 'important');
-        });
-        
-        const contenedoresMesa = document.querySelectorAll('#contenedorLogistica, #contenedorTarjetas, #contenedorTabla, #contenedorAgenda');
-        contenedoresMesa.forEach(contenedor => {
-            if (!contenedor) return;
-            
-            const campos = contenedor.querySelectorAll('input, select, textarea');
-            campos.forEach(campo => {
-                const idCampo = (campo.id || "").toLowerCase();
-                const claseCampo = (campo.className || "").toLowerCase();
-                
-                if (idCampo !== 'buscadorinput' && !idCampo.includes('nota') && !claseCampo.includes('nota') && !idCampo.includes('chat')) {
-                    campo.disabled = true;
-                    campo.style.cursor = 'not-allowed';
-                }
-            });
+    // Sin restricciones por departamento: normalizamos estado UI por si venimos de una sesión limitada.
+    const ocultosPrevios = document.querySelectorAll('#botonesLogistica, .btn-guardar, button[onclick*="guardar"], button[onclick*="eliminar"], button[onclick*="anadirVehiculoManual"], button[onclick*="abrirGestorVacaciones"], button[onclick*="generarListadoDiario"], #contenedorPendientesPedir, .seccion-pedir-campa');
+    ocultosPrevios.forEach(el => {
+        el.style.removeProperty('display');
+    });
 
-            const botonesInternos = contenedor.querySelectorAll('button');
-            botonesInternos.forEach(btn => {
-                const clickAccion = (btn.getAttribute('onclick') || '').toLowerCase();
-                
-                // 🔥 SALVOCONDUCTO: Añadimos pedirinst para que Back Office pueda hacer clic
-                if (!clickAccion.includes('abrirchat') && 
-                    !clickAccion.includes('nota') && 
-                    !clickAccion.includes('crearcitamanual') &&
-                    !clickAccion.includes('pedirinst')) {
-                    btn.disabled = true;
-                    btn.style.opacity = '0.4';
-                    btn.style.cursor = 'not-allowed';
-                    btn.style.pointerEvents = 'none';
-                }
-            });
+    const contenedoresMesa = document.querySelectorAll('#contenedorLogistica, #contenedorTarjetas, #contenedorTabla, #contenedorAgenda');
+    contenedoresMesa.forEach(contenedor => {
+        if (!contenedor) return;
+
+        const campos = contenedor.querySelectorAll('input, select, textarea');
+        campos.forEach(campo => {
+            campo.disabled = false;
+            campo.style.removeProperty('cursor');
         });
-    }
+
+        const botonesInternos = contenedor.querySelectorAll('button');
+        botonesInternos.forEach(btn => {
+            btn.disabled = false;
+            btn.style.removeProperty('opacity');
+            btn.style.removeProperty('cursor');
+            btn.style.removeProperty('pointer-events');
+        });
+    });
 };
 
 window.iniciarAppDirectamente = function(rol, usuario) {
@@ -326,6 +321,7 @@ window.iniciarAppDirectamente = function(rol, usuario) {
     
     window.cargar(); // Carga los coches de la app de forma normal
     if (typeof window.suscribirMovimientosHistorial === 'function') window.suscribirMovimientosHistorial();
+    if (typeof window.suscribirDevolucionesRenting === 'function') window.suscribirDevolucionesRenting();
 
     if (document.body?.dataset?.vista === 'movil' && typeof window.cambiarPestana === 'function') {
         setTimeout(() => window.cambiarPestana('agenda'), 250);
@@ -336,7 +332,7 @@ window.iniciarAppDirectamente = function(rol, usuario) {
         window.cargarChatGlobal();
     }
 
-    if (rol === 'entregas' || rol === 'backoffice') {
+    if (rol === 'entregas' || rol === 'backoffice' || rol === 'comercial') {
         if (typeof window.iniciarMotorAlertas === 'function') { window.iniciarMotorAlertas(); }
         if (rol === 'backoffice' && typeof window.escucharNotificacionesBackOffice === 'function') {
             window.escucharNotificacionesBackOffice();
@@ -505,21 +501,30 @@ window.cambiarPestana = function(pestana) {
         }
         
         if (botones && botones.length > 0) {
-            if (pestana === 'logistica' && botones[0]) { botones[0].classList.remove('text-gray-400'); botones[0].classList.add('text-amber-300', 'bg-white/10'); }
-            else if (pestana === 'todos' && botones[1]) { botones[1].classList.remove('text-gray-400'); botones[1].classList.add('text-white', 'bg-white/10'); }
-            else if (pestana === 'agenda' && botones[2]) { botones[2].classList.remove('text-gray-400'); botones[2].classList.add('text-white', 'bg-white/10'); }
-            else if (pestana === 'global-taller' && botones[3]) {
-                botones[3].classList.remove('text-gray-400'); botones[3].classList.add('text-white', 'bg-white/10');
-                if(botonesDpto && botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
+            const botonActivo = Array.from(botones).find((btn) => {
+                const accion = String(btn.getAttribute('onclick') || '');
+                return accion.includes(`cambiarPestana('${pestana}')`);
+            });
+
+            if (botonActivo) {
+                botonActivo.classList.remove('text-gray-400');
+                botonActivo.classList.add('text-white', 'bg-white/10');
+
+                if (pestana === 'logistica') {
+                    botonActivo.classList.remove('text-white');
+                    botonActivo.classList.add('text-amber-300');
+                }
+
+                if (pestana === 'dashboard') {
+                    botonActivo.classList.remove('text-white');
+                    botonActivo.classList.add('text-emerald-400');
+                }
             }
-            else if (pestana === 'global-recambios' && botones[4]) {
-                botones[4].classList.remove('text-gray-400'); botones[4].classList.add('text-white', 'bg-white/10');
-                if(botonesDpto && botonesDpto[0]) botonesDpto[0].classList.add('bg-white/10', 'text-white');
+
+            if ((pestana === 'global-taller' || pestana === 'global-recambios') && botonesDpto && botonesDpto[0]) {
+                botonesDpto[0].classList.add('bg-white/10', 'text-white');
             }
-            else if (pestana === 'entregados' && botones[5]) { botones[5].classList.remove('text-gray-400'); botones[5].classList.add('text-white', 'bg-white/10'); }
-            else if (pestana === 'dashboard' && botones[6]) { botones[6].classList.remove('text-gray-400'); botones[6].classList.add('text-emerald-400', 'bg-white/10'); }
-            else if (pestana === 'encuestas' && botones[7]) { botones[7].classList.remove('text-gray-400'); botones[7].classList.add('text-white', 'bg-white/10'); }
-        }  
+        }
         
         if (pestana === 'historial-dpto') {
             if(botonesDpto && botonesDpto[1]) botonesDpto[1].classList.add('bg-white/10', 'text-white'); 
@@ -531,9 +536,9 @@ window.cambiarPestana = function(pestana) {
     // 2. Apagar absolutamente todas las pantallas de forma segura antes de activar la nueva
     const elementosOcultar = [
         'contenedorLogistica', 'contenedorTarjetas', 'contenedorTabla', 
-        'contenedorAgenda', 'contenedorEntregados', 'contenedorDashboard', 
+        'contenedorAgenda', 'contenedorEntregados', 'contenedorDevolucionesRenting', 'contenedorDashboard', 
         'contenedorEncuestas', 'contenedorHistorialDpto', 'filtrosVisuales', 
-        'controlesVistaExcel', 'botonesLogistica', 'botonesAgenda'
+        'controlesVistaExcel', 'botonesLogistica', 'botonesAgenda', 'botonesDevoluciones'
     ];
 
     elementosOcultar.forEach(id => {
@@ -550,6 +555,7 @@ window.cambiarPestana = function(pestana) {
         if (pestana === 'logistica') {
             const c = document.getElementById('contenedorLogistica'); if (c) c.style.display = 'grid';
             const b = document.getElementById('botonesLogistica'); if (b) b.style.display = 'flex'; 
+            if (typeof window.renderLogistica === 'function') window.renderLogistica();
         } else if (pestana === 'todos') {
             const c = document.getElementById('controlesVistaExcel'); if (c) c.style.display = 'flex';
             const f = document.getElementById('filtrosVisuales'); if (f) f.style.display = 'flex';
@@ -576,6 +582,14 @@ window.cambiarPestana = function(pestana) {
             const c = document.getElementById('contenedorEntregados'); if (c) c.style.display = 'block';
             if (buscador) buscador.style.display = 'none';
             if (typeof window.renderEntregados === 'function') window.renderEntregados();
+        } else if (pestana === 'devoluciones-renting') {
+            const c = document.getElementById('contenedorDevolucionesRenting'); if (c) c.style.display = 'block';
+            const b = document.getElementById('botonesDevoluciones'); if (b) b.style.display = 'flex';
+            if (buscador) {
+                buscador.style.display = 'none';
+                buscador.value = '';
+            }
+            if (typeof window.renderDevolucionesRenting === 'function') window.renderDevolucionesRenting();
         } else if (pestana === 'dashboard') {
             const c = document.getElementById('contenedorDashboard'); if (c) c.style.display = 'block';
             if (buscador) buscador.style.display = 'none';
@@ -598,10 +612,8 @@ window.cambiarPestana = function(pestana) {
         console.error("Error crítico al encender la pestaña solicitada:", e);
     }
     
-    // 4. Refrescar la base de datos si no estamos en secciones estáticas especiales
-    if (pestana !== 'dashboard' && pestana !== 'encuestas' && pestana !== 'historial-dpto') {
-        if (typeof window.cargar === 'function') window.cargar();
-    }
+    // 4. No reabrimos suscripciones en cada click de pestaña para evitar latencia global.
+    // Las vistas se actualizan con los onSnapshot activos y renders específicos de cada pestaña.
     
     if (typeof window.aplicarPermisosPorRol === 'function') window.aplicarPermisosPorRol();
 };
@@ -615,27 +627,40 @@ window.cargar = function() {
         todosLosCoches = [];
         snapshot.forEach(doc => { 
             let c = doc.data(); 
-            c.fila = doc.id; 
-            c.A = c.bastidor || "Sin Bastidor"; 
-            c.B = c.matricula || c.Matricula || "S/M"; 
-            c.C = c.modelo || "VW"; 
             
-            let chatProcess = c.chatInfo;
-            if (!chatProcess && c.chat && typeof c.chat === 'string') {
-                try { chatProcess = JSON.parse(c.chat); } catch(e) {}
+            // 🔥 ESCUDO ANTIFANTASMAS: Comprobamos que el documento tenga información real
+            let tieneBastidor = c.bastidor && String(c.bastidor).trim() !== '';
+            let tieneMatricula = (c.matricula && String(c.matricula).trim() !== '') || (c.Matricula && String(c.Matricula).trim() !== '');
+            let esValido = tieneBastidor || tieneMatricula;
+
+            // Solo metemos el coche en la app si pasó la prueba
+            if (esValido) {
+                c.fila = doc.id; 
+                c.A = c.bastidor || "Sin Bastidor"; 
+                c.B = c.matricula || c.Matricula || "S/M"; 
+                c.C = c.modelo || "VW"; 
+                
+                let chatProcess = c.chatInfo;
+                if (!chatProcess && c.chat && typeof c.chat === 'string') {
+                    try { chatProcess = JSON.parse(c.chat); } catch(e) {}
+                }
+                c.chatData = chatProcess || {history: [], lastOpened: {}};
+                
+                todosLosCoches.push(c); 
+            } else {
+                console.warn("Se ha ignorado un vehículo fantasma en Firebase con ID:", doc.id);
             }
-            c.chatData = chatProcess || {history: [], lastOpened: {}};
-            todosLosCoches.push(c); 
         });
         
         todosLosCoches.sort((a, b) => (b.creadoEn || 0) - (a.creadoEn || 0));
 
+        // ... (El resto de tu función window.cargar sigue exactamente igual hacia abajo con la distribución por departamentos)
         // 🔥 DISTRIBUCIÓN DE DATOS SEGÚN EL DEPARTAMENTO
         if (window.rolActivo === 'taller' || window.rolActivo === 'recambios') {
             if(typeof window.renderizarDepartamentos === 'function') window.renderizarDepartamentos(window.rolActivo);
             if (activeTab === 'historial-dpto') { window.cargarUltimosHistorialDpto(); }
             
-        } else if (window.rolActivo === 'entregas' || window.rolActivo === 'backoffice') {
+       } else if (window.rolActivo === 'entregas' || window.rolActivo === 'backoffice' || window.rolActivo === 'comercial') {
             if (activeTab === 'logistica') {
                 if(typeof window.renderLogistica === 'function') window.renderLogistica();
             } else if (activeTab === 'todos') { 
@@ -661,6 +686,8 @@ window.cargar = function() {
                 if(typeof window.renderAgenda === 'function') window.renderAgenda();
             } else if (activeTab === 'entregados') {
                 if(typeof window.renderEntregados === 'function') window.renderEntregados();
+            } else if (activeTab === 'devoluciones-renting') {
+                if(typeof window.renderDevolucionesRenting === 'function') window.renderDevolucionesRenting();
             }
             
             if (primeraCargaDb) {
@@ -668,10 +695,10 @@ window.cargar = function() {
                 setTimeout(() => { if(typeof window.sincronizarCitasSilencioso === 'function') window.sincronizarCitasSilencioso(); }, 1500); 
             }
 
-            // Aviso diario: coches con cita dentro de 3 días aún sin pedir a campa.
-            if (typeof window.mostrarAvisoPedidosHoySiOSi === 'function') {
-                setTimeout(() => window.mostrarAvisoPedidosHoySiOSi(), 900);
-            }
+            // Aviso diario: SOLO PARA EL EQUIPO DE ENTREGAS
+         if (window.rolActivo === 'entregas' && typeof window.mostrarAvisoPedidosHoySiOSi === 'function') {
+             setTimeout(() => window.mostrarAvisoPedidosHoySiOSi(), 900);
+         }
         }
 
         window.aplicarPermisosPorRol();
@@ -712,121 +739,152 @@ window.actualizarContadores = function() {
 window.renderLogistica = function() {
    let logistica = todosLosCoches.filter(c => c.pasoAInventario !== true && c.pasoAInventario !== "true" && c.entregado !== true && c.entregado !== "true");
    let div = document.getElementById('contenedorLogistica');
-   
+
    if (logistica.length === 0) {
        div.innerHTML = `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">No hay vehículos en fase de logística previa.</p></div>`;
    } else {
-       if(typeof window.renderTarjetaCompacta === 'function') {
-           div.innerHTML = logistica.map(c => {
-               let btnDoc = c.fechaDoc ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Doc: ${c.fechaDoc}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaDoc')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">Documentación</button>`;
-               let btnTrans = c.fechaTransporte ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Trans: ${c.fechaTransporte}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaTransporte')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Transporte</button>`;
-               let btnPrep = c.fechaPreparacion ? `<div class="bg-amber-100 text-amber-800 text-[9px] font-bold py-1.5 px-2 rounded border border-amber-300 text-center">⚠️ Prep: ${c.fechaPreparacion}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaPreparacion')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Preparación</button>`;
+       // 🔥 ORDENACIÓN INTELIGENTE (Los listos van arriba del todo)
+       logistica.sort((a, b) => {
+           let enTa = a.enTaller && !a.finTaller;
+           let enRa = a.enRecambios && !a.finRecambios;
+           let aListo = !!a.fechaDoc && !!a.fechaTransporte && !!a.fechaPreparacion && !enTa && !enRa ? 1 : 0;
 
-               let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27"); 
-               let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
-               let maS = encodeURIComponent(c.B || '').replace(/'/g, "%27");
-               
-               let escA = window.escapeJS(c.A); let escB = window.escapeJS(c.B); let escC = window.escapeJS(c.C);
-               let escRen = window.escapeJS(c.renting); let escAge = window.escapeJS(c.agencia);
+           let enTb = b.enTaller && !b.finTaller;
+           let enRb = b.enRecambios && !b.finRecambios;
+           let bListo = !!b.fechaDoc && !!b.fechaTransporte && !!b.fechaPreparacion && !enTb && !enRb ? 1 : 0;
 
-               let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shadow-sm"><i class="ph-bold ph-plus"></i> Añadir Petición</button>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
-               let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-teal-100 text-teal-800 hover:bg-teal-200 border border-teal-200 shadow-sm"><i class="ph-bold ph-plus"></i> Añadir Petición</button>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
+           return bListo - aListo; // Coloca los 1 (Listos) antes que los 0
+       });
 
-               let arrTaller = c.peticionesTaller || (c.instruccionTaller ? [{fecha: c.fechaEntradaTaller || '-', motivo: c.instruccionTaller, url: c.urlParte}] : []);
-               let arrRecambios = c.peticionesRecambios || (c.instruccionRecambios ? [{fecha: c.fechaEntradaRecambios || '-', motivo: c.instruccionRecambios, url: c.urlParte}] : []);
+       div.innerHTML = logistica.map(c => {
+           let enT = c.enTaller && !c.finTaller;
+           let enR = c.enRecambios && !c.finRecambios;
+           let tieneCita = !!c.fechaCita;
+           let isAlerta = tieneCita && (enT || enR);
 
-               let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
-               let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
+           // 🔥 DETECTAMOS SI EL COCHE ESTÁ LISTO
+           let isListo = !!c.fechaDoc && !!c.fechaTransporte && !!c.fechaPreparacion && !enT && !enR;
 
-               txtTallerInfo += arrTaller.map(p => `<div class="text-[9px] leading-tight text-gray-600 mt-1 border-l-2 border-amber-400 pl-1.5"><b class="text-amber-700">${p.fecha}:</b> ${p.motivo} ${p.url ? `<a href="${p.url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1" title="Ver Acta"><i class="ph-bold ph-paperclip"></i></a>` : ''}</div>`).join('');
-               txtRecambiosInfo += arrRecambios.map(p => `<div class="text-[9px] leading-tight text-gray-600 mt-1 border-l-2 border-teal-500 pl-1.5"><b class="text-teal-700">${p.fecha}:</b> ${p.motivo} ${p.url ? `<a href="${p.url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1" title="Ver Acta"><i class="ph-bold ph-paperclip"></i></a>` : ''}</div>`).join('');
-               let notaAgendaLimpia = String(c.notaAgenda || '').replace(/[<>]/g, '').trim();
-               let htmlNotaAgenda = notaAgendaLimpia ? `<div class="text-[10px] bg-yellow-50 border border-yellow-200 text-yellow-900 px-2 py-1.5 rounded mb-3 font-bold"><i class="ph-bold ph-note"></i> Nota Agenda: ${notaAgendaLimpia}</div>` : '';
+           // MODIFICAMOS EL COLOR DEL BORDE Y LA SOMBRA
+           let borderAlerta = isAlerta ? 'border-l-8 border-red-600 bg-red-50/50' : 
+                              (isListo ? 'border-l-8 border-emerald-500 bg-emerald-50/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-l-8 border-gray-200');
 
-               let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
-                             let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
-                             let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion');
+           // 🔥 ETIQUETAS VISUALES DE ALERTA O LISTO
+           let htmlAlerta = isAlerta ? `<div class="bg-red-600 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-warning-circle text-sm"></i> ¡URGENTE! TIENE CITA EL ${c.fechaCita}</div>` : '';
+           if (isListo && !isAlerta) {
+               htmlAlerta = `<div class="bg-emerald-500 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-star text-sm"></i> ¡LISTO PARA CONCESIONARIO!</div>`;
+           }
 
-                             if (esBackoffice) {
-                                     return `
-                                     <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm fila-coche flex flex-col relative">
-                                         <div class="flex justify-between items-start mb-2 gap-2">
-                                                <div class="min-w-0 pr-2">
-                                                        <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
-                                                        <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
-                                                </div>
-                                                <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-9 h-9 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm" title="Chat interno"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
-                                         </div>
+           let btnDoc = c.fechaDoc ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Doc: ${c.fechaDoc}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaDoc')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">Documentación</button>`;
+           let btnTrans = c.fechaTransporte ? `<div class="bg-emerald-100 text-emerald-800 text-[9px] font-bold py-1.5 px-2 rounded border border-emerald-200 text-center">✓ Trans: ${c.fechaTransporte}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaTransporte')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Transporte</button>`;
+           let btnPrep = c.fechaPreparacion ? `<div class="bg-amber-100 text-amber-800 text-[9px] font-bold py-1.5 px-2 rounded border border-amber-300 text-center">⚠️ Prep: ${c.fechaPreparacion}</div>` : `<button onclick="window.marcarPaso('${c.fila}', 'fechaPreparacion')" class="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[9px] font-bold py-1.5 px-2 rounded w-full border border-gray-300">En Preparación</button>`;
 
-                                         <div class="flex gap-2 mb-3">
-                                                <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</div>
-                                                <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</div>
-                                         </div>
+           let chatJson = encodeURIComponent(JSON.stringify(c.chatData || {history:[]})).replace(/'/g, "%27"); 
+           let mS = encodeURIComponent(c.C || '').replace(/'/g, "%27"); 
+           let maS = encodeURIComponent(c.B || '').replace(/'/g, "%27");
+           
+           let escA = window.escapeJS(c.A); let escB = window.escapeJS(c.B); let escC = window.escapeJS(c.C);
+           let escRen = window.escapeJS(c.renting); let escAge = window.escapeJS(c.agencia);
 
-                                             ${htmlNotaAgenda}
+           let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shadow-sm"><i class="ph-bold ph-plus"></i> Añadir Petición</button>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
+           let bRecambios = c.finRecambios ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Rec. OK</span>` : c.enRecambios ? `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-teal-100 text-teal-800 hover:bg-teal-200 border border-teal-200 shadow-sm"><i class="ph-bold ph-plus"></i> Añadir Petición</button>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'recambios')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Recambios <i class="ph-bold ph-plus"></i></button>`;
 
-                                        <div class="flex flex-col gap-1.5 mb-3 min-w-0">
-                                            <button onclick="window.copiarAlPortapapeles('${escB}')" title="Copiar matrícula" class="cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
-                                                <span class="truncate">${c.B}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
-                                            </button>
-                                            <button onclick="window.copiarAlPortapapeles('${escA}')" title="Copiar bastidor" class="cursor-pointer hover:bg-gray-100 transition-colors bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
-                                                <span class="truncate">VIN: ${c.A}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
-                                            </button>
-                                        </div>
+           let arrTaller = c.peticionesTaller || (c.instruccionTaller ? [{fecha: c.fechaEntradaTaller || '-', motivo: c.instruccionTaller, url: c.urlParte}] : []);
+           let arrRecambios = c.peticionesRecambios || (c.instruccionRecambios ? [{fecha: c.fechaEntradaRecambios || '-', motivo: c.instruccionRecambios, url: c.urlParte}] : []);
 
-                                         <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
-                                                <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Doc: ${c.fechaDoc || 'Pte'}</div>
-                                                <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Trans: ${c.fechaTransporte || 'Pte'}</div>
-                                                <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Prep: ${c.fechaPreparacion || 'Pte'}</div>
-                                         </div>
+           let txtTallerInfo = c.enTaller ? `<div class="text-[9px] bg-amber-50 text-amber-800 px-2 py-1 rounded mt-1 font-bold">OR: ${c.ordenTaller||'Pte'} | Prev: ${c.fechaTaller||'Pte'}</div>` : '';
+           let txtRecambiosInfo = c.enRecambios ? `<div class="text-[9px] bg-teal-50 text-teal-800 px-2 py-1 rounded mt-1 font-bold">Ped: ${c.ordenRecambios||'Pte'} | Prev: ${c.fechaRecambios||'Pte'}</div>` : '';
 
-                                         <div class="flex flex-col gap-2">
-                                             <div class="flex gap-2 w-full">
-                                                 <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
-                                                 <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
-                                             </div>
-                                         </div>
-                                     </div>`;
-                             }
+           txtTallerInfo += arrTaller.map(p => `<div class="text-[9px] leading-tight text-gray-600 mt-1 border-l-2 border-amber-400 pl-1.5"><b class="text-amber-700">${p.fecha}:</b> ${p.motivo} ${p.url ? `<a href="${p.url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1" title="Ver Acta"><i class="ph-bold ph-paperclip"></i></a>` : ''}</div>`).join('');
+           txtRecambiosInfo += arrRecambios.map(p => `<div class="text-[9px] leading-tight text-gray-600 mt-1 border-l-2 border-teal-500 pl-1.5"><b class="text-teal-700">${p.fecha}:</b> ${p.motivo} ${p.url ? `<a href="${p.url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1" title="Ver Acta"><i class="ph-bold ph-paperclip"></i></a>` : ''}</div>`).join('');
+           let notaAgendaLimpia = String(c.notaAgenda || '').replace(/[<>]/g, '').trim();
+           let htmlNotaAgenda = notaAgendaLimpia ? `<div class="text-[10px] bg-yellow-50 border border-yellow-200 text-yellow-900 px-2 py-1.5 rounded mb-3 font-bold"><i class="ph-bold ph-note"></i> Nota Agenda: ${notaAgendaLimpia}</div>` : '';
 
+           let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
+           let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+           let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion' || rolLimpio === 'comercial');
+
+           if (esBackoffice) {
                return `
-               <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm fila-coche flex flex-col relative">
-                 <div class="flex justify-between items-start mb-2 gap-2">
-                    <div class="min-w-0 pr-2">
-                        <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
-                        <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
-                    </div>
-                    <div class="flex gap-1 flex-shrink-0">
-                        <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
-                        <button onclick="window.editarVehiculoBasico('${c.fila}', '${escA}', '${escB}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info del vehículo"><i class="ph-bold ph-pencil-simple text-lg"></i></button> 
-                        <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>              
-                    </div>
-                 </div>
-
-                 <div class="flex gap-2 mb-3">
-                    <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
-                    <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
-                 </div>
-
-                      ${htmlNotaAgenda}
-
-                 <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
-                    ${btnDoc} ${btnTrans} ${btnPrep}
-                 </div>
-
-                 <div class="flex flex-col gap-2 mb-4">
-                   <div class="flex gap-2 w-full">
-                     <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
-                     <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+               <div class="bg-white rounded-xl ${borderAlerta} border p-5 shadow-sm fila-coche flex flex-col relative">
+                   ${htmlAlerta}
+                   <div class="flex justify-between items-start mb-2 gap-2">
+                       <div class="min-w-0 pr-2">
+                           <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
+                           <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
+                       </div>
+                       <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-9 h-9 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm" title="Chat interno"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
                    </div>
-                 </div>
 
-                 <button onclick="window.pasarAInventario('${c.fila}')" class="w-full mt-auto bg-[#001e50] text-white font-bold py-3 rounded-lg text-xs hover:bg-blue-900 shadow-sm flex items-center justify-center gap-2">
-                    <i class="ph-bold ph-check"></i> Marcar como "Listo para Entrega"
-                 </button>
+                   <div class="flex gap-2 mb-3">
+                       <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</div>
+                       <div class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</div>
+                   </div>
+
+                   ${htmlNotaAgenda}
+
+                   <div class="flex flex-col gap-1.5 mb-3 min-w-0">
+                       <button onclick="window.copiarAlPortapapeles('${escB}')" title="Copiar matrícula" class="cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+                           <span class="truncate">${c.B}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+                       </button>
+                       <button onclick="window.copiarAlPortapapeles('${escA}')" title="Copiar bastidor" class="cursor-pointer hover:bg-gray-100 transition-colors bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+                           <span class="truncate">VIN: ${c.A}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+                       </button>
+                   </div>
+
+                   <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
+                       <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Doc: ${c.fechaDoc || 'Pte'}</div>
+                       <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Trans: ${c.fechaTransporte || 'Pte'}</div>
+                       <div class="bg-gray-100 text-gray-600 text-[9px] font-bold py-1.5 px-2 rounded border border-gray-300 text-center">Prep: ${c.fechaPreparacion || 'Pte'}</div>
+                   </div>
+
+                   <div class="flex flex-col gap-2">
+                       <div class="flex gap-2 w-full">
+                           <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
+                           <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+                       </div>
+                   </div>
                </div>`;
-           }).join('');
-       }
+           }
+
+           return `
+           <div class="bg-white rounded-xl ${borderAlerta} p-5 shadow-sm fila-coche flex flex-col relative">
+             ${htmlAlerta}
+             <div class="flex justify-between items-start mb-2 gap-2">
+                <div class="min-w-0 pr-2">
+                    <h3 class="font-black text-lg text-[#001e50] uppercase">${c.C}</h3>
+                    <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
+                </div>
+                <div class="flex gap-1 flex-shrink-0">
+                    <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-8 h-8 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
+                    <button onclick="window.editarVehiculoBasico('${c.fila}', '${escA}', '${escB}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-blue-500 hover:text-white shadow-sm transition-colors" title="Editar info del vehículo"><i class="ph-bold ph-pencil-simple text-lg"></i></button> 
+                    <button onclick="window.borrarVehiculo('${c.fila}', '${escC}')" class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white shadow-sm transition-colors" title="Eliminar"><i class="ph-bold ph-trash text-lg"></i></button>              
+                </div>
+             </div>
+
+             <div class="flex gap-2 mb-3">
+                <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</button>
+                <button onclick="window.editarRentingAgencia('${c.fila}', '${escRen}', '${escAge}')" class="text-[9px] bg-gray-50 border border-gray-200 text-gray-500 px-2 py-1 rounded font-bold hover:bg-gray-100 truncate flex-1 flex items-center gap-1"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</button>
+             </div>
+
+             ${htmlNotaAgenda}
+
+             <div class="grid grid-cols-3 gap-2 mt-2 mb-4 border-b border-gray-100 pb-4">
+                ${btnDoc} ${btnTrans} ${btnPrep}
+             </div>
+
+             <div class="flex flex-col gap-2 mb-4">
+               <div class="flex gap-2 w-full">
+                 <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
+                 <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+               </div>
+             </div>
+
+             <button onclick="window.pasarAInventario('${c.fila}')" class="w-full mt-auto bg-[#001e50] text-white font-bold py-3 rounded-lg text-xs hover:bg-blue-900 shadow-sm flex items-center justify-center gap-2">
+                <i class="ph-bold ph-check"></i> Marcar como "Listo para Entrega"
+             </button>
+           </div>`;
+       }).join('');
    }
 };
 
@@ -1025,6 +1083,30 @@ window.renderizarListaChats = function() {
 window.renderizarContactos = function() {
     const contenedor = document.getElementById('view-contactos');
     if (!contenedor) return;
+
+    // 1. Separamos el buscador de la lista para que el DOM no destruya el <input> al escribir
+    let contenedorLista = document.getElementById('contenedor-lista-contactos');
+    
+    if (!contenedorLista) {
+        // Si no existe, creamos la estructura base: Buscador estático + Contenedor de lista dinámico
+        contenedor.innerHTML = `
+        <div class="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 p-2.5">
+            <div class="relative">
+                <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                <input
+                    type="text"
+                    value="${window.escapeJS(window.filtroDirectorioChat || '')}"
+                    oninput="window.filtrarDirectorioChat(this.value)"
+                    placeholder="Buscar contacto o departamento..."
+                    class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-[11px] font-bold text-[#001e50] outline-none focus:ring-2 focus:ring-[#00b0f0]"
+                >
+            </div>
+        </div>
+        <div id="contenedor-lista-contactos"></div>`; // <-- Aquí se inyectarán solo los resultados
+        
+        contenedorLista = document.getElementById('contenedor-lista-contactos');
+    }
+
     const filtro = String(window.filtroDirectorioChat || '').toUpperCase().trim();
     const normalizarBusqueda = (txt) => String(txt || '')
         .toUpperCase()
@@ -1033,30 +1115,19 @@ window.renderizarContactos = function() {
         .replace(/[.\s_-]+/g, '');
     const filtroNormalizado = normalizarBusqueda(filtro);
     
-    // 1. Estructuramos a los usuarios por sus departamentos correspondientes
+    // Diccionario de usuarios con el nuevo departamento de Comerciales
     const departamentos = {
         "ENTREGAS": ["MANUEL.ARJONA", "ANTONIO.BERMEJO"],
         "TALLER": ["MANUEL.LOPEZ", "ALVARO.BELTRAN", "LORENA.LEOVEANU"],
         "RECAMBIOS": ["SERGIO.CABALLERO", "FERNANDO.CRESPO", "JAIME.JORGE", "FERNANDO.REMON", "ABRAHAM.CANIZARES"],
-        "BACKOFFICE": ["FATIMA.GARCIA", "GEMA.GOMEZ", "ALBERTO.GUTIERREZ", "RABAB.JAADAR", "RUBEN.GARCIA"]
+        "BACKOFFICE": ["FATIMA.GARCIA", "GEMA.GOMEZ", "ALBERTO.GUTIERREZ", "RABAB.JAADAR", "RUBEN.GARCIA"],
+        "COMERCIAL": ["ROBERTO.ABAD", "JORGE.AGUDO", "BLANCA.SANCHEZ", "ADRIA.HUGAS", "JAVIER.MARTINEZ", "MARINA.RODRIGUEZ", "ALBA.DORIA", "JOSEMARIA.MARTINEZ"]
     };
 
-    let htmlGenerado = `
-    <div class="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 p-2.5">
-        <div class="relative">
-            <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-            <input
-                type="text"
-                value="${window.escapeJS(window.filtroDirectorioChat || '')}"
-                oninput="window.filtrarDirectorioChat(this.value)"
-                placeholder="Buscar contacto o departamento..."
-                class="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-[11px] font-bold text-[#001e50] outline-none focus:ring-2 focus:ring-[#00b0f0]"
-            >
-        </div>
-    </div>`;
+    let htmlListaResultados = '';
     let totalCoincidencias = 0;
 
-    // 2. Recorremos cada departamento usando un bucle
+    // 2. Construimos solo el HTML de los contactos
     for (const [nombreDpto, usuarios] of Object.entries(departamentos)) {
         const rolDestino = nombreDpto.toLowerCase();
         const coincideDpto = filtro === '' ||
@@ -1064,6 +1135,7 @@ window.renderizarContactos = function() {
             rolDestino.includes(filtro) ||
             normalizarBusqueda(nombreDpto).includes(filtroNormalizado) ||
             normalizarBusqueda(rolDestino).includes(filtroNormalizado);
+        
         const usuariosFiltrados = filtro === ''
             ? usuarios
             : usuarios.filter(u => u.includes(filtro) || normalizarBusqueda(u).includes(filtroNormalizado));
@@ -1071,13 +1143,10 @@ window.renderizarContactos = function() {
         if (!coincideDpto && usuariosFiltrados.length === 0) continue;
         totalCoincidencias += (coincideDpto ? 1 : 0) + usuariosFiltrados.length;
         
-        // A) Dibujamos la cabecera del departamento
-        htmlGenerado += `<div class="bg-gray-200 text-[#001e50] text-[10px] font-black p-1.5 pl-3 uppercase tracking-widest mt-2 first:mt-0 shadow-inner">${nombreDpto}</div>`;
+        htmlListaResultados += `<div class="bg-gray-200 text-[#001e50] text-[10px] font-black p-1.5 pl-3 uppercase tracking-widest mt-2 first:mt-0 shadow-inner">${nombreDpto}</div>`;
         
-        // B) Dibujamos el botón especial para enviar mensajes a todo el grupo.
-        // Convertimos el nombre a minúsculas ('taller', 'entregas') para que coincida con los roles de tu base de datos.
         if (coincideDpto) {
-            htmlGenerado += `
+            htmlListaResultados += `
             <div class="p-3 border-b border-gray-300 bg-blue-50 hover:bg-blue-100 cursor-pointer text-xs font-black flex items-center gap-3 text-[#001e50] transition-colors" onclick="window.abrirChatEspecifico('${rolDestino}')">
                 <div class="w-8 h-8 rounded-full bg-[#001e50] flex items-center justify-center text-white text-sm shadow-sm">
                     <i class="ph-bold ph-users"></i>
@@ -1086,9 +1155,8 @@ window.renderizarContactos = function() {
             </div>`;
         }
 
-        // C) Dibujamos a los usuarios individuales pertenecientes a este departamento
         usuariosFiltrados.forEach(contacto => {
-            htmlGenerado += `
+            htmlListaResultados += `
             <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer text-xs font-bold flex items-center gap-3 text-gray-700 transition-colors" onclick="window.abrirChatEspecifico('${contacto}')">
                 <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[#001e50] text-[9px] font-black shadow-sm">${contacto.substring(0,2)}</div>
                 ${contacto}
@@ -1097,11 +1165,11 @@ window.renderizarContactos = function() {
     }
 
     if (totalCoincidencias === 0) {
-        htmlGenerado += `<div class="p-6 text-center text-[11px] font-bold text-gray-500">Sin resultados para "${window.escapeJS(window.filtroDirectorioChat || '')}"</div>`;
+        htmlListaResultados += `<div class="p-6 text-center text-[11px] font-bold text-gray-500">Sin resultados para "${window.escapeJS(window.filtroDirectorioChat || '')}"</div>`;
     }
 
-    // 3. Inyectamos todo el HTML construido de golpe en la pantalla
-    contenedor.innerHTML = htmlGenerado;
+    // 3. Inyectamos los resultados en el contenedor inferior, sin tocar el buscador superior
+    contenedorLista.innerHTML = htmlListaResultados;
 };
 
 window.filtrarDirectorioChat = function(valor) {
@@ -1249,9 +1317,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputChat) inputChat.addEventListener('keypress', function (e) { if (e.key === 'Enter') window.enviarMensajeGlobalUI(); });
 });
 // 🔥 Función mejorada para Entregas y Reagendamientos (Soporta Agenda y Tarjetas)
-window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda, fechaAgenda, horaAgenda) {
+window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda, fechaAgenda, horaAgenda, citaId) {
     let cocheC, cocheB, cocheA;
     let esDeAgendaSinDb = (fila === 'no_db');
+    const esDevolucion = String(modeloAgenda || '').toUpperCase().includes('DEVOLUCION') || String(modeloAgenda || '').toUpperCase().includes('DEVOLUCIÓN');
 
     // 1. Identificamos los datos dependiendo de si viene del Inventario o de una cita sin DB
     if (!esDeAgendaSinDb) {
@@ -1266,7 +1335,86 @@ window.preguntarSiEntregado = async function(fila, modeloAgenda, matriculaAgenda
         cocheA = 'S/B';
     }
 
-    // 2. Lanzamos la pregunta
+    // 2. Las devoluciones sin ficha no deben crear vehículo en inventario.
+    if (esDeAgendaSinDb && esDevolucion) {
+        const confirmar = await Swal.fire({
+            title: 'Completar Devolución',
+            html: `
+                <p class="text-sm text-gray-700">Esta devolución no pertenece al inventario interno.</p>
+                <p class="mt-2 text-sm text-gray-700">¿Quieres marcarla como completada y moverla al historial?</p>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, completar devolución',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!confirmar.isConfirmed) return;
+
+        try {
+            let idObjetivo = citaId || '';
+            if (!idObjetivo && Array.isArray(window.datosAgenda)) {
+                const matObj = String(matriculaAgenda || '').replace(/\s/g, '').toUpperCase();
+                const fechaObj = String(fechaAgenda || '').trim();
+                const horaObj = String(horaAgenda || '').replace('h', '').trim();
+                const candidata = window.datosAgenda.find(c => {
+                    const matCita = String(c?.matricula || '').replace(/\s/g, '').toUpperCase();
+                    const mismaMat = matObj && matCita && matObj === matCita;
+                    if (!mismaMat) return false;
+                    if (!c?.fechaHora) return true;
+                    const f = new Date(c.fechaHora);
+                    if (isNaN(f.getTime())) return true;
+                    const fechaTxt = f.toLocaleDateString('es-ES');
+                    const horaTxt = `${f.getHours()}:00`;
+                    const mismaFecha = !fechaObj || fechaTxt === fechaObj;
+                    const mismaHora = !horaObj || horaTxt === horaObj;
+                    return mismaFecha && mismaHora;
+                });
+                idObjetivo = candidata?.id || '';
+            }
+
+            if (!idObjetivo) {
+                Swal.fire('Aviso', 'No se ha podido localizar la cita para marcarla automáticamente. Ábrela desde Agenda y vuelve a confirmar.', 'warning');
+                return;
+            }
+
+            const tsEntrega = typeof window.obtenerTimestamp === 'function' ? window.obtenerTimestamp() : Date.now();
+            const fechaEntregaTexto = typeof window.formatearFechaES === 'function' ? window.formatearFechaES(tsEntrega) : new Date(tsEntrega).toLocaleDateString('es-ES');
+
+            await window.updateDoc(window.doc(window.db, 'citas_agenda', idObjetivo), {
+                estado: 'confirmada',
+                entregado: true,
+                fechaEntrega: tsEntrega,
+                fechaEntregaTexto,
+                tipoFinalizacion: 'DEVOLUCION'
+            });
+
+            if (typeof window.registrarMovimientoHistorial === 'function') {
+                await window.registrarMovimientoHistorial({
+                    tipo: 'DEVOLUCION',
+                    citaId: idObjetivo,
+                    vehiculoId: null,
+                    matricula: matriculaAgenda || 'S/M',
+                    bastidor: 'S/D',
+                    modelo: modeloAgenda || 'DEVOLUCION',
+                    detalle: 'Devolucion completada desde agenda sin tarjeta de vehiculo'
+                });
+            }
+
+            Swal.fire('Devolución completada', 'Se ha marcado en verde y enviada al historial.', 'success');
+            if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+            if (typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes();
+            return;
+        } catch (errorDevolucion) {
+            console.error('Error al completar devolución sin inventario:', errorDevolucion);
+            Swal.fire('Error', 'No se pudo completar la devolución.', 'error');
+            return;
+        }
+    }
+
+    // 3. Lanzamos la pregunta
     if (esDeAgendaSinDb) {
         const confirmacionAlta = await Swal.fire({
             title: 'Vehículo no encontrado',

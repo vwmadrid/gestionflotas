@@ -52,6 +52,88 @@ window.copiarAlPortapapeles = function(texto) {
         Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Fallo al copiar', showConfirmButton: false, timer: 1500 });
     });
 };
+
+window.toggleAgendaClienteUrgente = async function(idVehiculo, estadoActual) {
+    const estadoNormalizado = String(estadoActual || '').toLowerCase() === 'true';
+    const activar = !estadoNormalizado;
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: activar ? 'Activando agenda mañana...' : 'Desactivando agenda mañana...',
+        showConfirmButton: false,
+        timer: 900
+    });
+
+    const cocheLocal = Array.isArray(todosLosCoches)
+        ? todosLosCoches.find((c) => c && c.fila === idVehiculo)
+        : null;
+    const estadoAnterior = cocheLocal ? cocheLocal.agendaClienteUrgente : undefined;
+
+    // Refresco optimista para que el usuario vea el cambio sin esperar al snapshot.
+    if (cocheLocal) {
+        cocheLocal.agendaClienteUrgente = activar;
+        cocheLocal.agendaClienteUrgenteTs = Date.now();
+        cocheLocal.agendaClienteUrgenteBy = window.usuarioActivo || 'SISTEMA';
+
+        if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+        if (typeof window.renderLogistica === 'function' && window.tabActiva === 'logistica') window.renderLogistica();
+    }
+
+    try {
+        if (!window.updateDoc || !window.doc || !window.db) {
+            throw new Error('Firebase no inicializado para escritura.');
+        }
+
+        await window.updateDoc(window.doc(window.db, 'vehiculos', idVehiculo), {
+            agendaClienteUrgente: activar,
+            agendaClienteUrgenteTs: Date.now(),
+            agendaClienteUrgenteBy: window.usuarioActivo || 'SISTEMA'
+        });
+
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: activar ? 'Agenda mañana habilitada' : 'Agenda mañana desactivada',
+            showConfirmButton: false,
+            timer: 1700
+        });
+    } catch (e) {
+        if (cocheLocal) {
+            cocheLocal.agendaClienteUrgente = estadoAnterior;
+            if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+            if (typeof window.renderLogistica === 'function' && window.tabActiva === 'logistica') window.renderLogistica();
+        }
+
+        console.error('No se pudo actualizar agendaClienteUrgente', e);
+        const esPermiso = String(e && (e.code || e.message) || '').toLowerCase().includes('permission');
+        Swal.fire(
+            'Error',
+            esPermiso
+                ? 'La app ya no restringe por departamento, pero Firebase está rechazando la escritura de este usuario (permission-denied).'
+                : 'No se pudo actualizar el permiso de agenda urgente.',
+            'error'
+        );
+    }
+};
+
+if (!window.__bindAgendaUrgenteDelegado) {
+    window.__bindAgendaUrgenteDelegado = true;
+    document.addEventListener('click', function(event) {
+        const boton = event.target.closest('[data-toggle-agenda-urgente="1"]');
+        if (!boton) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const idVehiculo = boton.getAttribute('data-id-vehiculo') || '';
+        const estado = boton.getAttribute('data-estado-urgente') || 'false';
+        if (!idVehiculo || typeof window.toggleAgendaClienteUrgente !== 'function') return;
+
+        window.toggleAgendaClienteUrgente(idVehiculo, estado);
+    }, true);
+}
 // ==========================================
 // 🚛 GESTOR DE PEDIDOS A CAMPA
 // ==========================================
@@ -144,6 +226,7 @@ window.mostrarAvisoPedidosHoySiOSi = function() {
 window.subirArchivoConReintento = async function(file, opciones) {
     const opts = opciones || {};
     const maxIntentos = Number(opts.maxIntentos || 3);
+    const timeoutMs = Number(opts.timeoutMs || 20000);
 
     const leerBase64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -154,16 +237,20 @@ window.subirArchivoConReintento = async function(file, opciones) {
 
     let ultimoError = null;
     for (let intento = 1; intento <= maxIntentos; intento++) {
+        let timeoutId = null;
         try {
+            const controller = new AbortController();
+            timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
             const res = await fetch('https://script.google.com/macros/s/AKfycbxec72BCUB3fA_ZtBAe8Zs7dqE00MScDbCGSqeQguIVHlH6S8q0vqNBbtGwk_1vPeNYjw/exec', {
                 method: 'POST',
+                signal: controller.signal,
                 body: JSON.stringify({
                     base64: leerBase64,
                     fileName: file.name,
                     mimeType: file.type
                 })
             });
-
             if (!res.ok) throw new Error(`Respuesta no valida (${res.status})`);
             const data = await res.json();
             const url = data?.url || data?.fileUrl || data?.link || null;
@@ -171,10 +258,16 @@ window.subirArchivoConReintento = async function(file, opciones) {
 
             return { ok: true, url, intentos: intento, error: null };
         } catch (errorSubida) {
-            ultimoError = errorSubida;
+            if (errorSubida?.name === 'AbortError') {
+                ultimoError = new Error('Tiempo de espera agotado al subir el archivo.');
+            } else {
+                ultimoError = errorSubida;
+            }
             if (intento < maxIntentos) {
                 await new Promise(resolve => setTimeout(resolve, 600 * intento));
             }
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
         }
     }
 
@@ -262,30 +355,10 @@ window.marcarComoPedido = async function(id) {
     }
 };
 
-window.marcarComoPedido = async function(id) {
-    try {
-        // Ocultamos visualmente el elemento de la lista al instante para que la experiencia sea muy rápida
-        let divCoche = document.getElementById(`coche-pedido-${id}`);
-        if (divCoche) {
-            divCoche.style.opacity = '0';
-            setTimeout(() => divCoche.style.display = 'none', 300);
-        }
-
-        // Actualizamos en la base de datos de Firebase
-        await window.updateDoc(window.doc(window.db, "vehiculos", id), {
-            cochePedido: true
-        });
-
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Marcado como pedido', showConfirmButton: false, timer: 1500 });
-        
-    } catch (error) {
-        console.error("Error al marcar pedido", error);
-        Swal.fire('Error', 'No se pudo guardar la información en la base de datos.', 'error');
-    }
-};
 window.renderizarVistas = function() {
    let activos = todosLosCoches.filter(c => c.pasoAInventario !== false && c.entregado !== true && c.entregado !== "true");
    let inventario = todosLosCoches.filter(c => (c.pasoAInventario === true || c.pasoAInventario === "true") && (c.entregado !== true && c.entregado !== "true"));
+   
    let filtrados = activos.filter(c => {
       let enT = c.enTaller && !c.finTaller; 
       let enR = c.enRecambios && !c.finRecambios;
@@ -299,6 +372,14 @@ window.renderizarVistas = function() {
       return true;
    });
 
+   // 🔥 NUEVO: ORDENACIÓN INTELIGENTE (Los listos van arriba del todo)
+   filtrados.sort((a, b) => {
+       const esListo = (c) => c.pasoAInventario === false && !!c.fechaDoc && !!c.fechaTransporte && !!c.fechaPreparacion && !(c.enTaller && !c.finTaller) && !(c.enRecambios && !c.finRecambios);
+       let aListo = esListo(a) ? 1 : 0;
+       let bListo = esListo(b) ? 1 : 0;
+       return bListo - aListo; // Coloca los 1 (Listos) antes que los 0
+   });
+
    if (modoVistaActual === 'tarjetas') {
        let div = document.getElementById('contenedorTarjetas');
        if (filtrados.length === 0) {
@@ -310,22 +391,23 @@ window.renderizarVistas = function() {
        window.renderTablaModoExcel(filtrados);
    }
 
-   // 🔥 NUEVO: DESBLOQUEO FORZADO PARA BACKOFFICE
-   // Si el usuario es de backoffice, reactivamos los botones de peticiones
+   // DESBLOQUEO FORZADO PARA BACKOFFICE Y ADMIN
    if (window.rolActivo === 'backoffice' || window.rolActivo === 'admin') {
-       // Usamos un pequeño retardo para asegurar que el navegador ya ha terminado de pintar los botones
        setTimeout(() => {
-           // Buscamos cualquier botón o celda de tabla que contenga la llamada a "pedirInst"
            const botonesBloqueados = document.querySelectorAll('button[onclick*="pedirInst"], td[onclick*="pedirInst"]');
-           
            botonesBloqueados.forEach(btn => {
-               btn.disabled = false;               // Quitamos el estado deshabilitado del navegador
-               btn.style.pointerEvents = 'auto';   // Permitimos que el clic funcione
-               btn.style.cursor = 'pointer';       // Restauramos el cursor de la manita
-               btn.style.opacity = '1';            // Le devolvemos el color original si estaba atenuado
-               btn.classList.remove('cursor-not-allowed', 'opacity-50'); // Limpiamos clases de bloqueo de Tailwind si las hubiera
+               btn.disabled = false;               
+               btn.style.pointerEvents = 'auto';   
+               btn.style.cursor = 'pointer';       
+               btn.style.opacity = '1';            
+               btn.classList.remove('cursor-not-allowed', 'opacity-50'); 
            });
        }, 50);
+   }
+
+   // LLAMADA AL RADAR DE COCHES LISTOS
+   if (typeof window.comprobarCochesListosParaConcesionario === 'function') {
+       window.comprobarCochesListosParaConcesionario();
    }
 };
 window.renderTarjetaCompacta = function(c) {
@@ -341,7 +423,14 @@ window.renderTarjetaCompacta = function(c) {
   let tieneCita = !!c.fechaCita;
 
   let isAlerta = tieneCita && (enT || enR);
-  let borderAlerta = isAlerta ? 'border-l-8 border-red-600 bg-red-50/50' : 'border-l-8 border-[#001e50]';
+  
+  // 🔥 DETECTAMOS SI EL COCHE ESTÁ LISTO
+  let isListo = c.pasoAInventario === false && !!c.fechaDoc && !!c.fechaTransporte && !!c.fechaPreparacion && !enT && !enR;
+
+  // MODIFICAMOS EL COLOR DEL BORDE Y LA SOMBRA
+  let borderAlerta = isAlerta ? 'border-l-8 border-red-600 bg-red-50/50' : 
+                     (isListo ? 'border-l-8 border-emerald-500 bg-emerald-50/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'border-l-8 border-[#001e50]');
+                     
   let prog = window.calcularProgreso(c);
 
   let bTaller = c.finTaller ? `<span class="status-btn bg-emerald-100 text-emerald-800"><i class="ph-bold ph-check"></i> Tall. OK</span>` : c.enTaller ? `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-200 shadow-sm"><i class="ph-bold ph-plus"></i> Añadir Petición</button>` : `<button onclick="window.pedirInst(this, '${c.fila}', 'taller')" class="status-btn bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm">Taller <i class="ph-bold ph-plus"></i></button>`;
@@ -357,60 +446,75 @@ window.renderTarjetaCompacta = function(c) {
   txtRecambiosInfo += arrRecambios.map(p => `<div class="text-[9px] leading-tight text-gray-600 mt-1 border-l-2 border-teal-500 pl-1.5"><b class="text-teal-700">${p.fecha}:</b> ${p.motivo} ${p.url ? `<a href="${p.url}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-1" title="Ver Acta"><i class="ph-bold ph-paperclip"></i></a>` : ''}</div>`).join('');
 
   let burbuja = typeof window.obtenerBurbujaChat === 'function' ? window.obtenerBurbujaChat(c.chatData) : '';
+  
+  // 🔥 ETIQUETAS VISUALES DE ALERTA O LISTO
   let htmlAlerta = isAlerta ? `<div class="bg-red-600 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-warning-circle text-sm"></i> ¡URGENTE! TIENE CITA EL ${c.fechaCita}</div>` : '';
-    let notaAgendaLimpia = String(c.notaAgenda || '').replace(/[<>]/g, '').trim();
-    let htmlNotaAgenda = notaAgendaLimpia ? `<div class="text-[10px] bg-yellow-50 border border-yellow-200 text-yellow-900 px-2 py-1.5 rounded mb-3 font-bold"><i class="ph-bold ph-note"></i> Nota Agenda: ${notaAgendaLimpia}</div>` : '';
+  if (isListo && !isAlerta) {
+      htmlAlerta = `<div class="bg-emerald-500 text-white text-[10px] font-black px-3 py-2 rounded flex items-center justify-center gap-1.5 animate-pulse shadow-md w-full mb-3"><i class="ph-bold ph-star text-sm"></i> ¡LISTO PARA CONCESIONARIO!</div>`;
+  }
 
-    let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
-    let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion');
+  let notaAgendaLimpia = String(c.notaAgenda || '').replace(/[<>]/g, '').trim();
+  let htmlNotaAgenda = notaAgendaLimpia ? `<div class="text-[10px] bg-yellow-50 border border-yellow-200 text-yellow-900 px-2 py-1.5 rounded mb-3 font-bold"><i class="ph-bold ph-note"></i> Nota Agenda: ${notaAgendaLimpia}</div>` : '';
+    let urgenteActivo = c.agendaClienteUrgente === true || c.agendaClienteUrgente === 'true';
+    let chipAgendaUrgente = urgenteActivo
+            ? `<button type="button" data-toggle-agenda-urgente="1" data-id-vehiculo="${c.fila}" data-estado-urgente="true" onclick="window.toggleAgendaClienteUrgente('${c.fila}', true)" class="bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase tracking-widest cursor-pointer"><i class="ph-bold ph-lightning"></i> Agenda mañana ON</button>`
+            : `<button type="button" data-toggle-agenda-urgente="1" data-id-vehiculo="${c.fila}" data-estado-urgente="false" onclick="window.toggleAgendaClienteUrgente('${c.fila}', false)" class="bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase tracking-widest cursor-pointer"><i class="ph-bold ph-lightning-slash"></i> Agenda mañana OFF</button>`;
 
-    if (esBackoffice) {
-        return `
-        <div class="card-mini ${borderAlerta} p-5 fila-coche h-full flex flex-col">
-            ${htmlAlerta}
-            <div class="flex justify-between items-start mb-2 gap-2">
-                <div class="min-w-0 pr-2 flex-1">
-                    <h3 class="font-black text-base text-[#001e50] truncate uppercase">${c.C}</h3>
-                    <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
-                </div>
-                <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-9 h-9 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm" title="Chat interno"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
-            </div>
+  let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+  let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion');
 
-            <div class="grid grid-cols-2 gap-2 mb-3">
-                <div class="text-[10px] bg-gray-50 border border-gray-200 text-gray-600 px-2 py-1.5 rounded font-bold truncate"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</div>
-                <div class="text-[10px] bg-gray-50 border border-gray-200 text-gray-600 px-2 py-1.5 rounded font-bold truncate"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</div>
-            </div>
+  if (esBackoffice) {
+      return `
+      <div class="card-mini ${borderAlerta} p-5 fila-coche h-full flex flex-col">
+          ${htmlAlerta}
+          <div class="flex justify-between items-start mb-2 gap-2">
+              <div class="min-w-0 pr-2 flex-1">
+                  <h3 class="font-black text-base text-[#001e50] truncate uppercase">${c.C}</h3>
+                  <p class="text-[10px] font-bold text-gray-400 tracking-widest mt-1">VIN: ${c.A} | MAT: ${c.B}</p>
+              </div>
+              <button onclick="window.abrirChat('${c.fila}', '${mS}', '${maS}', '${chatJson}')" class="w-9 h-9 relative bg-[#25D366] text-white rounded-full flex items-center justify-center hover:bg-[#128C7E] shadow-sm" title="Chat interno"><i class="ph-fill ph-whatsapp-logo text-lg"></i>${burbuja}</button>
+          </div>
 
-            ${htmlNotaAgenda}
+          <div class="grid grid-cols-2 gap-2 mb-3">
+              <div class="text-[10px] bg-gray-50 border border-gray-200 text-gray-600 px-2 py-1.5 rounded font-bold truncate"><i class="ph-bold ph-buildings"></i> ${c.renting || 'Renting'}</div>
+              <div class="text-[10px] bg-gray-50 border border-gray-200 text-gray-600 px-2 py-1.5 rounded font-bold truncate"><i class="ph-bold ph-truck"></i> ${c.agencia || 'Agencia'}</div>
+          </div>
 
-            <div class="flex items-start justify-between mb-3 gap-2 overflow-hidden">
-                <div class="flex flex-col gap-1.5 min-w-0 flex-1">
-                    <button onclick="window.copiarAlPortapapeles('${escB}')" title="Copiar matrícula" class="cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
-                        <span class="truncate">${c.B}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
-                    </button>
-                    <button onclick="window.copiarAlPortapapeles('${escA}')" title="Copiar bastidor" class="cursor-pointer hover:bg-gray-100 transition-colors bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
-                        <span class="truncate">VIN: ${c.A}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
-                    </button>
-                </div>
-                <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
-                    ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}
-                    ${c.cochePedido ? `<div class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase tracking-widest"><i class="ph-bold ph-truck"></i> Pedido</div>` : ''}
-                </div>
-            </div>
+          ${htmlNotaAgenda}
 
-            <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden flex-shrink-0">
-                 <div class="${prog.color} h-2 transition-all duration-500" style="width: ${prog.pct}%"></div>
-                 <span class="absolute inset-0 flex items-center justify-center text-[7px] font-black text-gray-800 drop-shadow-md mix-blend-overlay">${prog.pct}%</span>
-            </div>
+          <div class="flex items-start justify-between mb-3 gap-2 overflow-hidden">
+              <div class="flex flex-col gap-1.5 min-w-0 flex-1">
+                  <button onclick="window.copiarAlPortapapeles('${escB}')" title="Copiar matrícula" class="cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+                      <span class="truncate">${c.B}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+                  </button>
+                  <button onclick="window.copiarAlPortapapeles('${escA}')" title="Copiar bastidor" class="cursor-pointer hover:bg-gray-100 transition-colors bg-white border border-gray-300 text-gray-700 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
+                      <span class="truncate">VIN: ${c.A}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
+                  </button>
+              </div>
+              <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+                  ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}
+                  ${c.cochePedido ? `<div class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase tracking-widest"><i class="ph-bold ph-truck"></i> Pedido</div>` : ''}
+                  ${chipAgendaUrgente}
+              </div>
+          </div>
 
-            <div class="flex flex-col gap-2 mt-auto">
-                <div class="flex gap-2 w-full">
-                    <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
-                    <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
-                </div>
-            </div>
-        </div>`;
-    }
+          <button data-toggle-agenda-urgente="1" data-id-vehiculo="${c.fila}" data-estado-urgente="${urgenteActivo ? 'true' : 'false'}" onclick="window.toggleAgendaClienteUrgente('${c.fila}', ${urgenteActivo ? 'true' : 'false'})" style="pointer-events:auto;" class="w-full mb-3 ${urgenteActivo ? 'bg-fuchsia-600 hover:bg-fuchsia-700' : 'bg-slate-700 hover:bg-slate-800'} text-white px-3 py-2 rounded font-black text-[10px] uppercase tracking-widest shadow-sm transition-colors">
+              ${urgenteActivo ? 'Desactivar agenda mañana cliente' : 'Habilitar agenda mañana cliente'}
+          </button>
+
+          <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden flex-shrink-0">
+               <div class="${prog.color} h-2 transition-all duration-500" style="width: ${prog.pct}%"></div>
+               <span class="absolute inset-0 flex items-center justify-center text-[7px] font-black text-gray-800 drop-shadow-md mix-blend-overlay">${prog.pct}%</span>
+          </div>
+
+          <div class="flex flex-col gap-2 mt-auto">
+              <div class="flex gap-2 w-full">
+                  <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
+                  <div class="w-1/2 flex flex-col">${bRecambios} ${txtRecambiosInfo}</div>
+              </div>
+          </div>
+      </div>`;
+  }
 
   return `
   <!-- Añadimos h-full flex flex-col para que ocupe todo el alto de su celda y no flote -->
@@ -439,7 +543,6 @@ window.renderTarjetaCompacta = function(c) {
 
     ${htmlNotaAgenda}
 
-    <!-- 🔧 ZONA REPARADA: Matrícula, Bastidor y Etiquetas -->
     <div class="flex items-start justify-between mb-3 gap-2 overflow-hidden">
        <!-- Botones clicables con restricción de ancho (truncate) -->
        <div class="flex flex-col gap-1.5 min-w-0 flex-1">
@@ -455,8 +558,13 @@ window.renderTarjetaCompacta = function(c) {
        <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
            ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}
            ${c.cochePedido ? `<div class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase tracking-widest"><i class="ph-bold ph-truck"></i> Pedido</div>` : ''}
+           ${chipAgendaUrgente}
        </div>
     </div>
+
+    <button data-toggle-agenda-urgente="1" data-id-vehiculo="${c.fila}" data-estado-urgente="${urgenteActivo ? 'true' : 'false'}" onclick="window.toggleAgendaClienteUrgente('${c.fila}', ${urgenteActivo ? 'true' : 'false'})" style="pointer-events:auto;" class="w-full mb-3 ${urgenteActivo ? 'bg-fuchsia-600 hover:bg-fuchsia-700' : 'bg-slate-700 hover:bg-slate-800'} text-white px-3 py-2 rounded font-black text-[10px] uppercase tracking-widest shadow-sm transition-colors">
+        ${urgenteActivo ? 'Desactivar agenda mañana cliente' : 'Habilitar agenda mañana cliente'}
+    </button>
 
     <!-- Barra de progreso -->
     <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden flex-shrink-0">
@@ -1113,6 +1221,11 @@ window.marcarComoEntregado = function(id, opciones) {
                     }
                     // Refrescamos la pantalla al final de todo el proceso
                     if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+                    
+                    // 🔥 PARCHE M2: Forzamos la recarga de la agenda si se ejecuta desde el iPhone de los entregadores
+                    if (document.body.dataset.vista === 'movil' && typeof window.cargarEntregasHoy === 'function') {
+                        window.cargarEntregasHoy();
+                    }
                 });
             };
 
@@ -1245,15 +1358,89 @@ window.gestionarTraslado = async function(id) {
     }
 };
 
-window.pasarAInventario = async function(id) {
-    await window.updateDoc(window.doc(window.db, "vehiculos", id), { pasoAInventario: true });
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Listo para entrega', showConfirmButton: false, timer: 1500 });
+window.pasarAInventario = function(id) {
+    // 1. Lanzamos la pregunta antes de hacer nada
+    Swal.fire({
+        title: '¿Pasar a Inventario?',
+        text: 'El vehículo saldrá de la vista de Logística y estará disponible para agendarle una cita. ¿Estás seguro?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#001e50', // Azul corporativo
+        cancelButtonColor: '#6b7280',  // Gris neutro
+        confirmButtonText: 'Sí, pasar a inventario',
+        cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+        // 2. Ejecutamos el cambio solo si se confirma
+        if (result.isConfirmed) {
+            try {
+                Swal.fire({ title: 'Moviendo vehículo...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+                // Actualizamos la base de datos
+                await window.updateDoc(window.doc(window.db, "vehiculos", id), { pasoAInventario: true });
+                
+                // Mostramos el mensaje de éxito discreto
+                Swal.fire({ 
+                    toast: true, 
+                    position: 'top-end', 
+                    icon: 'success', 
+                    title: 'Listo para entrega', 
+                    showConfirmButton: false, 
+                    timer: 1500 
+                });
+
+                // Actualizamos la vista para que el coche desaparezca de esta pestaña
+                if (typeof window.renderizarVistas === 'function') {
+                    window.renderizarVistas();
+                }
+
+            } catch (error) {
+                console.error("Error al pasar a inventario:", error);
+                Swal.fire('Error', 'Hubo un problema al actualizar la base de datos.', 'error');
+            }
+        }
+    });
 };
 
-window.marcarPaso = async function(id, campo) {
-    let updateData = {}; updateData[campo] = new Date().toLocaleDateString('es-ES');
-    await window.updateDoc(window.doc(window.db, "vehiculos", id), updateData);
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Fase completada', showConfirmButton: false, timer: 1500 });
+window.marcarPaso = function(id, campo) {
+    // 1. Lanzamos la ventana de confirmación ANTES de tocar la base de datos
+    Swal.fire({
+        title: '¿Confirmar acción?',
+        text: '¿Estás seguro de marcar esta fase logística como completada? Se registrará la fecha de hoy.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#001e50', // Tu color corporativo azul
+        cancelButtonColor: '#6b7280',  // Gris neutro para cancelar
+        confirmButtonText: 'Sí, completar',
+        cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+        // 2. Solo si el usuario hace clic en "Sí, completar", ejecutamos el guardado
+        if (result.isConfirmed) {
+            try {
+                Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+                let updateData = {}; 
+                updateData[campo] = new Date().toLocaleDateString('es-ES');
+                
+                await window.updateDoc(window.doc(window.db, "vehiculos", id), updateData);
+                
+                Swal.fire({ 
+                    toast: true, 
+                    position: 'top-end', 
+                    icon: 'success', 
+                    title: 'Fase completada', 
+                    showConfirmButton: false, 
+                    timer: 1500 
+                });
+
+                // Forzamos que la pantalla se refresque para actualizar los botones
+                if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+
+            } catch (error) {
+                console.error("Error al marcar el paso logístico:", error);
+                Swal.fire('Error', 'Hubo un problema al guardar la información en Firebase.', 'error');
+            }
+        }
+    });
 };
 
 window.ejecutarDpto = async function(tipo, id, fin) {
@@ -1641,70 +1828,105 @@ window.renderEntregados = function() {
 }
 
 window.obtenerMovimientosHistorial = function() {
-   if (Array.isArray(window.movimientosHistorial) && window.movimientosHistorial.length > 0) {
-       return window.movimientosHistorial.map(m => {
-           const tipo = String(m.tipo || m.tipoFinalizacion || '').toUpperCase();
-           const ts = Number(m.ts || m.fechaEntregaTs || 0) || 0;
-           let fechaTxt = m.fechaTexto || m.fechaEntrega || '';
-           if (!fechaTxt && ts > 0) {
-               const d = new Date(ts);
-               if (!isNaN(d.getTime())) fechaTxt = d.toLocaleDateString('es-ES');
-           }
+    // 1. Procesar el nuevo historial de Firebase (El Presente - Julio)
+    let listaNuevos = [];
+    if (Array.isArray(window.movimientosHistorial) && window.movimientosHistorial.length > 0) {
+        listaNuevos = window.movimientosHistorial.map(m => {
+            const tipo = String(m.tipo || m.tipoFinalizacion || '').toUpperCase();
+            const ts = Number(m.ts || m.fechaEntregaTs || 0) || 0;
+            let fechaTxt = m.fechaTexto || m.fechaEntrega || '';
+            if (!fechaTxt && ts > 0) {
+                const d = new Date(ts);
+                if (!isNaN(d.getTime())) fechaTxt = d.toLocaleDateString('es-ES');
+            }
 
-           return {
-               fila: m.vehiculoId || m.id || ('mov_' + Math.random().toString(36).slice(2)),
-               C: m.modelo || 'MOVIMIENTO',
-               A: m.bastidor || 'S/D',
-               B: m.matricula || 'S/M',
-               agente: m.usuario || m.agente || 'N/A',
-               entregador: m.usuario || m.agente || 'N/A',
-               renting: m.renting || '-',
-               fechaEntrega: fechaTxt || 'Completado',
-               fechaEntregaTs: ts,
-               tipoFinalizacion: tipo === 'TRASLADO' ? 'TRASLADO' : (tipo === 'DEVOLUCION' ? 'DEVOLUCION' : 'ENTREGA'),
-               concesionarioDestino: m.concesionarioDestino || null,
-               urlActaTraslado: m.urlActaTraslado || null,
-               esRegistroAgenda: !m.vehiculoId
-           };
-       });
-   }
+            return {
+                fila: m.vehiculoId || m.id || ('mov_' + Math.random().toString(36).slice(2)),
+                C: m.modelo || 'MOVIMIENTO',
+                A: m.bastidor || 'S/D',
+                B: m.matricula || 'S/M',
+                agente: m.usuario || m.agente || 'N/A',
+                entregador: m.usuario || m.agente || 'N/A',
+                renting: m.renting || '-',
+                fechaEntrega: fechaTxt || 'Completado',
+                fechaEntregaTs: ts,
+                tipoFinalizacion: tipo === 'TRASLADO' ? 'TRASLADO' : (tipo === 'DEVOLUCION' ? 'DEVOLUCION' : 'ENTREGA'),
+                concesionarioDestino: m.concesionarioDestino || null,
+                urlActaTraslado: m.urlActaTraslado || null,
+                urlActaDevolucion: m.urlActaDevolucion || null,
+                urlCartaPorte: m.urlCartaPorte || null,
+                recogidoPor: m.recogidoPor || '',
+                ubicacion: m.ubicacion || '',
+                fechaRecogida: m.fechaRecogida || '',
+                fechaReentregaRenting: m.fechaReentregaRenting || '',
+                esRegistroAgenda: !m.vehiculoId
+            };
+        });
+    }
 
-   let entregadosVehiculos = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
-   let devolucionesAgenda = (window.datosAgenda || []).filter(cita => {
-       let modelo = String(cita && cita.modelo ? cita.modelo : '').toUpperCase();
-       let esDevolucion = modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
-       return esDevolucion && (cita.entregado === true || cita.entregado === "true");
-   }).map(cita => {
-       let fechaTxt = cita.fechaEntregaTexto || '';
-       if (!fechaTxt && cita.fechaEntrega) {
-           let d = new Date(Number(cita.fechaEntrega));
-           if (!isNaN(d.getTime())) fechaTxt = d.toLocaleDateString('es-ES');
-       }
-       if (!fechaTxt && cita.fecha) {
-           let p = String(cita.fecha).split('-');
-           if (p.length === 3) fechaTxt = `${p[2]}/${p[1]}/${p[0]}`;
-       }
-       return {
-           fila: cita.id || ('cita_' + Math.random().toString(36).slice(2)),
-           C: cita.modelo || 'DEVOLUCIÓN',
-           A: cita.bastidor || 'S/D',
-           B: cita.matricula || 'S/M',
-           agente: cita.entregador || cita.agente || 'N/A',
-           renting: cita.renting || '-',
-           fechaEntrega: fechaTxt || 'Completado',
-           fechaEntregaTs: Number(cita.fechaEntrega || 0) || 0,
-           tipoFinalizacion: 'DEVOLUCION',
-           esRegistroAgenda: true
-       };
-   });
+    // 2. Procesar los vehículos antiguos ya entregados (El Pasado - Junio)
+    let entregadosVehiculos = todosLosCoches.filter(c => c.entregado === true || c.entregado === "true");
 
-   let combinado = entregadosVehiculos.concat(devolucionesAgenda);
-   combinado.sort((a, b) => {
-       const tsA = Number(a.fechaEntregaTs || 0) || 0;
-       const tsB = Number(b.fechaEntregaTs || 0) || 0;
-       return tsB - tsA;
-   });
-   return combinado;
+    // 3. Procesar las devoluciones antiguas desde la agenda
+    let devolucionesAgenda = (window.datosAgenda || []).filter(cita => {
+        let modelo = String(cita && cita.modelo ? cita.modelo : '').toUpperCase();
+        let esDevolucion = modelo.includes('DEVOLUCION') || modelo.includes('DEVOLUCIÓN');
+        let tipoFin = String(cita?.tipoFinalizacion || '').toUpperCase();
+        let cerrada = tipoFin === 'DEVOLUCION_CERRADA' || tipoFin === 'DEVOLUCION';
+        return esDevolucion && cerrada;
+    }).map(cita => {
+        let fechaTxt = cita.fechaEntregaTexto || '';
+        if (!fechaTxt && cita.fechaEntrega) {
+            let d = new Date(Number(cita.fechaEntrega));
+            if (!isNaN(d.getTime())) fechaTxt = d.toLocaleDateString('es-ES');
+        }
+        if (!fechaTxt && cita.fecha) {
+            let p = String(cita.fecha).split('-');
+            if (p.length === 3) fechaTxt = `${p[2]}/${p[1]}/${p[0]}`;
+        }
+        return {
+            fila: cita.id || ('cita_' + Math.random().toString(36).slice(2)),
+            C: cita.modelo || 'DEVOLUCIÓN',
+            A: cita.bastidor || 'S/D',
+            B: cita.matricula || 'S/M',
+            agente: cita.entregador || cita.agente || 'N/A',
+            renting: cita.renting || '-',
+            fechaEntrega: fechaTxt || 'Completado',
+            fechaEntregaTs: Number(cita.fechaEntrega || 0) || 0,
+            tipoFinalizacion: 'DEVOLUCION',
+            esRegistroAgenda: true
+        };
+    });
+
+    // 4. 🛡️ FILTRO DE CRUCE: Evitamos duplicar en pantalla coches que estén en ambas listas
+    let llavesNuevas = new Set();
+    listaNuevos.forEach(m => {
+        if (m.B && m.B !== 'S/M') llavesNuevas.add(String(m.B).replace(/\s/g, '').toUpperCase());
+        if (m.A && m.A !== 'S/D') llavesNuevas.add(String(m.A).replace(/\s/g, '').toUpperCase());
+    });
+
+    let antiguosSinDuplicar = entregadosVehiculos.filter(c => {
+        let mat = String(c.B || c.matricula || '').replace(/\s/g, '').toUpperCase();
+        let bas = String(c.A || c.bastidor || '').replace(/\s/g, '').toUpperCase();
+        return !llavesNuevas.has(mat) && !llavesNuevas.has(bas);
+    });
+
+    let devolucionesSinDuplicar = devolucionesAgenda.filter(c => {
+        let mat = String(c.B || '').replace(/\s/g, '').toUpperCase();
+        return !llavesNuevas.has(mat);
+    });
+
+    // 5. Unimos el Pasado y el Presente
+    let combinado = [...listaNuevos, ...antiguosSinDuplicar, ...devolucionesSinDuplicar];
+    
+    // 6. Ordenar cronológicamente (los más nuevos arriba)
+    combinado.sort((a, b) => {
+        const tsA = Number(a.fechaEntregaTs || 0) || 0;
+        const tsB = Number(b.fechaEntregaTs || 0) || 0;
+        return tsB - tsA;
+    });
+    
+    return combinado;
 };
 
 window.buscarEnHistorial = function() {
@@ -1756,6 +1978,19 @@ window.inyectarResultadosHistorial = function(resultados, contenedor, criterioTe
             ${c.urlActaTraslado ? `<a href="${c.urlActaTraslado}" target="_blank" class="text-[10px] text-blue-600 font-bold hover:underline mb-2 block"><i class="ph-bold ph-file-pdf"></i> Ver Acta de Traslado</a>` : ''}
         ` : '';
 
+        let infoDevolucion = esDevolucion ? `
+            <div class="mb-2 space-y-1">
+                ${c.recogidoPor ? `<p class="text-[10px] font-bold text-sky-700"><i class="ph-bold ph-user"></i> Recogido por: ${c.recogidoPor}</p>` : ''}
+                ${c.ubicacion ? `<p class="text-[10px] font-bold text-sky-700"><i class="ph-bold ph-map-pin"></i> Ubicación: ${c.ubicacion}</p>` : ''}
+                ${c.fechaRecogida ? `<p class="text-[10px] font-bold text-sky-700"><i class="ph-bold ph-calendar"></i> Recogida cliente: ${window.formatearFechaDevolucionRenting ? window.formatearFechaDevolucionRenting(c.fechaRecogida) : c.fechaRecogida}</p>` : ''}
+                ${c.fechaReentregaRenting ? `<p class="text-[10px] font-bold text-sky-700"><i class="ph-bold ph-arrow-counter-clockwise"></i> Reentrega renting: ${window.formatearFechaDevolucionRenting ? window.formatearFechaDevolucionRenting(c.fechaReentregaRenting) : c.fechaReentregaRenting}</p>` : ''}
+            </div>
+            <div class="flex gap-2 flex-wrap mb-2">
+                ${c.urlActaDevolucion ? `<a href="${c.urlActaDevolucion}" target="_blank" class="text-[10px] text-blue-600 font-bold hover:underline"><i class="ph-bold ph-file-pdf"></i> Acta devolución</a>` : ''}
+                ${c.urlCartaPorte ? `<a href="${c.urlCartaPorte}" target="_blank" class="text-[10px] text-blue-600 font-bold hover:underline"><i class="ph-bold ph-file-text"></i> Carta de porte</a>` : ''}
+            </div>
+        ` : '';
+
         return `
         <div class="bg-white rounded-xl ${esTraslado ? 'border-l-8 border-orange-500' : (esDevolucion ? 'border-l-8 border-sky-600' : 'border-l-8 border-emerald-500')} p-5 shadow-sm mb-3 relative overflow-hidden">
             <div class="flex items-start justify-between gap-2 mb-1">
@@ -1765,6 +2000,7 @@ window.inyectarResultadosHistorial = function(resultados, contenedor, criterioTe
             <p class="text-[10px] font-bold text-gray-400 tracking-widest mb-2">VIN: ${c.A} | MAT: ${c.B}</p>
             
             ${infoTraslado}
+            ${infoDevolucion}
             
             <p class="font-black ${esTraslado ? 'text-orange-600' : (esDevolucion ? 'text-sky-700' : 'text-emerald-600')} text-sm mb-2"><i class="ph-bold ph-calendar-check"></i> ${c.fechaEntrega || 'Completado'}</p>
             <div class="flex gap-2 text-[9px] font-bold text-gray-400 uppercase mb-4">
@@ -1878,4 +2114,47 @@ window.revertirLogistica = function(id) {
             }
         }
     });
+};
+// ==========================================
+// 🔔 RADAR: COCHES LISTOS PARA PASAR A INVENTARIO
+// ==========================================
+window.comprobarCochesListosParaConcesionario = function() {
+    // 1. Filtro estricto: SOLO los Entregadores pueden ver este aviso
+    let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+    if (rolLimpio !== 'entregas') return; // Si no es "entregas", el código se detiene aquí y no hace nada más
+
+    // 2. Filtramos los coches que cumplen TODAS las condiciones exactas
+    let cochesListos = todosLosCoches.filter(c => {
+        let enLogistica = c.pasoAInventario === false;
+        
+        let docOk = !!c.fechaDoc; 
+        let transOk = !!c.fechaTransporte;
+        let prepOk = !!c.fechaPreparacion;
+
+        let retenidoTaller = c.enTaller && !c.finTaller;
+        let retenidoRecambios = c.enRecambios && !c.finRecambios;
+
+        // Devuelve 'true' solo si tiene todo OK y ningún bloqueo
+        return enLogistica && docOk && transOk && prepOk && !retenidoTaller && !retenidoRecambios;
+    });
+
+    // 3. Si hay coches listos y no hemos mostrado la alerta todavía, la lanzamos
+    if (cochesListos.length > 0 && !window.alertaCochesListosMostrada) {
+        window.alertaCochesListosMostrada = true; // Candado para que no salga infinitamente
+
+        let listaHtml = cochesListos.map(c => `<li><i class="ph-bold ph-car"></i> <b>${c.B || c.matricula || 'S/M'}</b> - ${c.C || c.modelo}</li>`).join('');
+
+        Swal.fire({
+            title: '🔔 ¡Vehículos listos!',
+            html: `
+                <p class="mb-3 text-sm text-gray-600 text-left">Tienes <b>${cochesListos.length}</b> vehículo(s) en Logística Renting con la preparación terminada. Pásalos a concesionario:</p>
+                <ul class="text-left text-sm bg-blue-50 border border-blue-200 rounded-lg p-3 max-h-40 overflow-y-auto custom-scrollbar text-[#001e50] space-y-1">
+                    ${listaHtml}
+                </ul>
+            `,
+            icon: 'info',
+            confirmButtonColor: '#00b0f0',
+            confirmButtonText: 'Entendido, voy a revisarlos'
+        });
+    }
 };
