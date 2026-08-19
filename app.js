@@ -562,6 +562,17 @@ window.cambiarPestana = function(pestana) {
             if (typeof window.cambiarModoVisualizacion === 'function') window.cambiarModoVisualizacion(modoVistaActual);
         } else if (pestana === 'global-taller' || pestana === 'global-recambios') {
             const c = document.getElementById('contenedorTarjetas'); if (c) c.style.display = 'grid';
+            const esT = pestana === 'global-taller';
+            const coches = todosLosCoches.filter(v =>
+                (esT ? (v.enTaller && !v.finTaller) : (v.enRecambios && !v.finRecambios)) &&
+                v.entregado !== true && v.entregado !== "true"
+            );
+            if (c) {
+                const vacio = esT ? 'No hay ningún vehículo en Taller actualmente.' : 'No hay ningún vehículo en Recambios actualmente.';
+                c.innerHTML = coches.length === 0
+                    ? `<div class="col-span-full bg-white p-12 rounded-xl shadow-sm text-center border border-gray-200 mt-6"><p class="text-gray-500 font-bold text-lg">${vacio}</p></div>`
+                    : coches.map(v => typeof window.renderTarjetaCompacta === 'function' ? window.renderTarjetaCompacta(v) : '').join('');
+            }
         } else if (pestana === 'agenda') {
             const c = document.getElementById('contenedorAgenda');
             if (c) {
