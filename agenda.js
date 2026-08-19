@@ -163,6 +163,7 @@
 
     window.marcarEntregadoAgenda = function(cita) {
         if (!cita) return;
+
         let fechaCitaObj = cita.fechaHora ? new Date(cita.fechaHora) : new Date();
         let fechaStr = fechaCitaObj.getFullYear() + '-' + String(fechaCitaObj.getMonth() + 1).padStart(2, '0') + '-' + String(fechaCitaObj.getDate()).padStart(2, '0');
         let horaStr = String(fechaCitaObj.getHours()).padStart(2, '0') + ':00';
@@ -228,6 +229,9 @@
                     const hora = `${String(fechaCita.getHours()).padStart(2, '0')}:${String(fechaCita.getMinutes()).padStart(2, '0')}`;
                     const cliente = window.escapeJS(cita.cliente || 'Cliente');
                     const modelo = window.escapeJS(cita.modelo || 'Vehículo');
+                    const modeloUpper = String(cita.modelo || '').toUpperCase();
+                    const esDevolucionPura = modeloUpper.includes('DEVOLUCION') || modeloUpper.includes('DEVOLUCIÓN');
+                    const esMixtaEntregaDevolucion = !esDevolucionPura && (String(cita.entregaVO || '').toUpperCase() === 'SI' || String(cita.entregaVO || '').toUpperCase() === 'SÍ');
                     const matricula = window.escapeJS(cita.matricula || 'S/M');
                     const telefono = window.escapeJS(String(cita.telefono || '').trim());
                     const email = window.escapeJS(String(cita.email || '').trim());
@@ -259,11 +263,19 @@
                                 ${notas ? `<p class="flex items-center gap-1 rounded-lg bg-slate-50 px-2 py-1 text-xs"><i class="ph-fill ph-note text-sm text-slate-400"></i> ${notas}</p>` : ''}
                             </div>
 
+                            ${esMixtaEntregaDevolucion ? `
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <span class="bg-[#001e50] text-white text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-widest"><i class="ph-bold ph-key"></i> Entrega</span>
+                                    <span class="bg-sky-100 text-sky-800 border border-sky-300 text-[10px] px-2.5 py-1 rounded-lg font-black uppercase tracking-widest"><i class="ph-bold ph-arrow-counter-clockwise"></i> Devolución</span>
+                                </div>
+                            ` : ''}
+
                             <div class="mt-4 grid grid-cols-3 gap-2">
                                 <button onclick="window.abrirWhatsAppAgenda('${telefono}', '${cliente}')" class="rounded-xl bg-emerald-600 px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">WhatsApp</button>
                                 <button onclick="window.llamarAgenda('${telefono}')" class="rounded-xl bg-sky-600 px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">Llamar</button>
-                                <button onclick="window.marcarEntregadoAgenda({id:'${cita.id}', fila:'${idFb}', modelo:'${modeloSeg}', matricula:'${matriculaSeg}', bastidor:'${window.escapeJS(cita.bastidor || '')}', renting:'${window.escapeJS(cita.renting || '')}', fechaHora:'${cita.fechaHora}'})" class="rounded-xl bg-[#001e50] px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">Entregado</button>
+                                <button onclick="window.marcarEntregadoAgenda({id:'${cita.id}', fila:'${idFb}', modelo:'${modeloSeg}', matricula:'${matriculaSeg}', bastidor:'${window.escapeJS(cita.bastidor || '')}', renting:'${window.escapeJS(cita.renting || '')}', entregaVO:'${window.escapeJS(cita.entregaVO || '')}', fechaHora:'${cita.fechaHora}'})" class="rounded-xl bg-[#001e50] px-2 py-2 text-[11px] font-black uppercase tracking-widest text-white shadow-sm">Entregado</button>
                             </div>
+
                         </div>`;
                 }).join('')}
             </div>`;
@@ -347,8 +359,12 @@
                     cliente: datosEnriquecidos.cliente || "Cliente", telefono: datosEnriquecidos.telefono || "", email: datosEnriquecidos.email || "",
                     matricula: datosEnriquecidos.matricula || "S/M", modelo: datosEnriquecidos.modelo || "Vehículo", bastidor: datosEnriquecidos.bastidor || "",
                     renting: datosEnriquecidos.renting || "", entregaVO: datosEnriquecidos.entregaVO || "NO", agente: datosEnriquecidos.agente || "MANUEL",
-                    notas: data.notas || "", estado: data.estado || "confirmada", isBlock: false
-                });
+                    notas: data.notas || "", estado: data.estado || "confirmada", entregado: data.entregado === true || data.entregado === "true",
+                    tipoFinalizacion: data.tipoFinalizacion || '', fechaEntrega: data.fechaEntrega || null, fechaEntregaTexto: data.fechaEntregaTexto || '', isBlock: false,
+                    isBlock: false,
+                    esConjunta: data.esConjunta === true || data.esConjunta === "true",
+                    creadoPor: data.creadoPor || "SISTEMA" 
+                    });
             });
 
             if (actualizacionesPendientes.length > 0) {
@@ -412,7 +428,7 @@
             (c.A && String(c.A).toUpperCase() === basCita)
         ) : null;
         
-        let yaEntregado = cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true");
+        let yaEntregado = (cita.entregado === true || cita.entregado === "true") || (cocheEnBaseDatos && (cocheEnBaseDatos.entregado === true || cocheEnBaseDatos.entregado === "true"));
         
         if (fechaCitaLimpia < hoyLimpio && !yaEntregado) {
             let fechaCitaRaw = `${fechaCitaPartes[0]}-${fechaCitaPartes[1]}-${fechaCitaPartes[2]}`;
@@ -468,26 +484,36 @@ window.mostrarPopupAtrasados = function() {
     };
 
     window.obtenerConflictosAgenda = function() {
-        const conflictosMap = {};
+    const conflictosMap = {};
 
-        (window.datosAgenda || []).forEach(cita => {
-            if (!cita || !cita.fechaHora) return;
-            const fecha = new Date(cita.fechaHora);
-            if (isNaN(fecha.getTime())) return;
+    (window.datosAgenda || []).forEach(cita => {
+        if (!cita || !cita.fechaHora) return;
+        const fecha = new Date(cita.fechaHora);
+        if (isNaN(fecha.getTime())) return;
 
-            const dateKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
-            const horaKey = `${String(fecha.getHours()).padStart(2, '0')}:00`;
-            const agente = String(cita.entregador || cita.agente || 'MANUEL').toUpperCase();
-            const clave = (horaKey === '19:00') ? `${dateKey}|${horaKey}|UNICA` : `${dateKey}|${horaKey}|${agente}`;
+        const dateKey = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+        const horaKey = `${String(fecha.getHours()).padStart(2, '0')}:00`;
+        const agente = String(cita.entregador || cita.agente || 'MANUEL').toUpperCase();
+        const clave = (horaKey === '19:00') ? `${dateKey}|${horaKey}|UNICA` : `${dateKey}|${horaKey}|${agente}`;
 
-            if (!conflictosMap[clave]) {
-                conflictosMap[clave] = { dateKey, horaKey, agente: horaKey === '19:00' ? 'UNICA' : agente, citas: [] };
-            }
-            conflictosMap[clave].citas.push(cita);
-        });
+        if (!conflictosMap[clave]) {
+            conflictosMap[clave] = { dateKey, horaKey, agente: horaKey === '19:00' ? 'UNICA' : agente, citas: [] };
+        }
+        conflictosMap[clave].citas.push(cita);
+    });
 
-        return Object.values(conflictosMap).filter(item => item.citas.length > 1);
-    };
+    // 🔥 FILTRO INTELIGENTE: Diferencia entre conflicto y entrega conjunta
+    return Object.values(conflictosMap).filter(item => {
+        // Si solo hay 1 coche, no hay solape
+        if (item.citas.length <= 1) return false; 
+
+        // Comprobamos si AL MENOS UNO de los coches en esta hora tiene la casilla de conjunta marcada
+        let esEntregaIntencionada = item.citas.some(c => c.esConjunta === true || c.esConjunta === "true");
+        
+        // Si marcaste la casilla, le decimos al banner naranja que NO lo cuente (false)
+        return !esEntregaIntencionada; 
+    });
+};
 
     window.mostrarPopupConflictosAgenda = function() {
         const conflictos = window.obtenerConflictosAgenda();
@@ -522,7 +548,7 @@ window.mostrarPopupAtrasados = function() {
         let agendaEstructurada = {};
         const horasLaborales = ['10', '11', '12', '13', '16', '17', '18', '19'];
         let rolAgenda = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
-        let esBackoffice = (rolAgenda === 'backoffice' || rolAgenda === 'administracion');
+        let esBackoffice = (rolAgenda === 'backoffice' || rolAgenda === 'administracion' || rolAgenda === 'comercial');
 
         window.datosAgenda.forEach(cita => {
             if (!cita.fechaHora) return;
@@ -675,38 +701,63 @@ window.mostrarPopupAtrasados = function() {
                 let isVacM = !!bloqueoM; 
                 let isVacA = !!bloqueoA;
 
-                const renderizarListaCitas = function(lista, agente, bg, textClass, border, unico) {
-                    if (!lista || lista.length === 0) {
-                        return window.renderizarCeldaCita(null, agente, '#f3f4f6', 'text-gray-400', 'border-gray-300', unico);
+                const renderizarListaCitas = function(lista, agente, bg, textClass, border, unico, dateKey, hora) {
+    if (!lista || lista.length === 0) {
+        return window.renderizarCeldaCita(null, agente, '#f3f4f6', 'text-gray-400', 'border-gray-300', unico, dateKey, hora);
+    }
+                    
+                    // 🔥 NUEVA LÓGICA: Si hay más de 1 vehículo (y no es un bloqueo), mostramos la tarjeta resumen
+                    if (lista.length > 1 && !lista[0].isBlock) {
+                        const idsStr = lista.map(c => c.id).join(',');
+                        const altura = unico ? "min-h-[220px]" : "min-h-[140px]";
+                        const borderColorClass = agente === 'ANTONIO' ? 'border-orange-400' : 'border-blue-400';
+                        const textColorClass = agente === 'ANTONIO' ? 'text-orange-900' : 'text-blue-900';
+                        const bgColorHex = agente === 'ANTONIO' ? '#ffedd5' : '#e0e7ff';
+                        
+                        return `
+                        <div onclick="window.verEntregaConjunta('${idsStr}', '${agente}')" class="cita-tarjeta flex-1 rounded-lg p-3 border-2 border-dashed ${borderColorClass} flex flex-col justify-center items-center cursor-pointer hover:scale-[1.02] transition-transform shadow-sm ${altura}" style="background-color: ${bgColorHex};">
+                            <div class="bg-purple-100 text-purple-800 text-[10px] font-black px-2 py-1 rounded mb-2 border border-purple-300 uppercase tracking-widest animate-pulse flex items-center gap-1 shadow-sm"><i class="ph-bold ph-stack"></i> Conjunta</div>
+                            <div class="text-3xl font-black ${textColorClass} mb-1">${lista.length}</div>
+                            <div class="text-[10px] font-bold ${textColorClass} uppercase tracking-widest mb-3">Vehículos</div>
+                            <button class="bg-[#001e50] text-white text-[10px] font-black py-1.5 px-4 rounded shadow-sm hover:bg-blue-900 uppercase tracking-widest flex items-center gap-1"><i class="ph-bold ph-eye"></i> Ver Grupo</button>
+                        </div>`;
                     }
+                    
+                    // Si solo hay 1, se pinta la tarjeta normal
                     return lista.map((item) => {
-                        const citaConMeta = (lista.length > 1 && !item.isBlock)
-                            ? { ...item, _slotConflictCount: lista.length }
-                            : item;
-                        return window.renderizarCeldaCita(citaConMeta, agente, bg, textClass, border, unico);
-                    }).join('');
-                };
+        const citaConMeta = (lista.length > 1 && !item.isBlock) ? { ...item, _slotConflictCount: lista.length } : item;
+        return window.renderizarCeldaCita(citaConMeta, agente, bg, textClass, border, unico, dateKey, hora);
+    }).join('');
+};
 
                 if (hora === '19') {
-                    const listaUnica = [...(cM || []), ...(cA || [])];
-                    if (listaUnica.length > 0) {
+                    let citasAntonioReales = agendaEstructurada[dateKey] && agendaEstructurada[dateKey][hora] ? (agendaEstructurada[dateKey][hora].ANTONIO || []) : [];
+                    const listaUnica = [...(cM || []), ...citasAntonioReales];
+                    
+                    if (listaUnica.length > 1 && !listaUnica[0].isBlock) {
+                        const idsStr = listaUnica.map(c => c.id).join(',');
+                        html += `
+                        <div onclick="window.verEntregaConjunta('${idsStr}', 'MANUEL')" class="cita-tarjeta flex-1 rounded-lg p-3 border-2 border-dashed border-purple-400 flex flex-col justify-center items-center cursor-pointer hover:scale-[1.02] transition-transform shadow-sm min-h-[220px]" style="background-color: #f3e8ff;">
+                            <div class="bg-purple-100 text-purple-800 text-[10px] font-black px-2 py-1 rounded mb-2 border border-purple-300 uppercase tracking-widest animate-pulse flex items-center gap-1 shadow-sm"><i class="ph-bold ph-stack"></i> Conjunta</div>
+                            <div class="text-3xl font-black text-purple-900 mb-1">${listaUnica.length}</div>
+                            <div class="text-[10px] font-bold text-purple-800 uppercase tracking-widest mb-3">Vehículos</div>
+                            <button class="bg-[#001e50] text-white text-[10px] font-black py-1.5 px-4 rounded shadow-sm hover:bg-blue-900 uppercase tracking-widest flex items-center gap-1"><i class="ph-bold ph-eye"></i> Ver Grupo</button>
+                        </div>`;
+                    } else if (listaUnica.length === 1) {
                         html += listaUnica.map((item) => {
-                            const agenteReal = String(item.entregador || item.agente || 'MANUEL').toUpperCase();
+                            const agenteReal = item.isBlock ? 'MANUEL' : String(item.entregador || item.agente || 'MANUEL').toUpperCase();
                             const esAntonio = agenteReal === 'ANTONIO';
                             const bgBase = esAntonio ? '#f9cb9c' : '#c9daf8';
                             const txtBase = esAntonio ? 'text-orange-900' : 'text-blue-900';
                             const borderBase = esAntonio ? 'border-orange-300' : 'border-blue-200';
-                            const citaConMeta = (listaUnica.length > 1 && !item.isBlock)
-                                ? { ...item, _slotConflictCount: listaUnica.length }
-                                : item;
-                            return window.renderizarCeldaCita(citaConMeta, agenteReal, item.isBlock ? '#e5e7eb' : bgBase, item.isBlock ? 'text-gray-500' : txtBase, item.isBlock ? 'border-gray-300' : borderBase, true);
+                            return window.renderizarCeldaCita(item, agenteReal, item.isBlock ? '#e5e7eb' : bgBase, item.isBlock ? 'text-gray-500' : txtBase, item.isBlock ? 'border-gray-300' : borderBase, true, dateKey, hora);
                         }).join('');
                     } else {
-                        html += window.renderizarCeldaCita(null, 'UNICA ENTREGA', '#f3f4f6', 'text-gray-400', 'border-gray-300', true);
+                        html += window.renderizarCeldaCita(null, 'UNICA ENTREGA', '#f3f4f6', 'text-gray-400', 'border-gray-300', true, dateKey, hora);
                     }
                 } else {
-                    html += renderizarListaCitas(cM, 'MANUEL', isVacM ? '#e5e7eb' : '#c9daf8', isVacM ? 'text-gray-500' : 'text-blue-900', isVacM ? 'border-gray-300' : 'border-blue-200', false);
-                    html += renderizarListaCitas(cA, 'ANTONIO', isVacA ? '#e5e7eb' : '#f9cb9c', isVacA ? 'text-gray-500' : 'text-orange-900', isVacA ? 'border-gray-300' : 'border-orange-300', false);
+                    html += renderizarListaCitas(cM, 'MANUEL', isVacM ? '#e5e7eb' : '#c9daf8', isVacM ? 'text-gray-500' : 'text-blue-900', isVacM ? 'border-gray-300' : 'border-blue-200', false, dateKey, hora);
+                    html += renderizarListaCitas(cA, 'ANTONIO', isVacA ? '#e5e7eb' : '#f9cb9c', isVacA ? 'text-gray-500' : 'text-orange-900', isVacA ? 'border-gray-300' : 'border-orange-300', false, dateKey, hora);
                 }
                 html += `</div></td>`;
             });
@@ -762,12 +813,48 @@ window.mostrarPopupAtrasados = function() {
         }
     };
 
-   window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico) {
+window.verEntregaConjunta = function(idsStr, agenteUI) {
+        if (!idsStr) return;
+        const ids = idsStr.split(',');
+        const citasGrupo = (window.datosAgenda || []).filter(c => ids.includes(c.id));
+        
+        if (citasGrupo.length === 0) return;
+        
+        let htmlCitas = citasGrupo.map(cita => {
+            const agenteCita = String(cita.entregador || cita.agente || 'MANUEL').toUpperCase();
+            const esAntonio = agenteCita === 'ANTONIO';
+            const bgBase = esAntonio ? '#f9cb9c' : '#c9daf8';
+            const txtBase = esAntonio ? 'text-orange-900' : 'text-blue-900';
+            const borderBase = esAntonio ? 'border-orange-300' : 'border-blue-200';
+            
+            // Usamos false para que las tarjetas salgan en formato compacto dentro del popup
+            return `<div class="mb-3 w-full text-left">${window.renderizarCeldaCita(cita, agenteCita, bgBase, txtBase, borderBase, false)}</div>`;
+        }).join('');
+        
+        Swal.fire({
+            title: 'ENTREGA CONJUNTA',
+            html: `
+                <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-3 text-center">Gestión de ${citasGrupo.length} vehículos</p>
+                <div class="max-h-[60vh] overflow-y-auto custom-scrollbar p-1 flex flex-col gap-2">
+                    ${htmlCitas}
+                </div>
+            `,
+            width: '450px',
+            showConfirmButton: false,
+            showCloseButton: true,
+            background: '#f8fafc'
+        });
+    };
+
+   window.renderizarCeldaCita = function(cita, nombreAgente, bgColor, textColor, borderColor, esUnico, fechaKey, horaKey) {
     let alturaClase = esUnico ? "min-h-[220px]" : "min-h-[140px]";
     
     if (!cita) {
-        return `<div class="cita-tarjeta flex-1 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center ${alturaClase} opacity-60">
-                   <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5">Libre</span>
+        let onclickHTML = (fechaKey && horaKey) ? `onclick="window.opcionesHuecoLibre('${fechaKey}', '${horaKey}', '${nombreAgente}')"` : '';
+        let cursorHover = (fechaKey && horaKey) ? "cursor-pointer hover:bg-gray-100 hover:ring-2 hover:ring-[#00b0f0] transition-all hover:scale-[1.02] shadow-sm" : "";
+
+        return `<div ${onclickHTML} class="cita-tarjeta flex-1 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50 p-2 flex items-center justify-center ${alturaClase} opacity-60 ${cursorHover}">
+                   <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5"><i class="ph-bold ph-plus-circle text-lg"></i> Libre</span>
                 </div>`;
     }
     
@@ -804,7 +891,7 @@ window.mostrarPopupAtrasados = function() {
         let horaStr = fechaCitaObj.getHours() + ":00h";
         let idFb = cocheEnBaseDatos ? cocheEnBaseDatos.fila : 'no_db';
         let modeloSeguro = window.escapeJS(cita.modelo); let matriculaSegura = window.escapeJS(cita.matricula);
-        alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="if(window.event) window.event.stopPropagation(); window.preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}')"><i class="ph-bold ph-question text-lg"></i></div>`;
+        alertaVisual = `<div class="absolute -top-2 -right-2 bg-[#00b0f0] text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce cursor-pointer z-10" onclick="if(window.event) window.event.stopPropagation(); window.preguntarSiEntregado('${idFb}', '${modeloSeguro}', '${matriculaSegura}', '${diaStr}', '${horaStr}', '${cita.id || ''}')"><i class="ph-bold ph-question text-lg"></i></div>`;
         borderColor = "border-[#00b0f0] border-2"; 
     } else if (estaRetenido && cita.matricula !== "---" && !cita.isBlock) {
         let escMat = window.escapeJS(cita.matricula); let escMod = window.escapeJS(cita.modelo);
@@ -812,19 +899,22 @@ window.mostrarPopupAtrasados = function() {
     }
 
     let textoVO = (cita.entregaVO) ? String(cita.entregaVO).toUpperCase().trim() : '';
+    let modeloCitaUpper = String(cita.modelo || '').toUpperCase();
+    let esDevolucionPura = modeloCitaUpper.includes('DEVOLUCION') || modeloCitaUpper.includes('DEVOLUCIÓN');
+    let esMixtaEntregaDevolucion = !esDevolucionPura && (textoVO === 'SÍ' || textoVO === 'SI');
     let tagVO = (textoVO === 'SÍ' || textoVO === 'SI') ? `<span class="bg-purple-200 text-purple-900 border border-purple-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest"><i class="ph-bold ph-car-profile"></i> VO</span>` : '';
+    let tagFlujoMixto = esMixtaEntregaDevolucion ? `<span class="bg-[#001e50] text-white border border-[#001e50] text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1"><i class="ph-bold ph-key"></i> ENTREGA</span><span class="bg-sky-100 text-sky-800 border border-sky-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1"><i class="ph-bold ph-arrow-counter-clockwise"></i> DEVOLUCIÓN</span>` : '';
     let tagNotas = cita.notas ? `<span class="bg-yellow-200 text-yellow-900 border border-yellow-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1" title="${window.escapeJS(cita.notas)}"><i class="ph-bold ph-note"></i> NOTAS</span>` : '';
     let tagConflicto = (Number(cita._slotConflictCount || 0) > 1)
         ? `<span class="bg-red-200 text-red-900 border border-red-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1"><i class="ph-bold ph-warning"></i> SOLAPE (${cita._slotConflictCount})</span>`
         : '';
     
-    // 🔥 NUEVA ETIQUETA: Identifica visualmente si el coche ya está pedido a la campa
     let tagPedido = (cocheEnBaseDatos && cocheEnBaseDatos.cochePedido) ? `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[8px] px-1 py-0.5 rounded shadow-sm font-black tracking-widest ml-1" title="Pedido a Campa"><i class="ph-bold ph-truck"></i> PEDIDO</span>` : '';
     
     let opacidad = "opacity-100"; let onclickCode = ""; let cursorClass = "";
     
-    if (cita.isBlock) {
-        if (rolUsuarioLogueado === 'backoffice' || rolUsuarioLogueado === 'administracion') {
+   if (cita.isBlock) {
+        if (rolUsuarioLogueado === 'backoffice' || rolUsuarioLogueado === 'administracion' || rolUsuarioLogueado === 'comercial') {
             cursorClass = "cursor-default";
         } else {
             onclickCode = `onclick="window.borrarBloqueo('${cita.idBloqueo}')"`;
@@ -850,11 +940,19 @@ window.mostrarPopupAtrasados = function() {
     }
 
     let botonesAprobacion = "";
-    if (esPendiente && (rolUsuarioLogueado === 'entregas' || rolUsuarioLogueado === 'admin')) {
+    if (esPendiente && (rolUsuarioLogueado === 'entregas' || rolUsuarioLogueado === 'admin') && rolUsuarioLogueado !== 'comercial') {
+        
+        let creadorCita = cita.creadoPor ? String(cita.creadoPor).toUpperCase() : 'COMPAÑERO';
+        
         botonesAprobacion = `
-        <div class="flex gap-2 mt-2 pt-2 border-t border-amber-200" onclick="if(window.event) window.event.stopPropagation();">
-            <button onclick="window.aprobarCitaPendiente('${cita.id}', '${matCita}')" class="flex-1 bg-emerald-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-emerald-600 transition-colors pointer-events-auto"><i class="ph-bold ph-check"></i> ACEPTAR</button>
-            <button onclick="window.rechazarCitaPendiente('${cita.id}', '${window.escapeJS(cita.modelo)}')" class="flex-1 bg-red-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-red-600 transition-colors pointer-events-auto"><i class="ph-bold ph-x"></i> RECHAZAR</button>
+        <div class="mt-2 pt-2 border-t border-amber-200" onclick="if(window.event) window.event.stopPropagation();">
+            <p class="text-[9px] font-black text-amber-900 mb-1.5 uppercase tracking-widest text-center">
+                <i class="ph-fill ph-user-circle text-amber-700"></i> Solicitado por: ${creadorCita}
+            </p>
+            <div class="flex gap-2">
+                <button onclick="window.aprobarCitaPendiente('${cita.id}', '${matCita}')" class="flex-1 bg-emerald-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-emerald-600 transition-colors pointer-events-auto"><i class="ph-bold ph-check"></i> ACEPTAR</button>
+                <button onclick="window.rechazarCitaPendiente('${cita.id}', '${window.escapeJS(cita.modelo)}')" class="flex-1 bg-red-500 text-white text-[10px] font-black py-1 rounded shadow-sm hover:bg-red-600 transition-colors pointer-events-auto"><i class="ph-bold ph-x"></i> RECHAZAR</button>
+            </div>
         </div>`;
     }
 
@@ -864,7 +962,7 @@ window.mostrarPopupAtrasados = function() {
        <div>
          <div class="flex justify-between items-start mb-1 gap-1">
            <h4 class="font-black text-[11px] ${textColor} uppercase leading-tight line-clamp-1 flex-1">${cita.modelo}</h4>
-                     <div class="flex items-center flex-wrap justify-end">${tagVO} ${tagPendiente} ${tagNotas} ${tagPedido} ${tagConflicto}</div>
+                     <div class="flex items-center flex-wrap justify-end">${tagVO} ${tagFlujoMixto} ${tagPendiente} ${tagNotas} ${tagPedido} ${tagConflicto}</div>
          </div>
          <div class="flex items-center gap-1.5 mb-1 flex-wrap">
             <p class="font-bold text-[10px] bg-white/80 px-1.5 py-0.5 rounded text-gray-900 tracking-widest">${cita.matricula}</p>
@@ -945,6 +1043,11 @@ window.mostrarPopupAtrasados = function() {
         }
     };
     window.abrirEdicionCita = async function(idCita, fechaActual, horaActual, agenteActual, cliente, matricula, telefono, email, vo, notas) {
+        // 🔥 Buscamos la cita para saber si ya era conjunta y dejar el check marcado
+        let citaOriginal = (window.datosAgenda || []).find(c => c.id === idCita);
+        let estabaMarcadaConjunta = citaOriginal ? citaOriginal.esConjunta : false;
+        let checkHtml = estabaMarcadaConjunta ? 'checked' : '';
+
         const { value: formValues, isDenied } = await Swal.fire({
             title: 'Gestionar Cita',
             width: '700px',
@@ -1008,6 +1111,10 @@ window.mostrarPopupAtrasados = function() {
                     <label class="text-[10px] uppercase font-bold text-gray-500 mb-1 flex items-center gap-1"><i class="ph-bold ph-note"></i> Notas (Opcional)</label>
                     <textarea id="e-notas" class="swal2-textarea !w-full !m-0 text-sm p-4" style="min-height: 80px;" placeholder="Detalles, retrasos, avisos...">${notas && notas !== 'undefined' ? notas : ''}</textarea>
                 </div>
+                <div class="mt-4 text-left flex items-center gap-2 bg-purple-50/50 p-3 rounded-lg border border-purple-200 select-none">
+                    <input type="checkbox" id="e-conjunta" class="w-4 h-4 accent-purple-600 cursor-pointer" ${checkHtml}>
+                    <label for="e-conjunta" class="text-xs font-black text-purple-900 cursor-pointer uppercase tracking-wider">Forzar entrega conjunta (Permitir solapes)</label>
+                </div>
             `,
             showCancelButton: true,
             showDenyButton: true,
@@ -1028,7 +1135,9 @@ window.mostrarPopupAtrasados = function() {
                 
                 if (!f) return Swal.showValidationMessage('La fecha es obligatoria');
                 if (!c) return Swal.showValidationMessage('El cliente es obligatorio');
-
+                if (h === '19:00' && a === 'ANTONIO') {
+                    return Swal.showValidationMessage('A las 19:00h solo Manuel realiza entregas. Reasigna la cita a MANUEL o cambia la hora.');
+                }
                 const conflictoEdicion = (window.datosAgenda || []).find(cita => {
                     if (!cita || !cita.id || cita.id === idCita || !cita.fechaHora) return false;
                     const fechaCita = new Date(cita.fechaHora);
@@ -1045,13 +1154,15 @@ window.mostrarPopupAtrasados = function() {
                     return agenteCita === a;
                 });
 
-                if (conflictoEdicion) {
+                const forzarConjunta = document.getElementById('e-conjunta') ? document.getElementById('e-conjunta').checked : false;
+
+                if (conflictoEdicion && !forzarConjunta) {
                     if(typeof window.registrarMetricaM2 === 'function') window.registrarMetricaM2('choques_agenda_evitados');
                     const vehiculoConflicto = conflictoEdicion.matricula || conflictoEdicion.modelo || 'otra cita';
-                    return Swal.showValidationMessage(`Ese hueco ya está ocupado por ${vehiculoConflicto}. Elige otra hora o entregador.`);
+                    return Swal.showValidationMessage(`Ese hueco ya está ocupado por ${vehiculoConflicto}. Elige otra hora, o marca "Forzar entrega conjunta".`);
                 }
                 
-                return { fecha: f, hora: h, agente: a, cliente: c, telefono: t, email: em, entregaVO: v, notas: n };
+                return { fecha: f, hora: h, agente: a, cliente: c, telefono: t, email: em, entregaVO: v, notas: n, esConjunta: forzarConjunta };
             }
         });
 
@@ -1166,7 +1277,14 @@ window.borrarBloqueo = async function(idBloqueo) {
     }
 };
 
-window.abrirGestorVacaciones = async function() {
+// ========================================================
+// 🔒 ABRIR GESTOR DE VACACIONES Y BLOQUEOS (CON AUTOCOMPLETADO)
+// ========================================================
+window.abrirGestorVacaciones = async function(fechaPredefinida = '', horaPredefinida = '', agentePredefinido = '') {
+    // Ajustamos el formato de la hora para que coincida con los selectores
+    let horaFormateada = horaPredefinida ? (horaPredefinida.includes(':') ? horaPredefinida : `${horaPredefinida}:00`) : '';
+    let esHoraSuelta = horaFormateada !== '';
+
     const { value: formValues } = await Swal.fire({
         title: '🔒 Bloquear Fechas / Horas',
         html: `
@@ -1174,53 +1292,53 @@ window.abrirGestorVacaciones = async function() {
                 
                 <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Afecta a:</label>
                 <select id="bv-operario" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:45px; font-weight:bold; color:#001e50;">
-                    <option value="AMBOS">Ambos (Manuel y Antonio)</option>
-                    <option value="MANUEL">Manuel</option>
-                    <option value="ANTONIO">Antonio</option>
+                    <option value="AMBOS" ${!agentePredefinido || agentePredefinido === 'AMBOS' ? 'selected' : ''}>Ambos (Manuel y Antonio)</option>
+                    <option value="MANUEL" ${agentePredefinido === 'MANUEL' ? 'selected' : ''}>Manuel</option>
+                    <option value="ANTONIO" ${agentePredefinido === 'ANTONIO' ? 'selected' : ''}>Antonio</option>
                 </select>
 
                 <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Tipo de Bloqueo:</label>
                 <select id="bv-tipo" onchange="window.toggleBloqueoForm(this.value)" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:45px; font-weight:bold; color:#001e50;">
-                    <option value="vacaciones">Día(s) Completo(s)</option>
-                    <option value="hora_suelta">Horas Sueltas (Día Determinado)</option>
+                    <option value="vacaciones" ${!esHoraSuelta ? 'selected' : ''}>Día(s) Completo(s)</option>
+                    <option value="hora_suelta" ${esHoraSuelta ? 'selected' : ''}>Horas Sueltas (Día Determinado)</option>
                 </select>
 
                 <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Fecha Inicio / Día:</label>
-                <input type="date" id="bv-fecha-inicio" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:40px;">
+                <input type="date" id="bv-fecha-inicio" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:40px;" value="${fechaPredefinida}">
 
-                <div id="bv-fecha-fin-container">
+                <div id="bv-fecha-fin-container" style="display: ${esHoraSuelta ? 'none' : 'block'};">
                     <label id="bv-fecha-fin-label" style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Fecha Fin (Inclusive):</label>
-                    <input type="date" id="bv-fecha-fin" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:40px;">
+                    <input type="date" id="bv-fecha-fin" class="swal2-input" style="width:100%; margin:0 0 15px 0; height:40px;" value="${fechaPredefinida}">
                 </div>
 
-                <div id="bv-hora-container" style="display: none; margin-bottom: 15px;">
+                <div id="bv-hora-container" style="display: ${esHoraSuelta ? 'block' : 'none'}; margin-bottom: 15px;">
                     <div style="display: flex; gap: 10px;">
                         <div style="flex: 1;">
                             <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Desde:</label>
                             <select id="bv-hora-inicio" class="swal2-input" style="width:100%; margin:0; height:40px;">
-                                <option value="" disabled selected>Elige hora...</option>
-                                <option value="09:00">09:00</option>
-                                <option value="10:00">10:00</option>
-                                <option value="11:00">11:00</option>
-                                <option value="12:00">12:00</option>
-                                <option value="13:00">13:00</option>
-                                <option value="16:00">16:00</option>
-                                <option value="17:00">17:00</option>
-                                <option value="18:00">18:00</option>
+                                <option value="" disabled ${!horaFormateada ? 'selected' : ''}>Elige hora...</option>
+                                <option value="10:00" ${horaFormateada === '10:00' ? 'selected' : ''}>10:00</option>
+                                <option value="11:00" ${horaFormateada === '11:00' ? 'selected' : ''}>11:00</option>
+                                <option value="12:00" ${horaFormateada === '12:00' ? 'selected' : ''}>12:00</option>
+                                <option value="13:00" ${horaFormateada === '13:00' ? 'selected' : ''}>13:00</option>
+                                <option value="16:00" ${horaFormateada === '16:00' ? 'selected' : ''}>16:00</option>
+                                <option value="17:00" ${horaFormateada === '17:00' ? 'selected' : ''}>17:00</option>
+                                <option value="18:00" ${horaFormateada === '18:00' ? 'selected' : ''}>18:00</option>
+                                <option value="19:00" ${horaFormateada === '19:00' ? 'selected' : ''}>19:00</option>
                             </select>
                         </div>
                         <div style="flex: 1;">
                             <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Hasta:</label>
                             <select id="bv-hora-fin" class="swal2-input" style="width:100%; margin:0; height:40px;">
-                                <option value="" disabled selected>Elige hora...</option>
-                                <option value="10:00">10:00</option>
-                                <option value="11:00">11:00</option>
-                                <option value="12:00">12:00</option>
-                                <option value="13:00">13:00</option>
-                                <option value="14:00">14:00</option>
-                                <option value="17:00">17:00</option>
-                                <option value="18:00">18:00</option>
-                                <option value="19:00">19:00</option>
+                                <option value="" disabled ${!horaFormateada ? 'selected' : ''}>Elige hora...</option>
+                                <option value="10:00" ${horaFormateada === '10:00' ? 'selected' : ''}>10:00</option>
+                                <option value="11:00" ${horaFormateada === '11:00' ? 'selected' : ''}>11:00</option>
+                                <option value="12:00" ${horaFormateada === '12:00' ? 'selected' : ''}>12:00</option>
+                                <option value="13:00" ${horaFormateada === '13:00' ? 'selected' : ''}>13:00</option>
+                                <option value="16:00" ${horaFormateada === '16:00' ? 'selected' : ''}>16:00</option>
+                                <option value="17:00" ${horaFormateada === '17:00' ? 'selected' : ''}>17:00</option>
+                                <option value="18:00" ${horaFormateada === '18:00' ? 'selected' : ''}>18:00</option>
+                                <option value="19:00" ${horaFormateada === '19:00' ? 'selected' : ''}>19:00</option>
                             </select>
                         </div>
                     </div>
@@ -1258,7 +1376,7 @@ window.abrirGestorVacaciones = async function() {
             }
 
             let datosBloqueo = {
-                operarioAfectado: operario, // Guardamos a quién afecta
+                operarioAfectado: operario,
                 tipo: tipo,
                 fechaInicio: fechaInicio,
                 motivo: motivo,
@@ -1273,7 +1391,14 @@ window.abrirGestorVacaciones = async function() {
             } else {
                 const horaInicio = document.getElementById('bv-hora-inicio').value;
                 const horaFin = document.getElementById('bv-hora-fin').value;
+                
                 if (!horaInicio || !horaFin) return Swal.showValidationMessage('Debes seleccionar las horas de inicio y fin.');
+                
+                // 🔥 Comprobación de seguridad para que la hora de inicio no sea mayor a la de fin
+                if (parseInt(horaInicio) > parseInt(horaFin)) {
+                    return Swal.showValidationMessage('La hora de inicio no puede ser posterior a la hora de fin.');
+                }
+                
                 datosBloqueo.horaInicio = horaInicio;
                 datosBloqueo.horaFin = horaFin;
             }
@@ -1296,9 +1421,11 @@ window.abrirGestorVacaciones = async function() {
     }
 };
 // ==========================================
-// ➕ CREACIÓN DE CITA MANUAL INTELIGENTE (ENTREGAS / DEVOLUCIONES)
+// ➕ CREACIÓN DE CITA MANUAL (CON FILTROS Y AUTOCOMPLETADO CORREGIDO)
 // ==========================================
-window.crearCitaManual = async function() {
+window.crearCitaManual = async function(fechaPredefinida = '', horaPredefinida = '', agentePredefinido = '') {
+    let horaFormateada = horaPredefinida ? (horaPredefinida.includes(':') ? horaPredefinida : `${horaPredefinida}:00`) : '';
+
     const paso1 = await Swal.fire({
         title: 'Programar Nueva Cita (V2)',
         text: '¿Qué tipo de gestión vas a realizar?',
@@ -1349,29 +1476,29 @@ window.crearCitaManual = async function() {
         `;
     }
 
+    // 🔥 MODIFICADO: Eliminado el 'min' de n-fec para que no borre fechas predefinidas
     htmlCampos += `
         <div class="grid grid-cols-2 gap-3 mb-3">
-            <div class="text-left"><label class="text-xs font-bold text-gray-500 uppercase">Fecha Cita</label><input type="date" id="n-fec" class="swal2-input !w-full !m-0 !mt-1"></div>
             <div class="text-left">
-                <label class="text-xs font-bold text-gray-500 uppercase">Hora Cita</label>
-                <select id="n-hor" class="swal2-select !w-full !m-0 !mt-1">
-                    <option value="" disabled selected>Elige hora...</option>
-                    <option value="10:00">10:00</option> <option value="11:00">11:00</option>
-                    <option value="12:00">12:00</option> <option value="13:00">13:00</option>
-                    <option value="16:00">16:00</option> <option value="17:00">17:00</option>
-                    <option value="18:00">18:00</option> <option value="19:00">19:00</option>
+                <label class="text-xs font-bold text-gray-500 uppercase">Fecha Cita</label>
+                <input type="date" id="n-fec" class="swal2-input !w-full !m-0 !mt-1" value="${fechaPredefinida}">
+            </div>
+            <div class="text-left">
+                <label class="text-xs font-bold text-gray-500 uppercase">Hora Libre</label>
+                <select id="n-hor" class="swal2-select !w-full !m-0 !mt-1 bg-gray-50">
+                    <option value="" disabled selected>Selecciona un día primero...</option>
                 </select>
             </div>
         </div>
-    `;
-
-    htmlCampos += `
         <div class="text-left mb-3">
             <label class="text-xs font-bold text-gray-500 uppercase">Entregador Asignado</label>
-            <select id="n-age" class="swal2-select !w-full !m-0 !mt-1">
-                <option value="MANUEL">MANUEL</option>
-                <option value="ANTONIO">ANTONIO</option>
+            <select id="n-age" class="swal2-select !w-full !m-0 !mt-1 bg-gray-50">
+                <option value="" disabled selected>Esperando hora...</option>
             </select>
+        </div>
+        <div class="mb-3 text-left flex items-center gap-2 bg-purple-50/50 p-3 rounded-lg border border-purple-200 select-none">
+            <input type="checkbox" id="n-conjunta" class="w-4 h-4 accent-purple-600 cursor-pointer">
+            <label for="n-conjunta" class="text-xs font-black text-purple-900 cursor-pointer uppercase tracking-wider">Forzar entrega conjunta (Omitir filtros)</label>
         </div>
     `;
 
@@ -1388,78 +1515,195 @@ window.crearCitaManual = async function() {
         title: esDevolucion ? '🔄 Programar Devolución (V2)' : '🚗 Programar Entrega (V2)',
         html: htmlCampos,
         width: '650px', focusConfirm: false, confirmButtonText: 'Guardar Cita', confirmButtonColor: '#001e50',
+        
         didOpen: () => {
             const inputMat = document.getElementById('n-mat');
-            if (!inputMat) return;
-            inputMat.addEventListener('input', () => {
-                let mat = inputMat.value.replace(/\s/g, '').toUpperCase();
-                if (mat.length < 4) return; 
-                let citaExistente = window.datosAgenda && window.datosAgenda.find(cita => cita.matricula && cita.matricula.replace(/\s/g, '').toUpperCase() === mat);
-                const divAviso = document.getElementById('aviso-cita-duplicada');
-                if (divAviso) { if (citaExistente) divAviso.classList.remove('hidden'); else divAviso.classList.add('hidden'); }
-                let cocheExistente = todosLosCoches.find(c => c.B && c.B.replace(/\s/g, '').toUpperCase() === mat);
-                if (cocheExistente) {
-                    if (document.getElementById('n-cli') && !document.getElementById('n-cli').value) document.getElementById('n-cli').value = cocheExistente.cliente || '';
-                    if (document.getElementById('n-mod') && !document.getElementById('n-mod').value) document.getElementById('n-mod').value = cocheExistente.C || '';
-                    if (document.getElementById('n-renting') && !document.getElementById('n-renting').value) document.getElementById('n-renting').value = cocheExistente.renting || '';
-                    if (document.getElementById('n-bas') && !document.getElementById('n-bas').value) document.getElementById('n-bas').value = cocheExistente.A || '';
+            const inputFec = document.getElementById('n-fec');
+            const selectHor = document.getElementById('n-hor');
+            const selectAge = document.getElementById('n-age');
+            const checkConjunta = document.getElementById('n-conjunta');
+            
+            const agenteEstaBloqueado = (agenteABuscar, fechaStr, horaStr) => {
+                if (!window.datosVacaciones) return false;
+                return window.datosVacaciones.some(b => {
+                    const afectaA = b.operarioAfectado || b.agente || 'AMBOS';
+                    if (afectaA !== agenteABuscar && afectaA !== 'AMBOS') return false;
+
+                    const tipoBloqueo = b.tipo || 'vacaciones';
+                    
+                    if (tipoBloqueo === 'dia_completo' || tipoBloqueo === 'vacaciones') {
+                        const inicio = b.fechaInicio || b.fecha;
+                        const fin = b.fechaFin || b.fechaInicio || b.fecha;
+                        return fechaStr >= inicio && fechaStr <= fin;
+                    }
+
+                    if (tipoBloqueo === 'hora_suelta') {
+                        const fBloqueo = b.fecha || b.fechaInicio;
+                        if (fBloqueo !== fechaStr) return false;
+                        
+                        if (b.hora) return b.hora === horaStr;
+                        if (b.horaInicio && b.horaFin) {
+                            return horaStr >= b.horaInicio && horaStr <= b.horaFin;
+                        }
+                    }
+                    return false;
+                });
+            };
+
+            const calcularDisponibilidad = () => {
+                const fechaElegida = inputFec.value;
+                const ignorarBloqueos = checkConjunta.checked;
+                
+                selectHor.innerHTML = '<option value="" disabled selected>Buscando horas...</option>';
+                selectAge.innerHTML = '<option value="" disabled selected>Esperando hora...</option>';
+
+                if (!fechaElegida) return;
+
+                const diaSemana = new Date(fechaElegida).getDay();
+                if (diaSemana === 0 || diaSemana === 6) {
+                    Swal.showValidationMessage('No se realizan entregas en fines de semana.');
+                    selectHor.innerHTML = '<option value="" disabled selected>Día no laborable</option>';
+                    return;
+                } else {
+                    Swal.resetValidationMessage();
                 }
-            });
+
+                const horasBase = ['10:00', '11:00', '12:00', '13:00', '16:00', '17:00', '18:00', '19:00'];
+                let ocupacion = {};
+                
+                (window.datosAgenda || []).forEach(cita => {
+                    if(!cita.fechaHora) return;
+                    let d = new Date(cita.fechaHora);
+                    let dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                    
+                    if (dStr === fechaElegida && !cita.esConjunta) {
+                        let hStr = `${String(d.getHours()).padStart(2,'0')}:00`;
+                        let ag = String(cita.entregador || cita.agente || 'MANUEL').toUpperCase();
+                        if(!ocupacion[hStr]) ocupacion[hStr] = {};
+                        ocupacion[hStr][ag] = true;
+                    }
+                });
+
+                let opcionesHoras = '<option value="" disabled selected>Elige hora libre...</option>';
+                let horasEncontradas = 0;
+
+                horasBase.forEach(h => {
+                    let manuelLleno = (ocupacion[h] && ocupacion[h]['MANUEL']) || agenteEstaBloqueado('MANUEL', fechaElegida, h);
+                    let antonioLleno = (ocupacion[h] && ocupacion[h]['ANTONIO']) || agenteEstaBloqueado('ANTONIO', fechaElegida, h);
+
+                    if (ignorarBloqueos) {
+                        opcionesHoras += `<option value="${h}">${h}</option>`;
+                        horasEncontradas++;
+                    } else if (h === '19:00') {
+                        if (!manuelLleno) { opcionesHoras += `<option value="19:00">19:00</option>`; horasEncontradas++; }
+                    } else {
+                        if (!manuelLleno || !antonioLleno) {
+                            opcionesHoras += `<option value="${h}">${h}</option>`;
+                            horasEncontradas++;
+                        }
+                    }
+                });
+
+                if (horasEncontradas === 0) {
+                    selectHor.innerHTML = '<option value="" disabled selected>Agenda llena o bloqueada</option>';
+                    Swal.showValidationMessage('No hay horas disponibles (agenda llena o día bloqueado).');
+                } else {
+                    selectHor.innerHTML = opcionesHoras;
+                    selectHor.classList.remove('bg-gray-50');
+                    if (horaFormateada && selectHor.querySelector(`option[value="${horaFormateada}"]`)) {
+                        selectHor.value = horaFormateada;
+                        actualizarAgente(); 
+                    }
+                }
+            };
+
+            const actualizarAgente = () => {
+                const horaElegida = selectHor.value;
+                const fechaElegida = inputFec.value;
+                const ignorarBloqueos = checkConjunta.checked;
+                
+                if (!horaElegida) return;
+
+                let manuelLleno = agenteEstaBloqueado('MANUEL', fechaElegida, horaElegida);
+                let antonioLleno = agenteEstaBloqueado('ANTONIO', fechaElegida, horaElegida);
+
+                (window.datosAgenda || []).forEach(cita => {
+                    if(!cita.fechaHora) return;
+                    let d = new Date(cita.fechaHora);
+                    let dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                    if (dStr === fechaElegida && !cita.esConjunta && `${String(d.getHours()).padStart(2,'0')}:00` === horaElegida) {
+                        let ag = String(cita.entregador || cita.agente || 'MANUEL').toUpperCase();
+                        if (ag === 'MANUEL') manuelLleno = true;
+                        if (ag === 'ANTONIO') antonioLleno = true;
+                    }
+                });
+
+                let opcionesAgente = '';
+                if (horaElegida === '19:00') {
+                    opcionesAgente = `<option value="MANUEL" selected>MANUEL</option>`;
+                } else {
+                    if (ignorarBloqueos) {
+                        opcionesAgente = `<option value="MANUEL">MANUEL</option><option value="ANTONIO">ANTONIO</option>`;
+                    } else {
+                        if (!manuelLleno) opcionesAgente += `<option value="MANUEL">MANUEL</option>`;
+                        if (!antonioLleno) opcionesAgente += `<option value="ANTONIO">ANTONIO</option>`;
+                    }
+                }
+                
+                selectAge.innerHTML = opcionesAgente;
+                selectAge.classList.remove('bg-gray-50');
+
+                if (agentePredefinido && selectAge.querySelector(`option[value="${agentePredefinido}"]`)) {
+                    selectAge.value = agentePredefinido;
+                }
+            };
+
+            inputFec.addEventListener('change', calcularDisponibilidad);
+            selectHor.addEventListener('change', actualizarAgente);
+            checkConjunta.addEventListener('change', calcularDisponibilidad);
+
+            if (inputMat) {
+                inputMat.addEventListener('input', () => {
+                    let mat = inputMat.value.replace(/\s/g, '').toUpperCase();
+                    if (mat.length < 4) return; 
+                    let citaExistente = window.datosAgenda && window.datosAgenda.find(cita => cita.matricula && cita.matricula.replace(/\s/g, '').toUpperCase() === mat);
+                    const divAviso = document.getElementById('aviso-cita-duplicada');
+                    if (divAviso) { if (citaExistente) divAviso.classList.remove('hidden'); else divAviso.classList.add('hidden'); }
+                    let cocheExistente = todosLosCoches.find(c => c.B && c.B.replace(/\s/g, '').toUpperCase() === mat);
+                    if (cocheExistente) {
+                        if (document.getElementById('n-cli') && !document.getElementById('n-cli').value) document.getElementById('n-cli').value = cocheExistente.cliente || '';
+                        if (document.getElementById('n-mod') && !document.getElementById('n-mod').value) document.getElementById('n-mod').value = cocheExistente.C || '';
+                        if (document.getElementById('n-renting') && !document.getElementById('n-renting').value) document.getElementById('n-renting').value = cocheExistente.renting || '';
+                        if (document.getElementById('n-bas') && !document.getElementById('n-bas').value) document.getElementById('n-bas').value = cocheExistente.A || '';
+                    }
+                });
+            }
+
+            // 🔥 MODIFICADO: Añadimos un pequeño retraso para asegurar que los elementos del DOM han cargado
+            if (fechaPredefinida) {
+                setTimeout(() => {
+                    calcularDisponibilidad();
+                }, 50);
+            }
         },
+
         preConfirm: async () => {
             const mat = document.getElementById('n-mat').value.toUpperCase().trim();
             const cli = document.getElementById('n-cli').value.toUpperCase().trim();
             const fec = document.getElementById('n-fec').value;
             const hor = document.getElementById('n-hor').value;
             const agenteAsignado = document.getElementById('n-age') ? document.getElementById('n-age').value : '';
+            
             if (!mat || !cli || !fec || !hor) { Swal.showValidationMessage('Matrícula, nombre, fecha y hora son obligatorios.'); return false; }
-            if (!agenteAsignado) { Swal.showValidationMessage('Debes asignar un entregador.'); return false; }
-            try {
-                const bloqueosSnapshot = await window.getDocs(window.collection(window.db, "bloqueos_agenda"));
-                let conflicto = null;
-                bloqueosSnapshot.forEach(doc => {
-                    const b = doc.data();
-                    if (b.operarioAfectado === "AMBOS" || b.operarioAfectado === agenteAsignado) {
-                        if (b.tipo === "vacaciones") {
-                            if (fec >= b.fechaInicio && fec <= b.fechaFin) conflicto = `⛔ ${agenteAsignado} está bloqueado/a: ${b.motivo}`;
-                        } else if (b.tipo === "hora_suelta") {
-                            if (fec === b.fechaInicio && hor >= b.horaInicio && hor <= b.horaFin) conflicto = `⛔ ${agenteAsignado} no está disponible a las ${hor}: ${b.motivo}`;
-                        }
-                    }
-                });
-                if (conflicto) {
-                    if(typeof window.registrarMetricaM2 === 'function') window.registrarMetricaM2('choques_agenda_evitados');
-                    Swal.showValidationMessage(conflicto); return false;
-                }
-            } catch (err) { console.error("Error al consultar bloqueos", err); }
+            if (!agenteAsignado) { Swal.showValidationMessage('Debes asignar un entregador válido para esa hora.'); return false; }
 
-            const conflictoCita = (window.datosAgenda || []).find(cita => {
-                if (!cita || !cita.fechaHora) return false;
-                const fechaCita = new Date(cita.fechaHora);
-                if (isNaN(fechaCita.getTime())) return false;
-
-                const fechaCitaKey = `${fechaCita.getFullYear()}-${String(fechaCita.getMonth() + 1).padStart(2, '0')}-${String(fechaCita.getDate()).padStart(2, '0')}`;
-                const horaCitaKey = `${String(fechaCita.getHours()).padStart(2, '0')}:00`;
-                const agenteCita = String(cita.entregador || cita.agente || 'MANUEL').toUpperCase();
-                const mismaFechaHora = (fechaCitaKey === fec && horaCitaKey === hor);
-
-                if (!mismaFechaHora) return false;
-                if (hor === '19:00') return true;
-
-                return agenteCita === agenteAsignado;
-            });
-
-            if (conflictoCita) {
-                if(typeof window.registrarMetricaM2 === 'function') window.registrarMetricaM2('choques_agenda_evitados');
-                const vehiculoConflicto = conflictoCita.matricula || conflictoCita.modelo || 'otra cita';
-                Swal.showValidationMessage(`Ese hueco ya está ocupado por ${vehiculoConflicto}. Elige otra hora o entregador.`);
-                return false;
-            }
+            const forzarConjunta = document.getElementById('n-conjunta') ? document.getElementById('n-conjunta').checked : false;
 
             let resultadoFormat = {
                 matricula: mat, cliente: cli, fecha: fec, hora: hor,
                 telefono: document.getElementById('n-tlf') ? document.getElementById('n-tlf').value.trim() : '',
-                renting: document.getElementById('n-renting') ? document.getElementById('n-renting').value.toUpperCase().trim() : ''
+                renting: document.getElementById('n-renting') ? document.getElementById('n-renting').value.toUpperCase().trim() : '',
+                esConjunta: forzarConjunta
             };
 
             if (esDevolucion) {
@@ -1478,10 +1722,8 @@ window.crearCitaManual = async function() {
     });
 
     if (formValues) {
-        
         let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
-        
-        const estadoAsignado = (rolLimpio === "backoffice" || rolLimpio === "administracion") ? "pendiente" : "confirmada";
+        const estadoAsignado = (rolLimpio === "backoffice" || rolLimpio === "administracion" || rolLimpio === "comercial") ? "pendiente" : "confirmada";
         
         try {
             Swal.fire({ title: 'Guardando cita en tiempo real...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
@@ -1493,7 +1735,8 @@ window.crearCitaManual = async function() {
                 telefono: formValues.telefono || "", email: formValues.email || "", bastidor: formValues.bastidor || "",
                 renting: formValues.renting || "", entregaVO: formValues.devuelveVehiculo || "NO", 
                 notas: formValues.notas || "", creadoPor: window.usuarioActivo, 
-                estado: estadoAsignado 
+                estado: estadoAsignado,
+                esConjunta: formValues.esConjunta
             });
 
             let matLimpiaForm = formValues.matricula.replace(/\s/g, '').toUpperCase();
@@ -1506,8 +1749,7 @@ window.crearCitaManual = async function() {
             }) : null;
 
             if (cocheEncontrado && cocheEncontrado.fila) {
-                let fechaVisual = formValues.fecha.split('-').reverse().join('/'); // De AAAA-MM-DD a DD/MM/AAAA
-                
+                let fechaVisual = formValues.fecha.split('-').reverse().join('/');
                 await window.updateDoc(window.doc(window.db, "vehiculos", cocheEncontrado.fila), {
                     fechaCita: `${fechaVisual} - ${formValues.hora}h`,
                     agente: formValues.agente,
@@ -1516,7 +1758,6 @@ window.crearCitaManual = async function() {
                 });
             }
 
-            // 🔥 DISPARADOR DE CORREO: Solo enviamos si NO es pendiente
             if(estadoAsignado !== "pendiente" && typeof window.dispararEmailCita === 'function') {
                  window.dispararEmailCita(formValues, "enviar_correo");
             }
@@ -1531,7 +1772,44 @@ window.crearCitaManual = async function() {
             Swal.fire('Fallo', 'Error al conectar con Firebase o actualizar el vehículo.', 'error'); 
         }
     }
-}; 
+};
+// ==========================================
+// 🎯 MENÚ INTERACTIVO PARA HUECOS LIBRES
+// ==========================================
+window.opcionesHuecoLibre = async function(fecha, hora, agente) {
+    const partesFecha = fecha.split('-');
+    const fechaVisual = `${partesFecha[2]}/${partesFecha[1]}/${partesFecha[0]}`;
+
+    // 🔥 MODIFICADO: Guardamos la respuesta completa en la variable "result"
+    const result = await Swal.fire({
+        title: 'Gestión de Hueco Libre',
+        html: `
+            <p class="text-sm text-gray-600 mb-3">Has seleccionado el <b>${fechaVisual}</b> a las <b>${hora}:00h</b> para <b>${agente}</b>.</p>
+            <p class="text-sm font-bold text-[#001e50]">¿Qué deseas hacer con esta franja?</p>
+        `,
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonColor: '#00b0f0',    // Azul VW para Citas
+        denyButtonColor: '#f59e0b',       // Naranja para Bloqueos
+        cancelButtonColor: '#64748b',     // Gris para cancelar
+        confirmButtonText: '<i class="ph-bold ph-calendar-plus"></i> Agendar Cita',
+        denyButtonText: '<i class="ph-bold ph-lock-key"></i> Bloquear Franja',
+        cancelButtonText: 'Cancelar',
+        customClass: {
+            confirmButton: 'text-[#001e50] font-black',
+            denyButton: 'font-black'
+        }
+    });
+
+    // 🔥 MODIFICADO: Evaluamos correctamente qué botón se ha pulsado y pasamos los datos
+    if (result.isConfirmed) {
+        // Pulsó Agendar Cita -> Enviamos datos al formulario (Si es el hueco general, asignamos Manuel)
+        window.crearCitaManual(fecha, hora, agente === 'UNICA ENTREGA' ? 'MANUEL' : agente); 
+    } else if (result.isDenied) {
+        // Pulsó Bloquear Franja -> Enviamos datos al Gestor de Vacaciones
+        window.abrirGestorVacaciones(fecha, hora, agente === 'UNICA ENTREGA' ? 'AMBOS' : agente);
+    }
+};
 // ==========================================
     // ✅ VALIDACIONES DE AGENDA (ENTREGAS)
     // ==========================================
@@ -1596,32 +1874,36 @@ window.crearCitaManual = async function() {
 
         if (motivo !== undefined) {
             try {
-                // 1. Recuperamos los datos de la cita antes de borrarla para saber quién la creó
+                // 1. Recuperamos los datos de la cita antes de borrarla
                 const docRef = window.doc(window.db, "citas_agenda", idCita);
                 const docSnap = await window.getDoc(docRef);
                 
                 if (docSnap.exists()) {
                     const datosCita = docSnap.data();
                     
-                    // 2. Si la cita la creó un usuario de Back Office, le creamos una notificación
+                    // 2. Intentamos crear la notificación, pero la BLINDAMOS por si falla Firebase
                     if (datosCita.creadoPor) {
-                        const refNotificacion = window.doc(window.collection(window.db, "notificaciones_agenda"));
-                        await window.setDoc(refNotificacion, {
-                            vehiculo: modeloVehiculo,
-                            matricula: datosCita.matricula || "S/M",
-                            fechaCita: `${datosCita.fecha} a las ${datosCita.hora}h`,
-                            solicitadoPor: datosCita.creadoPor, // Guardará el nombre del Back Office
-                            motivoRechazo: motivo || "No especificado por el agente",
-                            fechaRegistro: new Date().toLocaleString(),
-                            leido: false // Para saber si ya vio el aviso
-                        });
+                        try {
+                            const refNotificacion = window.doc(window.collection(window.db, "notificaciones_agenda"));
+                            await window.setDoc(refNotificacion, {
+                                vehiculo: modeloVehiculo,
+                                matricula: datosCita.matricula || "S/M",
+                                fechaCita: `${datosCita.fecha} a las ${datosCita.hora}h`,
+                                solicitadoPor: datosCita.creadoPor,
+                                motivoRechazo: motivo || "No especificado por el agente",
+                                fechaRegistro: new Date().toLocaleString(),
+                                leido: false
+                            });
+                        } catch (errorNotificacion) {
+                            console.warn("Aviso: La cita se borrará, pero no se pudo enviar la notificación a Back Office", errorNotificacion);
+                        }
                     }
                 }
 
-                // 3. Ahora sí, borramos la cita pendiente para liberar el hueco en el cuadrante
+                // 3. Ahora sí, borramos la cita (esta línea se ejecutará SIEMPRE, aunque la notificación falle)
                 await window.deleteDoc(window.doc(window.db, "citas_agenda", idCita));
                 
-                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Cita rechazada y notificada', showConfirmButton: false, timer: 3000 });
+                Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Cita rechazada y eliminada', showConfirmButton: false, timer: 3000 });
             } catch (error) {
                 console.error(error);
                 Swal.fire('Error', 'No se pudo procesar el rechazo de la cita.', 'error');
@@ -1649,61 +1931,100 @@ window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora,
         return modeloBase.includes('DEVOLUCION') || modeloBase.includes('DEVOLUCIÓN');
     })();
 
-    // Si es devolución y no hay ficha de vehículo, permitimos completar desde agenda sin crear tarjeta.
-    if (idFb === 'no_db' && esCitaDevolucion && citaId) {
-        const confirmarDevolucion = await Swal.fire({
-            title: 'Completar Devolución',
+    const esCitaMixtaEntregaDevolucion = !esCitaDevolucion && (String(citaEnAgenda?.entregaVO || '').toUpperCase() === 'SI' || String(citaEnAgenda?.entregaVO || '').toUpperCase() === 'SÍ');
+
+    if (esCitaDevolucion) {
+        const datosBase = citaEnAgenda || {};
+        const { value: formValues } = await Swal.fire({
+            title: 'Alta operativa de devolución',
+            width: 620,
             html: `
-                <p class="text-sm text-gray-700">Esta devolución no tiene tarjeta de vehículo vinculada.</p>
-                <p class="mt-2 text-sm text-gray-700">¿Quieres marcarla como completada y enviarla al historial?</p>
+                <div style="text-align:left; font-family:'Inter', sans-serif;">
+                    <p style="font-size:12px; color:#4b5563; margin-bottom:10px;">
+                        Se marcará la cita como finalizada y se enviará a Operativa Diaria > Devoluciones Renting.
+                    </p>
+                    <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Recogido por</label>
+                    <input id="dev-op-recogido" class="swal2-input !w-full !m-0 text-center uppercase" value="${window.escapeJS(datosBase.recogidoPor || window.usuarioActivo || '')}" placeholder="Nombre">
+
+                    <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin:10px 0 5px; text-transform:uppercase;">Renting</label>
+                    <input id="dev-op-renting" class="swal2-input !w-full !m-0 text-center uppercase" value="${window.escapeJS(datosBase.renting || '')}" placeholder="ARVAL, ALD...">
+
+                    <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin:10px 0 5px; text-transform:uppercase;">Modelo</label>
+                    <input id="dev-op-modelo" class="swal2-input !w-full !m-0 text-center uppercase" value="${window.escapeJS(datosBase.modelo || modelo || '')}" placeholder="T-ROC">
+                </div>
             `,
-            icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: '#10b981',
+            confirmButtonColor: '#001e50',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Sí, completar devolución',
-            cancelButtonText: 'Cancelar'
+            confirmButtonText: 'Crear en devoluciones',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const recogidoPor = String(document.getElementById('dev-op-recogido').value || '').toUpperCase().trim();
+                const renting = String(document.getElementById('dev-op-renting').value || '').toUpperCase().trim();
+                const modeloFinal = String(document.getElementById('dev-op-modelo').value || '').toUpperCase().trim();
+
+                if (!recogidoPor) return Swal.showValidationMessage('El campo "Recogido por" es obligatorio.');
+                if (!renting) return Swal.showValidationMessage('El renting es obligatorio.');
+                if (!modeloFinal) return Swal.showValidationMessage('El modelo es obligatorio.');
+
+                return { recogidoPor, renting, modelo: modeloFinal };
+            }
         });
 
-        if (!confirmarDevolucion.isConfirmed) return;
+        if (!formValues) return;
 
         try {
-            const tsEntrega = typeof window.obtenerTimestamp === 'function' ? window.obtenerTimestamp() : new Date().getTime();
-            const fechaEntregaTexto = typeof window.formatearFechaES === 'function' ? window.formatearFechaES(tsEntrega) : new Date().toLocaleDateString('es-ES');
-            await window.updateDoc(window.doc(window.db, "citas_agenda", citaId), {
-                estado: "confirmada",
-                entregado: true,
-                fechaEntrega: tsEntrega,
-                fechaEntregaTexto: fechaEntregaTexto,
-                tipoFinalizacion: 'DEVOLUCION'
-            });
+            let citaObjetivoId = String(citaId || '').trim();
+            if (!citaObjetivoId && Array.isArray(window.datosAgenda)) {
+                const matObj = String(matricula || '').replace(/\s/g, '').toUpperCase();
+                const modeloObj = String(modelo || '').toUpperCase();
+                const fechaObj = String(dia || '').trim();
+                const horaObj = String(hora || '').replace('h', '').trim();
 
-            if (typeof window.registrarMovimientoHistorial === 'function') {
-                await window.registrarMovimientoHistorial({
-                    tipo: 'DEVOLUCION',
-                    citaId: citaId,
-                    vehiculoId: null,
-                    matricula: (citaEnAgenda && citaEnAgenda.matricula) || matricula || 'S/M',
-                    bastidor: (citaEnAgenda && citaEnAgenda.bastidor) || 'S/D',
-                    modelo: (citaEnAgenda && citaEnAgenda.modelo) || modelo || 'DEVOLUCION',
-                    renting: (citaEnAgenda && citaEnAgenda.renting) || '',
-                    detalle: 'Devolucion completada desde agenda sin tarjeta de vehiculo'
+                const candidata = window.datosAgenda.find(c => {
+                    const matCita = String(c?.matricula || '').replace(/\s/g, '').toUpperCase();
+                    const modeloCita = String(c?.modelo || '').toUpperCase();
+                    const matchMat = matObj && matCita === matObj;
+                    const matchModelo = modeloObj && modeloCita.includes('DEVOLUCION');
+                    if (!matchMat && !matchModelo) return false;
+
+                    if (!c?.fechaHora) return true;
+                    const f = new Date(c.fechaHora);
+                    if (isNaN(f.getTime())) return true;
+                    const fechaTxt = f.toLocaleDateString('es-ES');
+                    const horaTxt = `${f.getHours()}:00`;
+                    const mismaFecha = !fechaObj || fechaTxt === fechaObj;
+                    const mismaHora = !horaObj || horaTxt === horaObj;
+                    return mismaFecha && mismaHora;
                 });
+
+                citaObjetivoId = candidata?.id || '';
             }
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Devolución completada',
-                text: 'La cita se ha marcado en verde y ya aparece en el historial de movimientos.',
-                confirmButtonColor: '#001e50'
-            });
+            if (!citaObjetivoId) {
+                Swal.fire('Aviso', 'No se ha encontrado la cita para continuar la devolución.', 'warning');
+                return;
+            }
 
-            if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
-            if (typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes();
+            if (typeof window.iniciarDevolucionRentingDesdeAgenda !== 'function') {
+                throw new Error('No está disponible iniciarDevolucionRentingDesdeAgenda.');
+            }
+
+            await window.iniciarDevolucionRentingDesdeAgenda({
+                citaIdOrigen: citaObjetivoId,
+                vehiculoIdOrigen: idFb !== 'no_db' ? idFb : null,
+                recogidoPor: formValues.recogidoPor,
+                renting: formValues.renting,
+                modelo: formValues.modelo,
+                matricula: (datosBase && datosBase.matricula) || matricula || 'S/M',
+                bastidor: (datosBase && datosBase.bastidor) || '',
+                fechaRecogida: dia || (datosBase && datosBase.fechaHora) || new Date(),
+                ubicacion: ''
+            });
             return;
         } catch (errorDevolucion) {
-            console.error('Error al completar devolución desde agenda:', errorDevolucion);
-            Swal.fire('Error', 'No se pudo completar la devolución.', 'error');
+            console.error('Error al enviar devolución a operativa:', errorDevolucion);
+            Swal.fire('Error', 'No se pudo crear la devolución operativa.', 'error');
             return;
         }
     }
@@ -1774,7 +2095,33 @@ window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora,
     if (result.isConfirmed) {
         // Si se entregó, conectamos con la herramienta de WhatsApp y fotografía
         if (typeof window.marcarComoEntregado === 'function') {
-            window.marcarComoEntregado(idFb, { idCita: citaId || null, mantenerCita: true });
+            await Promise.resolve(window.marcarComoEntregado(idFb, { idCita: citaId || null, mantenerCita: true }));
+
+            if (esCitaMixtaEntregaDevolucion && typeof window.tramitarDevolucionDesdeCitaAgenda === 'function') {
+                const iniciarDevolucion = await Swal.fire({
+                    title: '¿El cliente ha entregado su vehículo?',
+                    text: 'Si respondes "Sí", abriremos ahora el flujo de devolución para adjuntar el acta.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#0ea5e9',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Sí, iniciar devolución',
+                    cancelButtonText: 'No, todavía no'
+                });
+
+                if (iniciarDevolucion.isConfirmed) {
+                    await window.tramitarDevolucionDesdeCitaAgenda({
+                        id: String(citaId || '').trim() || (citaEnAgenda?.id || ''),
+                        fila: idFb,
+                        modelo: citaEnAgenda?.modelo || modelo,
+                        matricula: citaEnAgenda?.matricula || matricula,
+                        bastidor: citaEnAgenda?.bastidor || '',
+                        renting: citaEnAgenda?.renting || '',
+                        entregaVO: citaEnAgenda?.entregaVO || '',
+                        fechaHora: citaEnAgenda?.fechaHora || `${dia} ${hora}`
+                    }, { noActualizarCitaEstadoEntrega: true });
+                }
+            }
         } else {
             Swal.fire('Error', 'La función de entrega no está disponible en este momento.', 'error');
         }
@@ -1787,6 +2134,70 @@ window.preguntarSiEntregado = async function(idFb, modelo, matricula, dia, hora,
             confirmButtonColor: '#001e50'
         });
     }
+};
+
+window.tramitarDevolucionDesdeCitaAgenda = async function(cita, opciones = {}) {
+    const datosBase = cita || {};
+    const { value: formValues } = await Swal.fire({
+        title: 'Tramitar devolución desde cita',
+        width: 620,
+        html: `
+            <div style="text-align:left; font-family:'Inter', sans-serif;">
+                <p style="font-size:12px; color:#4b5563; margin-bottom:10px;">
+                    La entrega y la devolución se gestionan por separado. Ahora prepararás la devolución.
+                </p>
+                <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Recogido por</label>
+                <input id="mix-dev-recogido" class="swal2-input !w-full !m-0 text-center uppercase" value="${window.escapeJS(window.usuarioActivo || '')}" placeholder="Nombre">
+
+                <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin:10px 0 5px; text-transform:uppercase;">Renting</label>
+                <input id="mix-dev-renting" class="swal2-input !w-full !m-0 text-center uppercase" value="${window.escapeJS(datosBase.renting || '')}" placeholder="ARVAL, ALD...">
+
+                <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin:10px 0 5px; text-transform:uppercase;">Modelo devolución</label>
+                <input id="mix-dev-modelo" class="swal2-input !w-full !m-0 text-center uppercase" value="${window.escapeJS(datosBase.modelo || '')}" placeholder="Modelo coche devolución">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#001e50',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Abrir flujo devolución',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const recogidoPor = String(document.getElementById('mix-dev-recogido').value || '').toUpperCase().trim();
+            const renting = String(document.getElementById('mix-dev-renting').value || '').toUpperCase().trim();
+            const modelo = String(document.getElementById('mix-dev-modelo').value || '').toUpperCase().trim();
+
+            if (!recogidoPor) return Swal.showValidationMessage('El campo "Recogido por" es obligatorio.');
+            if (!renting) return Swal.showValidationMessage('El renting es obligatorio.');
+            if (!modelo) return Swal.showValidationMessage('El modelo es obligatorio.');
+
+            return { recogidoPor, renting, modelo };
+        }
+    });
+
+    if (!formValues) return;
+
+    if (typeof window.iniciarDevolucionRentingDesdeAgenda !== 'function') {
+        Swal.fire('Error', 'No se pudo abrir el flujo de devoluciones.', 'error');
+        return;
+    }
+
+    const fechaRecogida = (() => {
+        const fecha = datosBase?.fechaHora ? new Date(datosBase.fechaHora) : new Date();
+        return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+    })();
+
+    await window.iniciarDevolucionRentingDesdeAgenda({
+        citaIdOrigen: String(datosBase.id || '').trim() || null,
+        vehiculoIdOrigen: String(datosBase.fila || '').trim() || null,
+        recogidoPor: formValues.recogidoPor,
+        renting: formValues.renting,
+        modelo: formValues.modelo,
+        matricula: String(datosBase.matricula || '').toUpperCase().trim(),
+        bastidor: String(datosBase.bastidor || '').toUpperCase().trim(),
+        fechaRecogida,
+        ubicacion: '',
+        noActualizarCitaEstadoEntrega: opciones?.noActualizarCitaEstadoEntrega === true
+    });
 };
 // ==========================================
 // 📧 MÓDULO DE NOTIFICACIONES POR EMAIL (BACKOFFICE)

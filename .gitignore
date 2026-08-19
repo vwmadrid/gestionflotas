@@ -1,0 +1,9 @@
+# Ignorar dependencias de Node
+node_modules/
+
+# Ignorar archivos de error
+*.log
+
+# Ignorar ejecutables de Tailwind
+tailwindcss.exe
+tailwindcss-windows-x64.exe

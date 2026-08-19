@@ -22,9 +22,11 @@
   
     <!-- ENLACES PWA (AÑADIDOS PARA INSTALACIÓN) -->
     <link rel="manifest" href="./manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="GesCar OS">
+    <link rel="icon" type="image/png" href="./icon.png">
     <link rel="apple-touch-icon" href="./icon.png">
 
     <script>
@@ -39,7 +41,6 @@
     </script>
     
     <title>Castellana Wagen M-40 - Control de Vehículos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -63,7 +64,12 @@
           appId: "1:1070891769268:web:47b04e6d62e576038966e1"
         };
 
+        const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(location.hostname);
+
         const app = initializeApp(firebaseConfig);
+        if (isLocalHost) {
+            console.log("🛠️ App Check desactivado para desarrollo local.");
+        }
         window.db = getFirestore(app);
         window.auth = getAuth(app);
         
@@ -99,6 +105,7 @@
                 <option value="taller">Dpto. Taller</option>
                 <option value="recambios">Dpto. Recambios</option>
                 <option value="backoffice">Back Office</option>
+                <option value="comercial">Comercial</option>
             </select>
 
             <input type="text" id="userLogin" placeholder="Usuario" class="hidden w-full p-4 bg-gray-50 border border-gray-300 rounded-lg text-base outline-none focus:ring-2 focus:ring-[#00b0f0] font-medium uppercase text-center tracking-widest">
@@ -127,6 +134,7 @@
               <button onclick="window.cambiarPestana('logistica')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-truck text-sm"></i> Logística Renting</button>
               <button onclick="window.cambiarPestana('todos')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-car text-sm"></i> Inventario Activo</button>
               <button onclick="window.cambiarPestana('agenda')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-calendar-plus text-sm"></i> Agenda de Citas</button>
+              <button onclick="window.cambiarPestana('devoluciones-renting')" class="p-2.5 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg font-bold text-xs text-left flex items-center gap-2 transition-all"><i class="ph-bold ph-arrow-counter-clockwise text-sm"></i> Devoluciones Renting</button>
           </div>
       </div>
 
@@ -209,6 +217,15 @@
                     <i class="ph-bold ph-calendar-slash text-base"></i> Bloquear Fechas
                 </button>
             </div>
+
+            <div id="botonesDevoluciones" class="hidden flex items-center gap-2">
+                <button onclick="window.abrirFormularioDevolucionRenting()" class="bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-900 transition-colors shadow-sm">
+                    <i class="ph-bold ph-plus-circle text-base"></i> Nueva Devolución
+                </button>
+                <button onclick="window.exportarDevolucionesRentingExcel()" class="bg-[#107c41] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0c5e31] transition-colors shadow-sm">
+                    <i class="ph-bold ph-microsoft-excel-logo text-base"></i> Exportar Excel
+                </button>
+            </div>
             
             <div id="controlesVistaExcel" class="hidden flex items-center gap-2 border-l border-gray-300 pl-3 ml-1">
                 <button onclick="window.descargarExcelReal()" class="bg-[#107c41] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0c5e31] transition-colors shadow-sm">
@@ -237,6 +254,7 @@
       <div id="contenedorTabla" class="hidden w-full bg-white rounded-lg shadow-sm border border-gray-300 overflow-auto" style="max-height: calc(100vh - 190px);"></div>
       <div id="contenedorAgenda" class="hidden max-w-full mx-auto w-full"></div>
       <div id="contenedorEntregados" class="hidden max-w-full mx-auto w-full"></div>
+      <div id="contenedorDevolucionesRenting" class="hidden max-w-6xl mx-auto w-full"></div>
       
       <div id="contenedorEncuestas" class="hidden w-full bg-white p-6 rounded-lg shadow-sm border border-gray-300">
           <div id="tablaEncuestas" class="overflow-x-auto"></div>
@@ -310,9 +328,7 @@
             </div>
         </div>
       </div>
-</div>
-
-  <input type="file" id="inputUploadPDF" accept=".pdf" multiple class="hidden" onchange="window.procesarPDFs(event)">
+</main> <input type="file" id="inputUploadPDF" accept=".pdf" multiple class="hidden" onchange="window.procesarPDFs(event)">
 
   <div id="chatModal" class="fixed inset-0 z-50 hidden bg-black/60 flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl flex flex-col h-[550px] overflow-hidden border-t-8 border-[#075e54]">
@@ -398,17 +414,18 @@
     </div>
 </div>
 
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=20"></script>
     <script src="chat.js?v=8"></script>
     <script src="dashboard.js?v=9"></script>
-    <script src="agenda.js?v=16"></script>
-    <script src="vehiculos.js?v=14"></script>
+    <script src="agenda.js?v=24"></script>
+    <script src="devoluciones.js?v=11"></script>
+    <script src="vehiculos.js?v=19"></script>
 
 <!-- REGISTRO DEL SERVICE WORKER (PWA) AÑADIDO -->
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js?v=8')
+                navigator.serviceWorker.register('./sw.js?v=9')
                 .then((registration) => {
                     registration.update();
 
