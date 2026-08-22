@@ -350,18 +350,21 @@ window.abrirAdjuntosDevolucionRenting = function(id) {
     if (item.urlActaDevolucion) {
         enlaces.push(`<a href="${item.urlActaDevolucion}" target="_blank" class="text-blue-700 hover:underline font-bold"><i class="ph-bold ph-file-pdf"></i> Acta de devolución</a>`);
     }
+    if (item.urlFotoEstado) {
+        enlaces.push(`<a href="${item.urlFotoEstado}" target="_blank" class="text-orange-600 hover:underline font-bold"><i class="ph-bold ph-image"></i> Foto estado vehículo</a>`);
+    }
     if (item.urlCartaPorte) {
         enlaces.push(`<a href="${item.urlCartaPorte}" target="_blank" class="text-blue-700 hover:underline font-bold"><i class="ph-bold ph-file-text"></i> Carta de porte</a>`);
     }
 
     if (!enlaces.length) {
-        Swal.fire('Sin adjuntos', 'Este registro aún no tiene acta ni carta de porte.', 'info');
+        Swal.fire('Sin adjuntos', 'Este registro aún no tiene acta, fotos ni carta de porte.', 'info');
         return;
     }
 
     Swal.fire({
         title: 'Documentación adjunta',
-        html: `<div class="text-left space-y-2">${enlaces.map(x => `<div>${x}</div>`).join('')}</div>`,
+        html: `<div class="text-left space-y-3">${enlaces.map(x => `<div>${x}</div>`).join('')}</div>`,
         confirmButtonColor: '#001e50'
     });
 };
@@ -482,14 +485,30 @@ window.abrirFormularioDevolucionRenting = async function(id) {
                 </div>
 
                 <div style="margin-top: 14px; border-top:1px solid #e5e7eb; padding-top:12px;">
-                    <p style="font-size:11px; font-weight:bold; color:#666; margin-bottom:8px; text-transform:uppercase;">Acta en la entrega del cliente</p>
-                    <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px;">Acta de devolución (PDF/Imagen)</label>
-                    <input id="dev-acta" type="file" accept=".pdf,image/*" class="swal2-file text-sm w-full border border-gray-300 rounded p-2">
-                    <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin:10px 0 5px;">Escanear/foto rápida (móvil)</label>
-                    <input id="dev-acta-camara" type="file" accept="image/*" capture="environment" class="swal2-file text-sm w-full border border-gray-300 rounded p-2">
-                    ${existente?.urlActaDevolucion ? `<p style="margin-top:8px; font-size:11px;"><a href="${existente.urlActaDevolucion}" target="_blank" style="color:#1d4ed8; font-weight:bold; text-decoration:underline;">Ver acta actual</a></p>` : ''}
-                    <p style="font-size:11px; color:#6b7280; margin-top:8px;">
-                        En móvil puedes usar la cámara para escanear el acta. La fecha de reentrega y la carta de porte se registran después, cuando el renting retira el coche.
+                    <p style="font-size:11px; font-weight:bold; color:#666; margin-bottom:8px; text-transform:uppercase;">Documentación en la entrega del cliente</p>
+                    
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <!-- Columna Acta -->
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px;">1. Acta de devolución (PDF/Foto)</label>
+                            <input id="dev-acta" type="file" accept=".pdf,image/*" class="swal2-file text-sm w-full border border-gray-300 rounded p-2 mb-2">
+                            <label style="display:block; font-size:10px; font-weight:bold; color:#666; margin-bottom:5px;">O abrir cámara (Móvil)</label>
+                            <input id="dev-acta-camara" type="file" accept="image/*" capture="environment" class="swal2-file text-sm w-full border border-gray-300 rounded p-2">
+                            ${existente?.urlActaDevolucion ? `<p style="margin-top:5px; font-size:11px;"><a href="${existente.urlActaDevolucion}" target="_blank" style="color:#1d4ed8; font-weight:bold; text-decoration:underline;">Ver acta actual</a></p>` : ''}
+                        </div>
+
+                        <!-- Columna Foto Daños -->
+                        <div>
+                            <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px;">2. Foto Estado/Daños (Opcional)</label>
+                            <input id="dev-foto-danos" type="file" accept="image/*" class="swal2-file text-sm w-full border border-gray-300 rounded p-2 mb-2">
+                            <label style="display:block; font-size:10px; font-weight:bold; color:#666; margin-bottom:5px;">O abrir cámara (Móvil)</label>
+                            <input id="dev-foto-camara" type="file" accept="image/*" capture="environment" class="swal2-file text-sm w-full border border-gray-300 rounded p-2">
+                            ${existente?.urlFotoEstado ? `<p style="margin-top:5px; font-size:11px;"><a href="${existente.urlFotoEstado}" target="_blank" style="color:#1d4ed8; font-weight:bold; text-decoration:underline;">Ver foto actual</a></p>` : ''}
+                        </div>
+                    </div>
+
+                    <p style="font-size:11px; color:#6b7280; margin-top:12px;">
+                        La fecha de reentrega y la carta de porte se registran después, cuando el renting retira el coche.
                     </p>
                 </div>
             </div>
@@ -505,9 +524,15 @@ window.abrirFormularioDevolucionRenting = async function(id) {
             const modelo = String(document.getElementById('dev-modelo').value || '').toUpperCase().trim();
             const fechaRecogida = String(document.getElementById('dev-fecha-recogida').value || '').trim();
             const ubicacion = String(document.getElementById('dev-ubicacion').value || '').toUpperCase().trim();
+            
             const fileActaDocumento = document.getElementById('dev-acta').files[0] || null;
             const fileActaCamara = document.getElementById('dev-acta-camara').files[0] || null;
             const fileActa = fileActaCamara || fileActaDocumento || null;
+
+            // 🔥 NUEVO: Recoger la foto del estado
+            const fileFotoDanos = document.getElementById('dev-foto-danos').files[0] || null;
+            const fileFotoCamara = document.getElementById('dev-foto-camara').files[0] || null;
+            const fileFoto = fileFotoCamara || fileFotoDanos || null;
 
             if (!recogidoPor) return Swal.showValidationMessage('El campo "Recogido por" es obligatorio.');
             if (!matricula) return Swal.showValidationMessage('La matrícula es obligatoria.');
@@ -518,13 +543,7 @@ window.abrirFormularioDevolucionRenting = async function(id) {
             if (!esEdicion && !fileActa) return Swal.showValidationMessage('En el alta debes adjuntar el acta de devolución.');
 
             return {
-                recogidoPor,
-                matricula,
-                renting,
-                modelo,
-                fechaRecogida,
-                ubicacion,
-                fileActa,
+                recogidoPor, matricula, renting, modelo, fechaRecogida, ubicacion, fileActa, fileFoto, // Añadimos fileFoto
                 citaIdOrigen: baseForm?.citaIdOrigen || null,
                 vehiculoIdOrigen: baseForm?.vehiculoIdOrigen || null,
                 bastidor: baseForm?.bastidor || null,
@@ -543,10 +562,12 @@ window.abrirFormularioDevolucionRenting = async function(id) {
         Swal.fire({ title: 'Guardando devolución...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
 
         let urlActaDevolucion = existente?.urlActaDevolucion || null;
-
         let estadoSubidaActa = existente?.estadoSubidaActa || 'SIN_ARCHIVO';
         let intentosSubidaActa = Number(existente?.intentosSubidaActa || 0);
         let errorSubidaActa = existente?.errorSubidaActa || null;
+
+        // Variables para la nueva foto
+        let urlFotoEstado = existente?.urlFotoEstado || null;
 
         if (formValues.fileActa) {
             const subidaActa = await window.subirArchivoConReintento(formValues.fileActa, { maxIntentos: 3 });
@@ -559,11 +580,17 @@ window.abrirFormularioDevolucionRenting = async function(id) {
                 estadoSubidaActa = 'PENDIENTE_SUBIDA';
                 intentosSubidaActa = subidaActa.intentos;
                 errorSubidaActa = subidaActa.error;
+                if (!esEdicion) throw new Error(`No se pudo subir el acta: ${subidaActa.error || 'error desconocido'}`);
+            }
+        }
 
-                // En altas de devolución, el acta debe quedar subida para continuar el flujo.
-                if (!esEdicion) {
-                    throw new Error(`No se pudo subir el acta: ${subidaActa.error || 'error desconocido'}`);
-                }
+        // 🔥 NUEVO: Lógica para subir la foto si existe
+        if (formValues.fileFoto) {
+            const subidaFoto = await window.subirArchivoConReintento(formValues.fileFoto, { maxIntentos: 3 });
+            if (subidaFoto.ok) {
+                urlFotoEstado = subidaFoto.url;
+            } else {
+                console.warn('Error al subir la foto de daños (continuamos sin ella)', subidaFoto.error);
             }
         }
 
@@ -578,9 +605,8 @@ window.abrirFormularioDevolucionRenting = async function(id) {
             fechaRecogida: formValues.fechaRecogida,
             ubicacion: formValues.ubicacion,
             urlActaDevolucion: urlActaDevolucion,
-            estadoSubidaActa,
-            intentosSubidaActa,
-            errorSubidaActa,
+            urlFotoEstado: urlFotoEstado, // Guardamos la URL de la foto
+            estadoSubidaActa, intentosSubidaActa, errorSubidaActa,
             actualizadoTs: ahora,
             actualizadoPor: window.usuarioActivo || 'SISTEMA'
         };
@@ -588,9 +614,7 @@ window.abrirFormularioDevolucionRenting = async function(id) {
         if (esEdicion) {
             await window.updateDoc(window.doc(window.db, 'devoluciones_renting', idDoc), payloadBase);
             window.upsertDevolucionRentingLocal({
-                ...(existente || {}),
-                id: idDoc,
-                ...payloadBase
+                ...(existente || {}), id: idDoc, ...payloadBase
             });
         } else {
             await window.setDoc(window.doc(window.db, 'devoluciones_renting', idDoc), {
@@ -601,48 +625,29 @@ window.abrirFormularioDevolucionRenting = async function(id) {
                 origen: formValues.origen || null,
                 fechaReentregaRenting: '',
                 urlCartaPorte: null,
-                estadoSubidaCarta: 'SIN_ARCHIVO',
-                intentosSubidaCarta: 0,
-                errorSubidaCarta: null,
-                creadoTs: ahora,
-                creadoPor: window.usuarioActivo || 'SISTEMA'
+                estadoSubidaCarta: 'SIN_ARCHIVO', intentosSubidaCarta: 0, errorSubidaCarta: null,
+                creadoTs: ahora, creadoPor: window.usuarioActivo || 'SISTEMA'
             });
 
             window.upsertDevolucionRentingLocal({
-                id: idDoc,
-                ...payloadBase,
+                id: idDoc, ...payloadBase,
                 citaIdOrigen: formValues.citaIdOrigen || null,
                 vehiculoIdOrigen: formValues.vehiculoIdOrigen || null,
                 bastidor: formValues.bastidor || null,
                 origen: formValues.origen || null,
-                fechaReentregaRenting: '',
-                urlCartaPorte: null,
-                estadoSubidaCarta: 'SIN_ARCHIVO',
-                intentosSubidaCarta: 0,
-                errorSubidaCarta: null,
-                creadoTs: ahora,
-                creadoPor: window.usuarioActivo || 'SISTEMA'
+                fechaReentregaRenting: '', urlCartaPorte: null,
+                estadoSubidaCarta: 'SIN_ARCHIVO', intentosSubidaCarta: 0, errorSubidaCarta: null,
+                creadoTs: ahora, creadoPor: window.usuarioActivo || 'SISTEMA'
             });
 
             if (formValues.citaIdOrigen && formValues.noActualizarCitaEstadoEntrega !== true) {
-                const fechaEntregaTexto = typeof window.formatearFechaES === 'function'
-                    ? window.formatearFechaES(ahora)
-                    : new Date(ahora).toLocaleDateString('es-ES');
-
-                // Esta escritura puede no estar permitida para todos los roles.
-                // No debe bloquear el alta principal en devoluciones_renting.
+                const fechaEntregaTexto = typeof window.formatearFechaES === 'function' ? window.formatearFechaES(ahora) : new Date(ahora).toLocaleDateString('es-ES');
                 try {
                     window.updateDoc(window.doc(window.db, 'citas_agenda', formValues.citaIdOrigen), {
-                        estado: 'confirmada',
-                        entregado: true,
-                        fechaEntrega: ahora,
-                        fechaEntregaTexto,
-                        tipoFinalizacion: 'DEVOLUCION_EN_CURSO'
-                    }).catch((errorCitaAgenda) => {
-                        console.warn('No se pudo actualizar citas_agenda (continuamos con la devolución):', errorCitaAgenda);
-                    });
+                        estado: 'confirmada', entregado: true, fechaEntrega: ahora, fechaEntregaTexto, tipoFinalizacion: 'DEVOLUCION_EN_CURSO'
+                    }).catch((errorCitaAgenda) => console.warn('No se pudo actualizar citas_agenda', errorCitaAgenda));
                 } catch (errorCitaAgenda) {
-                    console.warn('No se pudo actualizar citas_agenda (continuamos con la devolución):', errorCitaAgenda);
+                    console.warn('No se pudo actualizar citas_agenda', errorCitaAgenda);
                 }
             }
         }
@@ -821,42 +826,31 @@ window.renderDevolucionesRenting = function() {
     if (!contenedor) return;
 
     const lista = Array.isArray(window.devolucionesRentingData) ? window.devolucionesRentingData : [];
+    
     const ui = window.devolucionesRentingUI || { filtroEstado: 'TODAS', busqueda: '', vista: 'TABLA' };
+    ui.filtroEstado = 'TODAS'; 
     ui.vista = 'TABLA';
+    
     const listaFiltrada = window.filtrarDevolucionesRenting(lista);
-
     const countTotal = lista.length;
-    const countAbiertas = lista.filter((d) => window.obtenerEstadoDevolucionRenting(d) === 'ABIERTA').length;
-    const countCerradas = lista.filter((d) => window.obtenerEstadoDevolucionRenting(d) === 'CERRADA').length;
-    const countHoy = lista.filter((d) => window.esFechaHoyDevolucionRenting(d.fechaRecogida) || window.esFechaHoyDevolucionRenting(d.fechaReentregaRenting)).length;
 
-    const filtroBtnClass = (activo) => activo
-        ? 'bg-[#001e50] text-white border-[#001e50]'
-        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50';
-
-    const vistaBtnClass = (activo) => activo
-        ? 'bg-sky-100 text-sky-800 border-sky-300'
-        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50';
-
+    // 🔥 MODIFICADO: Hemos eliminado el <div> que contenía el botón "Modo Tabla"
     const bloqueCabecera = `
         <div class="mb-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-            <h2 class="text-xl font-black text-[#001e50] uppercase flex items-center gap-2"><i class="ph-bold ph-arrow-counter-clockwise text-sky-600"></i> Devoluciones Renting</h2>
+            <h2 class="text-xl font-black text-[#001e50] uppercase flex items-center gap-2">
+                <i class="ph-bold ph-arrow-counter-clockwise text-sky-600"></i> Devoluciones Renting
+            </h2>
             <p class="text-xs text-gray-500 font-bold mt-1">Fase 1: alta con acta de devolución del cliente. Fase 2: cierre al salir al renting con fecha y carta de porte.</p>
 
-            <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
-                <div class="lg:col-span-2 flex flex-wrap gap-2">
-                    <button onclick="window.setFiltroDevolucionesRenting('TODAS')" class="px-3 py-2 rounded-lg text-xs font-black border transition-colors ${filtroBtnClass(ui.filtroEstado === 'TODAS')}">Todas (${countTotal})</button>
-                    <button onclick="window.setFiltroDevolucionesRenting('ABIERTAS')" class="px-3 py-2 rounded-lg text-xs font-black border transition-colors ${filtroBtnClass(ui.filtroEstado === 'ABIERTAS')}">Abiertas (${countAbiertas})</button>
-                    <button onclick="window.setFiltroDevolucionesRenting('CERRADAS')" class="px-3 py-2 rounded-lg text-xs font-black border transition-colors ${filtroBtnClass(ui.filtroEstado === 'CERRADAS')}">Cerradas (${countCerradas})</button>
-                    <button onclick="window.setFiltroDevolucionesRenting('HOY')" class="px-3 py-2 rounded-lg text-xs font-black border transition-colors ${filtroBtnClass(ui.filtroEstado === 'HOY')}">Hoy (${countHoy})</button>
-                </div>
-
-                <div class="flex items-center gap-2 justify-start lg:justify-end">
-                    <span class="px-3 py-2 rounded-lg text-xs font-black border bg-sky-100 text-sky-800 border-sky-300"><i class="ph-bold ph-table"></i> Modo Tabla</span>
+            <div class="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="bg-blue-50 text-blue-800 border border-blue-200 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest shadow-sm">
+                        <i class="ph-bold ph-car-profile"></i> Vehículos en total: ${countTotal}
+                    </span>
                 </div>
             </div>
 
-            <div class="mt-3">
+            <div class="mt-4">
                 <input
                     type="text"
                     value="${window.escapeJS(ui.busqueda || '')}"
@@ -883,60 +877,11 @@ window.renderDevolucionesRenting = function() {
             ${bloqueCabecera}
             <div class="bg-white p-10 rounded-xl shadow-sm text-center border border-gray-200 mt-4">
                 <i class="ph-bold ph-magnifying-glass text-4xl text-gray-300 mb-3 block"></i>
-                <p class="text-gray-600 font-black text-lg">No hay resultados con ese filtro.</p>
-                <p class="text-gray-400 text-sm mt-1">Prueba con otro estado o cambia el texto de búsqueda.</p>
+                <p class="text-gray-600 font-black text-lg">No hay resultados con ese texto de búsqueda.</p>
+                <p class="text-gray-400 text-sm mt-1">Prueba con otra matrícula, modelo o ubicación.</p>
             </div>`;
         return;
     }
-
-    const cards = listaFiltrada.map((d) => {
-        const estado = window.obtenerEstadoDevolucionRenting(d);
-        const textoBusqueda = window.normalizarTextoDevolucionRenting([
-            d.recogidoPor,
-            d.matricula,
-            d.renting,
-            d.modelo,
-            d.ubicacion
-        ].join(' '));
-        const badge = estado === 'CERRADA'
-            ? '<span class="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-black px-2 py-1 rounded uppercase">Cerrada</span>'
-            : '<span class="bg-amber-100 text-amber-700 border border-amber-200 text-[10px] font-black px-2 py-1 rounded uppercase">Abierta</span>';
-
-        const estadoDocActa = d.estadoSubidaActa || (d.urlActaDevolucion ? 'SUBIDO' : 'SIN_ARCHIVO');
-        const estadoDocCarta = d.estadoSubidaCarta || (d.urlCartaPorte ? 'SUBIDO' : 'SIN_ARCHIVO');
-
-        return `
-            <div class="fila-coche bg-white rounded-xl border border-gray-200 shadow-sm p-5" data-dev-item="1" data-dev-search="${window.escapeJS(textoBusqueda)}">
-                <div class="flex items-start justify-between gap-2 mb-3">
-                    <div class="min-w-0">
-                        <h3 class="font-black text-[#001e50] text-lg uppercase truncate">${d.modelo || '-'}</h3>
-                        <p class="text-[11px] text-gray-500 font-bold uppercase tracking-wider">${d.matricula || 'S/M'} · ${d.renting || '-'}</p>
-                    </div>
-                    <div>${badge}</div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[12px]">
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3"><b class="text-gray-500 uppercase text-[10px] tracking-widest">Recogido por</b><p class="font-bold text-[#001e50] mt-1">${d.recogidoPor || '-'}</p></div>
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3"><b class="text-gray-500 uppercase text-[10px] tracking-widest">Ubicación</b><p class="font-bold text-[#001e50] mt-1">${d.ubicacion || '-'}</p></div>
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3"><b class="text-gray-500 uppercase text-[10px] tracking-widest">Fecha recogida</b><p class="font-bold text-[#001e50] mt-1">${window.formatearFechaDevolucionRenting(d.fechaRecogida)}</p></div>
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3"><b class="text-gray-500 uppercase text-[10px] tracking-widest">Fecha reentrega renting</b><p class="font-bold text-[#001e50] mt-1">${window.formatearFechaDevolucionRenting(d.fechaReentregaRenting)}</p></div>
-                </div>
-
-                <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-black uppercase">
-                    <span class="px-2 py-1 rounded border ${estadoDocActa === 'SUBIDO' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : (estadoDocActa === 'PENDIENTE_SUBIDA' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-50 text-gray-500 border-gray-200')}">Acta: ${estadoDocActa}</span>
-                    <span class="px-2 py-1 rounded border ${estadoDocCarta === 'SUBIDO' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : (estadoDocCarta === 'PENDIENTE_SUBIDA' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-50 text-gray-500 border-gray-200')}">Carta: ${estadoDocCarta}</span>
-                </div>
-
-                <div class="mt-4 flex items-center gap-2">
-                    <button onclick="window.abrirFormularioDevolucionRenting('${d.id}')" class="bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-black hover:bg-blue-900 transition-colors"><i class="ph-bold ph-pencil-simple"></i> Editar entrega</button>
-                    ${estado === 'ABIERTA'
-                        ? `<button onclick="window.cerrarDevolucionRenting('${d.id}')" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-black hover:bg-emerald-800 transition-colors"><i class="ph-bold ph-check-circle"></i> Cerrar salida</button>`
-                        : ''}
-                    <button onclick="window.abrirAdjuntosDevolucionRenting('${d.id}')" class="bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-xs font-black hover:bg-gray-50 transition-colors"><i class="ph-bold ph-paperclip"></i> Ver Adjuntos</button>
-                    <button onclick="window.eliminarDevolucionRenting('${d.id}')" class="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-xs font-black hover:bg-red-100 transition-colors"><i class="ph-bold ph-trash"></i> Eliminar</button>
-                </div>
-            </div>`;
-    }).join('');
 
     const filasTabla = listaFiltrada.map((d) => {
         const estado = window.obtenerEstadoDevolucionRenting(d);
@@ -957,6 +902,13 @@ window.renderDevolucionesRenting = function() {
                     <button onclick="window.copiarUrlDocumentoDevolucionRenting('${d.id}', 'ACTA')" class="px-2 py-1 rounded border border-sky-200 bg-sky-50 text-sky-700 text-[10px] font-black hover:bg-sky-100 transition-colors">Copiar</button>
                </div>`
             : '<span class="text-gray-400 font-bold">-</span>';
+            
+        const linkFoto = d.urlFotoEstado
+            ? `<div class="flex items-center gap-1">
+                    <a href="${d.urlFotoEstado}" target="_blank" class="text-orange-600 hover:underline font-black">Ver</a>
+               </div>`
+            : '<span class="text-gray-400 font-bold">-</span>';
+
         const linkCarta = d.urlCartaPorte
             ? `<div class="flex items-center gap-1">
                     <a href="${d.urlCartaPorte}" target="_blank" class="text-sky-700 hover:underline font-black">Ver</a>
@@ -976,6 +928,7 @@ window.renderDevolucionesRenting = function() {
                 <td class="px-3 py-2 border-b border-gray-200 text-xs font-black text-[#001e50] whitespace-nowrap">${window.calcularTiempoEnConcesionarioDevolucion(d)}</td>
                 <td class="px-3 py-2 border-b border-gray-200 text-xs whitespace-nowrap sticky right-[250px] z-20 bg-white shadow-[-4px_0_6px_-6px_rgba(0,0,0,0.35)] min-w-[130px]">${badge}</td>
                 <td class="px-3 py-2 border-b border-gray-200 text-xs whitespace-nowrap">${linkActa}</td>
+                <td class="px-3 py-2 border-b border-gray-200 text-xs whitespace-nowrap">${linkFoto}</td>
                 <td class="px-3 py-2 border-b border-gray-200 text-xs whitespace-nowrap">${linkCarta}</td>
                 <td class="px-3 py-2 border-b border-gray-200 text-xs sticky right-0 z-20 bg-white min-w-[250px]">
                     <div class="flex items-center gap-1 flex-wrap">
@@ -990,34 +943,33 @@ window.renderDevolucionesRenting = function() {
             </tr>`;
     }).join('');
 
-    const vistaContenido = ui.vista === 'TABLA'
-        ? `
-            <div id="dev-resultados-wrapper" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <div class="overflow-auto">
-                    <table class="min-w-[1550px] w-full border-collapse">
-                        <thead class="bg-[#001e50] text-white sticky top-0 z-10">
-                            <tr>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black min-w-[160px]">Recogido por</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black sticky left-[160px] z-30 bg-[#001e50] min-w-[130px]">Matrícula</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Renting</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Modelo</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Fecha recogida</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Ubicación</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Fecha reentrega renting</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Tiempo en concesionario</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black sticky right-[250px] z-30 bg-[#001e50] min-w-[130px]">Estado</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">URL Acta</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">URL Carta porte</th>
-                                <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black sticky right-0 z-30 bg-[#001e50] min-w-[250px]">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${filasTabla}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`
-        : `<div id="dev-resultados-wrapper" class="grid grid-cols-1 xl:grid-cols-2 gap-4">${cards}</div>`;
+    const vistaContenido = `
+        <div id="dev-resultados-wrapper" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="overflow-auto">
+                <table class="min-w-[1550px] w-full border-collapse">
+                    <thead class="bg-[#001e50] text-white sticky top-0 z-10">
+                        <tr>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black min-w-[160px]">Recogido por</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black sticky left-[160px] z-30 bg-[#001e50] min-w-[130px]">Matrícula</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Renting</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Modelo</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Fecha recogida</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Ubicación</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Fecha reentrega renting</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">Tiempo en concesionario</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black sticky right-[250px] z-30 bg-[#001e50] min-w-[130px]">Estado</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">URL Acta</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">URL Foto</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black">URL Carta porte</th>
+                            <th class="px-3 py-3 text-left text-[10px] uppercase tracking-wider font-black sticky right-0 z-30 bg-[#001e50] min-w-[250px]">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filasTabla}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
 
     contenedor.innerHTML = `
         ${bloqueCabecera}

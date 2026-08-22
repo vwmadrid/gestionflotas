@@ -477,6 +477,55 @@ window.registrarMetricaM2 = async function(campo) {
         console.warn("Tracker M2 Oculto:", err);
     }
 };
+// ==========================================
+// 🎛️ GESTOR DINÁMICO DE BOTONES SUPERIORES
+// ==========================================
+window.actualizarBotonesSuperiores = function(idPestanaActiva) {
+    const botones = document.querySelectorAll('.btn-top-dinamico');
+    botones.forEach(btn => {
+        btn.classList.add('hidden');
+        btn.style.display = 'none'; // Doble seguro por si tienen flex
+    });
+
+    const encenderBoton = (idBoton) => {
+        const btn = document.getElementById(idBoton);
+        if (btn) {
+            btn.classList.remove('hidden');
+            btn.style.display = 'inline-flex'; // O el display que use tu botón
+        }
+    };
+
+    switch (idPestanaActiva) {
+        case 'logistica':
+            encenderBoton('btn-top-subir-pdf');
+            encenderBoton('btn-top-anadir-manual');
+            encenderBoton('btn-top-exportar');
+            break;
+            
+        case 'todos': // Inventario Activo
+            encenderBoton('btn-top-exportar');
+            encenderBoton('btn-top-vistas');
+            break;
+            
+        case 'agenda':
+            encenderBoton('btn-top-hoja-prep');
+            encenderBoton('btn-top-nueva-cita');
+            encenderBoton('btn-top-bloqueos');
+            break;
+            
+        case 'devoluciones-renting':
+            encenderBoton('btn-top-nueva-dev');
+            encenderBoton('btn-top-exportar-dev');
+            break;
+            
+        case 'global-taller':
+        case 'global-recambios':
+        case 'encuestas':
+            encenderBoton('btn-top-exportar');
+            break;
+    }
+};
+
 // ========================================================
 // 🔄 INTERRUPTOR DE PESTAÑAS SEGURO (M2 CODE SYSTEMS)
 // ========================================================
@@ -484,7 +533,7 @@ window.cambiarPestana = function(pestana) {
     activeTab = pestana;
     window.tabActiva = pestana;
     
-    // 1. Gestión de estilos en botones de navegación (con protección contra elementos nulos)
+    // 1. Gestión de estilos en botones de navegación
     try {
         const botones = document.querySelectorAll('#tabsEntregas .submenu-container button');
         botones.forEach(b => { 
@@ -538,15 +587,15 @@ window.cambiarPestana = function(pestana) {
         'contenedorLogistica', 'contenedorTarjetas', 'contenedorTabla', 
         'contenedorAgenda', 'contenedorEntregados', 'contenedorDevolucionesRenting', 'contenedorDashboard', 
         'contenedorEncuestas', 'contenedorHistorialDpto', 'filtrosVisuales', 
-        'controlesVistaExcel', 'botonesLogistica', 'botonesAgenda', 'botonesDevoluciones'
+        // ⚠️ Nota: Ya no apagamos manualmente botonesLogistica, botonesAgenda, etc.
+        'controlesVistaExcel'
     ];
 
     elementosOcultar.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.style.display = 'none'; // Solo altera el estilo si el div existe realmente
+        if (el) el.style.display = 'none';
     });
     
-    // El buscador superior vuelve a estar visible por defecto
     const buscador = document.getElementById('buscadorInput');
     if (buscador) buscador.style.display = 'block';
 
@@ -554,7 +603,6 @@ window.cambiarPestana = function(pestana) {
     try {
         if (pestana === 'logistica') {
             const c = document.getElementById('contenedorLogistica'); if (c) c.style.display = 'grid';
-            const b = document.getElementById('botonesLogistica'); if (b) b.style.display = 'flex'; 
             if (typeof window.renderLogistica === 'function') window.renderLogistica();
         } else if (pestana === 'todos') {
             const c = document.getElementById('controlesVistaExcel'); if (c) c.style.display = 'flex';
@@ -580,14 +628,6 @@ window.cambiarPestana = function(pestana) {
                 c.classList.remove('hidden');
             }
             if (buscador) buscador.style.display = 'none';
-            const b = document.getElementById('botonesAgenda'); if (b) b.style.display = 'flex';
-            const esBackoffice = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '') === 'backoffice';
-            const btnListado = document.getElementById('btnAgendaListado');
-            const btnNuevaCita = document.getElementById('btnAgendaNuevaCita');
-            const btnBloqueos = document.getElementById('btnAgendaBloqueos');
-            if (btnListado) btnListado.style.display = esBackoffice ? 'none' : 'inline-flex';
-            if (btnBloqueos) btnBloqueos.style.display = esBackoffice ? 'none' : 'inline-flex';
-            if (btnNuevaCita) btnNuevaCita.style.display = 'inline-flex';
             if (typeof window.renderAgenda === 'function') window.renderAgenda();
         } else if (pestana === 'entregados') {
             const c = document.getElementById('contenedorEntregados'); if (c) c.style.display = 'block';
@@ -595,7 +635,6 @@ window.cambiarPestana = function(pestana) {
             if (typeof window.renderEntregados === 'function') window.renderEntregados();
         } else if (pestana === 'devoluciones-renting') {
             const c = document.getElementById('contenedorDevolucionesRenting'); if (c) c.style.display = 'block';
-            const b = document.getElementById('botonesDevoluciones'); if (b) b.style.display = 'flex';
             if (buscador) {
                 buscador.style.display = 'none';
                 buscador.value = '';
@@ -613,8 +652,6 @@ window.cambiarPestana = function(pestana) {
             const c = document.getElementById('contenedorHistorialDpto'); 
             if (c) {
                 c.style.display = 'flex';
-            } else {
-                console.warn("Aviso: 'contenedorHistorialDpto' no existe en el HTML.");
             }
             if (buscador) buscador.style.display = 'none';
             if (typeof window.cargarUltimosHistorialDpto === 'function') window.cargarUltimosHistorialDpto();
@@ -623,10 +660,10 @@ window.cambiarPestana = function(pestana) {
         console.error("Error crítico al encender la pestaña solicitada:", e);
     }
     
-    // 4. No reabrimos suscripciones en cada click de pestaña para evitar latencia global.
-    // Las vistas se actualizan con los onSnapshot activos y renders específicos de cada pestaña.
-    
     if (typeof window.aplicarPermisosPorRol === 'function') window.aplicarPermisosPorRol();
+    
+    // 🔥 AQUÍ SE ACTIVA EL GESTOR DE BOTONES
+    window.actualizarBotonesSuperiores(pestana);
 };
 // ========================================================
 // 🚀 MOTOR PRINCIPAL: DESCARGA DE COCHES DESDE FIREBASE

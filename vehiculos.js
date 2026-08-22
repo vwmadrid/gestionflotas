@@ -455,12 +455,28 @@ window.renderTarjetaCompacta = function(c) {
 
   let notaAgendaLimpia = String(c.notaAgenda || '').replace(/[<>]/g, '').trim();
   let htmlNotaAgenda = notaAgendaLimpia ? `<div class="text-[10px] bg-yellow-50 border border-yellow-200 text-yellow-900 px-2 py-1.5 rounded mb-3 font-bold"><i class="ph-bold ph-note"></i> Nota Agenda: ${notaAgendaLimpia}</div>` : '';
-    let urgenteActivo = c.agendaClienteUrgente === true || c.agendaClienteUrgente === 'true';
-    let chipAgendaUrgente = urgenteActivo
+  
+  // 🔥 NUEVO: COMPROBAMOS EL ROL PARA OCULTAR EL BOTÓN
+  let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
+  let esEntregas = (rolLimpio === 'entregas' || rolLimpio === 'admin'); // El admin también lo verá por precaución
+  
+  let urgenteActivo = c.agendaClienteUrgente === true || c.agendaClienteUrgente === 'true';
+  
+  let chipAgendaUrgente = '';
+  let botonGrandeUrgente = '';
+
+  // Solo inyectamos el HTML de los botones si el usuario es de Entregas
+  if (esEntregas) {
+      chipAgendaUrgente = urgenteActivo
             ? `<button type="button" data-toggle-agenda-urgente="1" data-id-vehiculo="${c.fila}" data-estado-urgente="true" onclick="window.toggleAgendaClienteUrgente('${c.fila}', true)" class="bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase tracking-widest cursor-pointer"><i class="ph-bold ph-lightning"></i> Agenda mañana ON</button>`
             : `<button type="button" data-toggle-agenda-urgente="1" data-id-vehiculo="${c.fila}" data-estado-urgente="false" onclick="window.toggleAgendaClienteUrgente('${c.fila}', false)" class="bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase tracking-widest cursor-pointer"><i class="ph-bold ph-lightning-slash"></i> Agenda mañana OFF</button>`;
+      
+      botonGrandeUrgente = `
+      <button data-toggle-agenda-urgente="1" data-id-vehiculo="${c.fila}" data-estado-urgente="${urgenteActivo ? 'true' : 'false'}" onclick="window.toggleAgendaClienteUrgente('${c.fila}', ${urgenteActivo ? 'true' : 'false'})" style="pointer-events:auto;" class="w-full mb-3 ${urgenteActivo ? 'bg-fuchsia-600 hover:bg-fuchsia-700' : 'bg-slate-700 hover:bg-slate-800'} text-white px-3 py-2 rounded font-black text-[10px] uppercase tracking-widest shadow-sm transition-colors">
+          ${urgenteActivo ? 'Desactivar agenda mañana cliente' : 'Habilitar agenda mañana cliente'}
+      </button>`;
+  }
 
-  let rolLimpio = String(window.rolActivo || '').toLowerCase().replace(/\s/g, '');
   let esBackoffice = (rolLimpio === 'backoffice' || rolLimpio === 'administracion');
 
   if (esBackoffice) {
@@ -498,9 +514,7 @@ window.renderTarjetaCompacta = function(c) {
               </div>
           </div>
 
-          <button data-toggle-agenda-urgente="1" data-id-vehiculo="${c.fila}" data-estado-urgente="${urgenteActivo ? 'true' : 'false'}" onclick="window.toggleAgendaClienteUrgente('${c.fila}', ${urgenteActivo ? 'true' : 'false'})" style="pointer-events:auto;" class="w-full mb-3 ${urgenteActivo ? 'bg-fuchsia-600 hover:bg-fuchsia-700' : 'bg-slate-700 hover:bg-slate-800'} text-white px-3 py-2 rounded font-black text-[10px] uppercase tracking-widest shadow-sm transition-colors">
-              ${urgenteActivo ? 'Desactivar agenda mañana cliente' : 'Habilitar agenda mañana cliente'}
-          </button>
+          ${botonGrandeUrgente}
 
           <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden flex-shrink-0">
                <div class="${prog.color} h-2 transition-all duration-500" style="width: ${prog.pct}%"></div>
@@ -517,7 +531,6 @@ window.renderTarjetaCompacta = function(c) {
   }
 
   return `
-  <!-- Añadimos h-full flex flex-col para que ocupe todo el alto de su celda y no flote -->
   <div class="card-mini ${borderAlerta} p-5 fila-coche h-full flex flex-col">
     ${htmlAlerta}
     <div class="flex justify-between items-start mb-2 gap-2">
@@ -544,7 +557,6 @@ window.renderTarjetaCompacta = function(c) {
     ${htmlNotaAgenda}
 
     <div class="flex items-start justify-between mb-3 gap-2 overflow-hidden">
-       <!-- Botones clicables con restricción de ancho (truncate) -->
        <div class="flex flex-col gap-1.5 min-w-0 flex-1">
            <button onclick="window.copiarAlPortapapeles('${escB}')" title="Copiar" class="cursor-pointer hover:bg-gray-200 transition-colors bg-gray-100 border border-gray-300 text-gray-800 px-2 py-1.5 rounded text-xs font-black tracking-widest shadow-sm flex items-center justify-between gap-1 w-full overflow-hidden">
                <span class="truncate">${c.B}</span> <i class="ph-bold ph-copy text-gray-400 flex-shrink-0"></i>
@@ -554,7 +566,6 @@ window.renderTarjetaCompacta = function(c) {
            </button>
        </div>
        
-       <!-- Etiquetas de Cita y Pedido -->
        <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
            ${c.fechaCita ? `<div class="bg-blue-50 text-[#001e50] border border-blue-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase"><i class="ph-bold ph-calendar-check"></i> Cita: ${c.fechaCita}</div>` : ''}
            ${c.cochePedido ? `<div class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-1.5 rounded font-black text-[10px] flex items-center gap-1 shadow-sm uppercase tracking-widest"><i class="ph-bold ph-truck"></i> Pedido</div>` : ''}
@@ -562,9 +573,7 @@ window.renderTarjetaCompacta = function(c) {
        </div>
     </div>
 
-    <button data-toggle-agenda-urgente="1" data-id-vehiculo="${c.fila}" data-estado-urgente="${urgenteActivo ? 'true' : 'false'}" onclick="window.toggleAgendaClienteUrgente('${c.fila}', ${urgenteActivo ? 'true' : 'false'})" style="pointer-events:auto;" class="w-full mb-3 ${urgenteActivo ? 'bg-fuchsia-600 hover:bg-fuchsia-700' : 'bg-slate-700 hover:bg-slate-800'} text-white px-3 py-2 rounded font-black text-[10px] uppercase tracking-widest shadow-sm transition-colors">
-        ${urgenteActivo ? 'Desactivar agenda mañana cliente' : 'Habilitar agenda mañana cliente'}
-    </button>
+    ${botonGrandeUrgente}
 
     <!-- Barra de progreso -->
     <div class="w-full bg-gray-200 rounded-full h-2 mb-3 relative overflow-hidden flex-shrink-0">
@@ -572,7 +581,6 @@ window.renderTarjetaCompacta = function(c) {
        <span class="absolute inset-0 flex items-center justify-center text-[7px] font-black text-gray-800 drop-shadow-md mix-blend-overlay">${prog.pct}%</span>
     </div>
 
-    <!-- MT-AUTO: Empuja el contenedor de botones de taller hacia abajo para igualar el diseño -->
     <div class="flex flex-col gap-2 mt-auto">
       <div class="flex gap-2 w-full">
         <div class="w-1/2 flex flex-col">${bTaller} ${txtTallerInfo}</div>
@@ -1011,6 +1019,7 @@ window.borrarVehiculo = async function(id, modelo) {
 // ==========================================
 window.marcarComoEntregado = function(id, opciones) {
     const opts = opciones || {};
+    
     // 1. Buscamos el coche en nuestra memoria local
     let coche = todosLosCoches.find(c => c.fila === id);
 
@@ -1029,7 +1038,7 @@ window.marcarComoEntregado = function(id, opciones) {
 
     if (!coche) return Swal.fire('Error', 'Vehículo no encontrado en el sistema.', 'error');
     
-    // 2. Buscamos el teléfono en agenda y en el propio coche
+    // 2. Buscamos el teléfono
     let cita = window.datosAgenda && window.datosAgenda.find(cita => {
         const matCita = String(cita.matricula || '').replace(/\s/g, '').toUpperCase();
         const matCoche = String(coche.B || '').replace(/\s/g, '').toUpperCase();
@@ -1048,43 +1057,16 @@ window.marcarComoEntregado = function(id, opciones) {
     const abrirWhatsappSeguro = function(telefonoRaw, mensaje) {
         const tel = normalizarTelefonoWhatsapp(telefonoRaw);
         if (!tel || tel.length < 11) {
-            Swal.fire({
-                icon: 'info',
-                title: 'Entrega guardada',
-                text: 'No hay un teléfono válido para abrir WhatsApp. Puedes enviarlo manualmente desde la agenda.'
-            });
+            Swal.fire({ icon: 'info', title: 'Entrega guardada', text: 'No hay un teléfono válido para abrir WhatsApp.' });
             return;
         }
 
         const textoCodificado = encodeURIComponent(mensaje || '');
-        const urlApi = `https://api.whatsapp.com/send?phone=${tel}&text=${textoCodificado}`;
         const urlWaMe = `https://wa.me/${tel}?text=${textoCodificado}`;
-        const urlScheme = `whatsapp://send?phone=${tel}&text=${textoCodificado}`;
-
-        try {
-            const popup = window.open(urlWaMe, '_blank', 'noopener,noreferrer');
-            if (popup) return;
-        } catch (e) {
-            console.warn('No se pudo abrir popup de WhatsApp, probando fallback.', e);
-        }
 
         try {
             window.location.href = urlWaMe;
-            return;
-        } catch (e2) {
-            console.warn('Fallo wa.me, probando api.whatsapp.com', e2);
-        }
-
-        try {
-            window.location.assign(urlApi);
-            return;
-        } catch (e3) {
-            console.warn('Fallo api.whatsapp.com, probando whatsapp://', e3);
-        }
-
-        try {
-            window.location.href = urlScheme;
-        } catch (e4) {
+        } catch (e) {
             Swal.fire('Aviso', 'No se pudo abrir WhatsApp automáticamente.', 'warning');
         }
     };
@@ -1098,21 +1080,18 @@ window.marcarComoEntregado = function(id, opciones) {
                     const tlfCita = dataCita.telefono || dataCita.tlf || '';
                     if (normalizarTelefonoWhatsapp(tlfCita)) return tlfCita;
                 }
-            } catch (errTlf) {
-                console.warn('No se pudo leer teléfono desde la cita.', errTlf);
-            }
+            } catch (errTlf) {}
         }
-
         if (normalizarTelefonoWhatsapp(tlf)) return tlf;
         return coche.telefono || coche.tlf || coche.telefonoCliente || '';
     };
 
-    // 3. Desplegamos el formulario
+    // 3. Desplegamos el formulario de entrega
     Swal.fire({
         title: '¿Completar Entrega?',
         html: `
             <div style="text-align: left; font-family: 'Inter', sans-serif;">
-                <p class="text-sm text-gray-600 mb-3 font-bold">El vehículo pasará al historial de GesCar OS. Sube una foto opcional de la entrega:</p>
+                <p class="text-sm text-gray-600 mb-3 font-bold">El vehículo pasará al historial de GesCar OS.</p>
                 <input type="file" id="fileFotos" accept="image/*" class="swal2-file text-sm w-full mb-3">
                 <div class="mt-4 flex items-center gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <input type="checkbox" id="pedirResena" checked class="w-4 h-4 accent-[#001e50] cursor-pointer"> 
@@ -1130,81 +1109,55 @@ window.marcarComoEntregado = function(id, opciones) {
             let inputFoto = document.getElementById('fileFotos').files[0];
             let pedirResena = document.getElementById('pedirResena').checked;
             
-            // Función interna para cerrar el proceso y lanzar WhatsApp de forma segura
             const finalizar = async (urlFoto, estadoSubida) => {
                 const tsEntrega = typeof window.obtenerTimestamp === 'function' ? window.obtenerTimestamp() : new Date().getTime();
                 const fechaEntregaTexto = typeof window.formatearFechaES === 'function' ? window.formatearFechaES(tsEntrega) : new Date().toLocaleDateString('es-ES');
                 const subida = estadoSubida || { estado: 'SIN_ARCHIVO', intentos: 0, error: null };
 
-                // A. Actualizamos el estado en la base de datos
+                // Guardamos en Firebase
                 await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
-                    entregado: true, 
-                    fechaEntrega: fechaEntregaTexto,
-                    fechaEntregaTs: tsEntrega,
-                    tipoFinalizacion: 'ENTREGA',
-                    estadoSubidaEntrega: subida.estado,
-                    intentosSubidaEntrega: Number(subida.intentos || 0),
-                    errorSubidaEntrega: subida.error || null
+                    entregado: true, fechaEntrega: fechaEntregaTexto, fechaEntregaTs: tsEntrega, tipoFinalizacion: 'ENTREGA'
                 });
 
-                // B. La cita se mantiene: la marcamos como confirmada/entregada y no se elimina.
-                try {
-                    if (opts.idCita) {
-                        await window.updateDoc(window.doc(window.db, "citas_agenda", opts.idCita), {
-                            estado: "confirmada",
-                            entregado: true,
-                            fechaEntrega: tsEntrega,
-                            fechaEntregaTexto: fechaEntregaTexto,
-                            tipoFinalizacion: 'ENTREGA'
-                        });
-                    } else if (Array.isArray(window.datosAgenda)) {
-                        const matCoche = String(coche.B || '').replace(/\s/g, '').toUpperCase();
-                        const basCoche = String(coche.A || '').replace(/\s/g, '').toUpperCase();
-                        const citaVinculada = window.datosAgenda.find(cita => {
-                            const matCita = String(cita.matricula || '').replace(/\s/g, '').toUpperCase();
-                            const basCita = String(cita.bastidor || '').replace(/\s/g, '').toUpperCase();
-                            return (matCoche && matCita && matCita === matCoche) || (basCoche && basCita && basCita === basCoche);
-                        });
-                        if (citaVinculada && citaVinculada.id) {
-                            await window.updateDoc(window.doc(window.db, "citas_agenda", citaVinculada.id), {
-                                estado: "confirmada",
-                                entregado: true,
-                                fechaEntrega: tsEntrega,
-                                fechaEntregaTexto: fechaEntregaTexto,
-                                tipoFinalizacion: 'ENTREGA'
-                            });
-                        }
-                    }
-                } catch (errorCita) {
-                    console.warn('No se pudo actualizar la cita tras la entrega, pero el vehículo quedó entregado.', errorCita);
-                }
-
-                if (typeof window.registrarMovimientoHistorial === 'function') {
-                    await window.registrarMovimientoHistorial({
-                        tipo: 'ENTREGA',
-                        vehiculoId: id,
-                        citaId: opts.idCita || null,
-                        matricula: coche.B || coche.matricula || 'S/M',
-                        bastidor: coche.A || coche.bastidor || 'S/D',
-                        modelo: coche.C || coche.modelo || '-',
-                        renting: coche.renting || '',
-                        urlFotoEntrega: urlFoto || null,
-                        solicitarResena: !!pedirResena,
-                        estadoSubida: subida.estado,
-                        intentosSubida: Number(subida.intentos || 0),
-                        errorSubida: subida.error || null
-                    });
+                if (opts.idCita) {
+                    await window.updateDoc(window.doc(window.db, "citas_agenda", opts.idCita), {
+                        estado: "confirmada", entregado: true, fechaEntrega: tsEntrega, fechaEntregaTexto: fechaEntregaTexto, tipoFinalizacion: 'ENTREGA'
+                    }).catch(()=>{});
                 }
                 
-                // C. Construimos el mensaje dinámico
-                let msg = `¡Hola! Un placer entregarte tu ${coche.C}. `;
-                if (urlFoto) msg += `Aquí tienes un recuerdo de tu entrega: ${urlFoto} `;
-                if (pedirResena) msg += `Te agradeceríamos mucho si nos dejas una pequeña reseña en Google: https://search.google.com/local/writereview?placeid=ChIJc6vL3fIvQg0RGT8iQzPAenc`;
+                // 🔥 CÓDIGO LIMPIO DEL MENSAJE (SIN DUPLICADOS)
+                let nombreAgenteBruto = String(coche.agente || coche.entregador || window.usuarioActivo || 'tu asesor').toLowerCase();
+                let nombreAgente = nombreAgenteBruto.charAt(0).toUpperCase() + nombreAgenteBruto.slice(1);
+                let modeloCoche = coche.C || coche.modelo || 'vehículo';
+                
+                let modeloUpper = modeloCoche.toUpperCase();
+                let emojiFestivo = "🚗✨🎉"; 
+
+                if (modeloUpper.includes("ID.") || modeloUpper.includes("ELECTRIC") || modeloUpper.includes("PHEV")) {
+                    emojiFestivo = "⚡🔌🚗✨";
+                } else if (modeloUpper.includes("GTI") || modeloUpper.includes(" R") || modeloUpper.includes("CLUBSPORT")) {
+                    emojiFestivo = "🏎️💨🔥🏁";
+                } else if (modeloUpper.includes("TIGUAN") || modeloUpper.includes("TOUAREG") || modeloUpper.includes("T-ROC") || modeloUpper.includes("TAIGO") || modeloUpper.includes("SUV")) {
+                    emojiFestivo = "🚙⛰️✨🎊";
+                } else if (modeloUpper.includes("CALIFORNIA") || modeloUpper.includes("MULTIVAN") || modeloUpper.includes("CADDY") || modeloUpper.includes("CRAFER")) {
+                    emojiFestivo = "🚐🏕️🌅🗺️";
+                }
+
+                // Generamos la variable msg UNA SOLA VEZ
+                let msg = `¡Hola soy ${nombreAgente}!. Un placer entregarte tu nuevo ${modeloCoche}. `;
+                
+                if (urlFoto) {
+                    msg += `Aquí tienes un recuerdo de tu entrega: ${urlFoto} `;
+                }
+                
+                if (pedirResena) {
+                    msg += `Te agradeceríamos mucho si nos dejas una pequeña reseña en Google: https://search.google.com/local/writereview?placeid=ChIJc6vL3fIvQg0RGT8iQzPAenc`;
+                }
                 
                 const telefonoRaw = await resolverTelefonoEntrega();
                 const telefonoWhatsapp = normalizarTelefonoWhatsapp(telefonoRaw);
 
-                // D. Mostramos el botón manual para EVITAR el bloqueo del navegador
+                // Mostramos botón para ir a WhatsApp
                 Swal.fire({
                     title: '¡Operación Registrada!',
                     text: 'El vehículo ya está en el historial de finalizados.',
@@ -1219,41 +1172,24 @@ window.marcarComoEntregado = function(id, opciones) {
                     if (waResult.isConfirmed) {
                         abrirWhatsappSeguro(telefonoRaw, msg);
                     }
-                    // Refrescamos la pantalla al final de todo el proceso
                     if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
-                    
-                    // 🔥 PARCHE M2: Forzamos la recarga de la agenda si se ejecuta desde el iPhone de los entregadores
-                    if (document.body.dataset.vista === 'movil' && typeof window.cargarEntregasHoy === 'function') {
-                        window.cargarEntregasHoy();
-                    }
                 });
             };
 
-            // 4. Si hay foto, la subimos primero a Apps Script
             if (inputFoto) {
-                Swal.fire({ title: 'Procesando fotografía...', text: 'Subiendo a la nube, por favor espera.', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+                Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
                 const subida = await window.subirArchivoConReintento(inputFoto, { maxIntentos: 3 });
-                if (subida.ok) {
-                    await finalizar(subida.url, { estado: 'SUBIDO', intentos: subida.intentos, error: null });
-                } else {
-                    await finalizar(null, { estado: 'PENDIENTE_SUBIDA', intentos: subida.intentos, error: subida.error });
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Entrega cerrada con subida pendiente',
-                        text: 'Se ha guardado la entrega, pero la foto no se pudo subir. Queda marcada como PENDIENTE_SUBIDA.',
-                        confirmButtonColor: '#f59e0b'
-                    });
-                }
+                if (subida.ok) await finalizar(subida.url, { estado: 'SUBIDO' });
+                else await finalizar(null, { estado: 'PENDIENTE_SUBIDA' });
             } else { 
-                // Si no hay foto, pasamos directamente
-                await finalizar(null, { estado: 'SIN_ARCHIVO', intentos: 0, error: null }); 
+                await finalizar(null, { estado: 'SIN_ARCHIVO' }); 
             }
         }
     });
 };
 
 // ==========================================
-// 🚛 GESTIÓN DE TRASLADOS EN GRÚA
+// 🚛 GESTIÓN DE TRASLADOS EN GRÚA (CON FOTO)
 // ==========================================
 window.gestionarTraslado = async function(id) {
     const { value: formValues } = await Swal.fire({
@@ -1264,7 +1200,12 @@ window.gestionarTraslado = async function(id) {
                 <input id="concesionario-destino" class="swal2-input !w-full !m-0 !mb-4 text-center uppercase" placeholder="Ej: Castellana Wagen">
                 
                 <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Acta de Traslado (PDF/Imagen):</label>
-                <input type="file" id="acta-traslado" accept=".pdf,image/*" class="swal2-file text-sm w-full border border-gray-300 rounded p-2">
+                <input type="file" id="acta-traslado" accept=".pdf,image/*" class="swal2-file text-sm w-full border border-gray-300 rounded p-2 mb-4">
+
+                <label style="display:block; font-size:11px; font-weight:bold; color:#666; margin-bottom:5px; text-transform:uppercase;">Fotografía de estado (Opcional):</label>
+                <input type="file" id="foto-traslado" accept="image/*" class="swal2-file text-sm w-full border border-gray-300 rounded p-2 mb-2">
+                <label style="display:block; font-size:10px; font-weight:bold; color:#666; margin-bottom:5px;">O abrir cámara (Móvil)</label>
+                <input type="file" id="foto-traslado-camara" accept="image/*" capture="environment" class="swal2-file text-sm w-full border border-gray-300 rounded p-2">
             </div>
         `,
         confirmButtonText: 'Finalizar Traslado', 
@@ -1275,25 +1216,31 @@ window.gestionarTraslado = async function(id) {
             const dest = document.getElementById('concesionario-destino').value.toUpperCase().trim();
             const file = document.getElementById('acta-traslado').files[0];
             
+            const fileFotoDanos = document.getElementById('foto-traslado').files[0] || null;
+            const fileFotoCamara = document.getElementById('foto-traslado-camara').files[0] || null;
+            const fileFoto = fileFotoCamara || fileFotoDanos || null;
+            
             if(!dest) return Swal.showValidationMessage('El destino es obligatorio'); 
             
-            return { dest, file }; 
+            return { dest, file, fileFoto }; 
         }
     });
 
     if (formValues) {
         // Función interna encargada de escribir en Firebase
-        const guardarEnBaseDeDatos = async (urlArchivo, estadoSubida) => {
+        const guardarEnBaseDeDatos = async (urlArchivo, estadoSubida, urlFotoTraslado) => {
             const tsTraslado = typeof window.obtenerTimestamp === 'function' ? window.obtenerTimestamp() : new Date().getTime();
             const fechaEntregaTexto = typeof window.formatearFechaES === 'function' ? window.formatearFechaES(tsTraslado) : new Date().toLocaleDateString('es-ES');
             const subida = estadoSubida || { estado: 'SIN_ARCHIVO', intentos: 0, error: null };
+            
             await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
                 entregado: true, 
                 fechaEntrega: fechaEntregaTexto,
                 fechaEntregaTs: tsTraslado,
                 tipoFinalizacion: 'TRASLADO', 
-                concesionarioDestino: formValues.dest, // Se ha corregido el error tipográfico
+                concesionarioDestino: formValues.dest,
                 urlActaTraslado: urlArchivo || null,
+                urlFotoTraslado: urlFotoTraslado || null, // 🔥 GUARDAMOS LA FOTO
                 estadoSubidaActa: subida.estado,
                 intentosSubidaActa: Number(subida.intentos || 0),
                 errorSubidaActa: subida.error || null
@@ -1310,35 +1257,52 @@ window.gestionarTraslado = async function(id) {
                     renting: coche.renting || '',
                     concesionarioDestino: formValues.dest,
                     urlActaTraslado: urlArchivo || null,
+                    urlFotoTraslado: urlFotoTraslado || null, // 🔥 GUARDAMOS LA FOTO EN EL HISTORIAL
                     estadoSubida: subida.estado,
                     intentosSubida: Number(subida.intentos || 0),
                     errorSubida: subida.error || null
                 });
             }
             
-            Swal.fire('Registrado', 'El traslado y el acta se han guardado en el historial.', 'success');
+            Swal.fire('Registrado', 'El traslado y sus documentos se han guardado en el historial.', 'success');
             
-            // Actualizamos la vista para que el cambio se refleje inmediatamente
             setTimeout(() => {
                 if(typeof window.renderizarVistas === 'function') window.renderizarVistas();
                 if(typeof window.renderEntregados === 'function') window.renderEntregados();
             }, 500);
         };
 
-        // Lógica de subida: comprobamos si el usuario ha adjuntado un archivo
-        if (formValues.file) {
-            Swal.fire({ 
-                title: 'Procesando acta...', 
-                text: 'Subiendo documento a la nube.', 
-                didOpen: () => Swal.showLoading(), 
-                allowOutsideClick: false 
-            });
+        Swal.fire({ 
+            title: 'Procesando traslado...', 
+            text: 'Subiendo documentos a la nube.', 
+            didOpen: () => Swal.showLoading(), 
+            allowOutsideClick: false 
+        });
 
+        let urlActaFinal = null;
+        let estadoSubidaFinal = { estado: 'SIN_ARCHIVO', intentos: 0, error: null };
+        let urlFotoFinal = null;
+
+        // 1. Subimos la foto (Si hay)
+        if (formValues.fileFoto) {
+            const subidaFoto = await window.subirArchivoConReintento(formValues.fileFoto, { maxIntentos: 3 });
+            if (subidaFoto.ok) {
+                urlFotoFinal = subidaFoto.url;
+            } else {
+                console.warn('No se pudo subir la foto de traslado', subidaFoto.error);
+            }
+        }
+
+        // 2. Subimos el acta (Si hay) y guardamos
+        if (formValues.file) {
             const subida = await window.subirArchivoConReintento(formValues.file, { maxIntentos: 3 });
             if (subida.ok) {
-                await guardarEnBaseDeDatos(subida.url, { estado: 'SUBIDO', intentos: subida.intentos, error: null });
+                estadoSubidaFinal = { estado: 'SUBIDO', intentos: subida.intentos, error: null };
+                urlActaFinal = subida.url;
+                await guardarEnBaseDeDatos(urlActaFinal, estadoSubidaFinal, urlFotoFinal);
             } else {
-                await guardarEnBaseDeDatos(null, { estado: 'PENDIENTE_SUBIDA', intentos: subida.intentos, error: subida.error });
+                estadoSubidaFinal = { estado: 'PENDIENTE_SUBIDA', intentos: subida.intentos, error: subida.error };
+                await guardarEnBaseDeDatos(null, estadoSubidaFinal, urlFotoFinal);
                 Swal.fire({
                     icon: 'warning',
                     title: 'Traslado cerrado con acta pendiente',
@@ -1347,13 +1311,7 @@ window.gestionarTraslado = async function(id) {
                 });
             }
         } else {
-            // Si el usuario no adjuntó ningún archivo, guardamos directamente los datos de texto
-            Swal.fire({ 
-                title: 'Registrando traslado...', 
-                didOpen: () => Swal.showLoading(), 
-                allowOutsideClick: false 
-            });
-            await guardarEnBaseDeDatos(null, { estado: 'SIN_ARCHIVO', intentos: 0, error: null });
+            await guardarEnBaseDeDatos(null, estadoSubidaFinal, urlFotoFinal);
         }
     }
 };
@@ -1853,6 +1811,7 @@ window.obtenerMovimientosHistorial = function() {
                 tipoFinalizacion: tipo === 'TRASLADO' ? 'TRASLADO' : (tipo === 'DEVOLUCION' ? 'DEVOLUCION' : 'ENTREGA'),
                 concesionarioDestino: m.concesionarioDestino || null,
                 urlActaTraslado: m.urlActaTraslado || null,
+                urlFotoTraslado: m.urlFotoTraslado || null, // 🔥 NUEVO: Recogemos la URL
                 urlActaDevolucion: m.urlActaDevolucion || null,
                 urlCartaPorte: m.urlCartaPorte || null,
                 recogidoPor: m.recogidoPor || '',
@@ -1861,6 +1820,18 @@ window.obtenerMovimientosHistorial = function() {
                 fechaReentregaRenting: m.fechaReentregaRenting || '',
                 esRegistroAgenda: !m.vehiculoId
             };
+        });
+
+        // 🔥 FILTRO MÁGICO: Ocultamos los tickets de entregas que se han revertido
+        listaNuevos = listaNuevos.filter(m => {
+            if (m.tipoFinalizacion === 'ENTREGA' && m.fila) {
+                let cocheFisico = todosLosCoches.find(c => c.fila === m.fila);
+                // Si el coche físico dice que NO está entregado (porque lo has revertido), ocultamos este ticket
+                if (cocheFisico && (cocheFisico.entregado === false || cocheFisico.entregado === "false")) {
+                    return false; 
+                }
+            }
+            return true;
         });
     }
 
@@ -1973,9 +1944,13 @@ window.inyectarResultadosHistorial = function(resultados, contenedor, criterioTe
         let textoTag = esTraslado ? 'Traslado' : (esDevolucion ? 'Devolución' : 'Entregado');
         let iconTag = esTraslado ? 'ph-truck' : (esDevolucion ? 'ph-arrow-counter-clockwise' : 'ph-key');
         
+        // 🔥 NUEVO: Añadimos el enlace a la foto dentro de la información del traslado
         let infoTraslado = esTraslado ? `
             <p class="text-[10px] font-bold text-orange-600 mb-1"><i class="ph-bold ph-map-pin"></i> Destino: ${c.concesionarioDestino || 'N/A'}</p>
-            ${c.urlActaTraslado ? `<a href="${c.urlActaTraslado}" target="_blank" class="text-[10px] text-blue-600 font-bold hover:underline mb-2 block"><i class="ph-bold ph-file-pdf"></i> Ver Acta de Traslado</a>` : ''}
+            <div class="flex gap-2 flex-wrap mb-2">
+                ${c.urlActaTraslado ? `<a href="${c.urlActaTraslado}" target="_blank" class="text-[10px] text-blue-600 font-bold hover:underline bg-blue-50 px-2 py-1 rounded"><i class="ph-bold ph-file-pdf"></i> Acta de Traslado</a>` : ''}
+                ${c.urlFotoTraslado ? `<a href="${c.urlFotoTraslado}" target="_blank" class="text-[10px] text-orange-600 font-bold hover:underline bg-orange-50 px-2 py-1 rounded"><i class="ph-bold ph-image"></i> Foto Estado</a>` : ''}
+            </div>
         ` : '';
 
         let infoDevolucion = esDevolucion ? `
@@ -2075,14 +2050,69 @@ window.deshacerEntrega = async function(id) {
         if (result.isConfirmed) {
             Swal.fire({title: 'Restaurando...', didOpen: () => Swal.showLoading()});
             try {
-                await window.updateDoc(window.doc(window.db, "vehiculos", id), { entregado: false, fechaEntrega: "" });
+                // 1. Revertimos el vehículo físico en Firebase
+                await window.updateDoc(window.doc(window.db, "vehiculos", id), { 
+                    entregado: false, 
+                    fechaEntrega: "",
+                    fechaEntregaTs: null,
+                    tipoFinalizacion: null 
+                });
+
+                // 2. Actualizamos la memoria local del coche al instante
+                if (coche) {
+                    coche.entregado = false;
+                    coche.fechaEntrega = "";
+                    coche.fechaEntregaTs = null;
+                    coche.tipoFinalizacion = null;
+                }
+
+                // 3. Revertimos la Cita en la Agenda (Firebase y memoria local)
+                if (window.datosAgenda) {
+                    let matCoche = coche ? String(coche.B || '').replace(/\s/g, '').toUpperCase() : '';
+                    
+                    // Buscamos TODAS las citas de esa matrícula para asegurarnos de limpiar la correcta
+                    let citasDelCoche = window.datosAgenda.filter(c => {
+                        let matCita = String(c.matricula || '').replace(/\s/g, '').toUpperCase();
+                        return matCita && matCoche && matCita === matCoche;
+                    });
+
+                    for (let cita of citasDelCoche) {
+                        // A. Actualizamos en Firebase
+                        if (cita.id) {
+                            await window.updateDoc(window.doc(window.db, "citas_agenda", cita.id), {
+                                entregado: false,
+                                fechaEntrega: "",
+                                fechaEntregaTexto: "",
+                                tipoFinalizacion: null
+                            }).catch(() => {});
+                        }
+                        
+                        // 🔥 B. ARREGLO: Actualizamos en la memoria local al instante
+                        cita.entregado = false;
+                        cita.fechaEntrega = "";
+                        cita.fechaEntregaTexto = "";
+                        cita.tipoFinalizacion = null;
+                    }
+                }
+
                 Swal.fire('¡Restaurado!', 'El vehículo vuelve a estar en curso.', 'success');
+                
+                // 4. Refrescamos TODAS las pantallas involucradas
                 setTimeout(() => {
                     if (document.getElementById('inputBusquedaHistorial') && document.getElementById('inputBusquedaHistorial').value) { window.buscarEnHistorial(); } 
                     else if (document.getElementById('hist-fecha-inicio') && document.getElementById('hist-fecha-inicio').value) { window.buscarPorDiaManual(); } 
                     else { window.renderEntregados(); }
+                    
+                    if (typeof window.renderizarVistas === 'function') window.renderizarVistas();
+                    
+                    // 🔥 ARREGLO: Forzamos que se redibuje el cuadrante de la agenda instantáneamente
+                    if (typeof window.dibujarCuadranteMes === 'function') window.dibujarCuadranteMes();
                 }, 500);
-            } catch (error) { Swal.fire('Error', 'No se pudo restaurar el vehículo.', 'error'); }
+                
+            } catch (error) { 
+                console.error(error);
+                Swal.fire('Error', 'No se pudo restaurar el vehículo.', 'error'); 
+            }
         }
     });
 };

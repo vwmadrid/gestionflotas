@@ -190,55 +190,57 @@
   <main class="flex-1 flex flex-col relative min-w-0" id="mainApp" style="display:none;">
     <header class="bg-white border-b border-gray-200 flex flex-col px-8 py-4 shadow-sm shrink-0 z-10 gap-3">
       <div class="flex items-center justify-between">
+         <!-- BUSCADOR PRINCIPAL -->
          <div class="relative w-full max-w-sm">
              <i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg"></i>
              <input type="text" id="buscadorInput" onkeyup="window.filtrarCoches()" placeholder="Buscar Bastidor o Matrícula..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm font-medium outline-none focus:border-[#00b0f0] focus:ring-1 focus:ring-[#00b0f0] transition-all">
          </div>
          
-         <div class="flex items-center gap-2">
-            <div id="botonesLogistica" class="hidden flex items-center gap-2">
-                <button onclick="window.abrirLectorPDF()" class="bg-white border border-[#001e50] text-[#001e50] px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-50 transition-colors shadow-sm">
-                  <i class="ph-bold ph-files text-base"></i> Subir PDFs
-                </button>
-                <button onclick="window.anadirVehiculoManual()" class="bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-900 transition-colors shadow-sm">
-                  <i class="ph-bold ph-keyboard text-base"></i> Añadir Manual
-                </button>
-            </div>
+         <!-- BOTONES DINÁMICOS -->
+         <div id="contenedor-botones-top" class="flex items-center gap-2">
+            
+            <!-- Botones Logística Renting -->
+            <button id="btn-top-subir-pdf" onclick="window.abrirLectorPDF()" class="btn-top-dinamico hidden bg-white border border-[#001e50] text-[#001e50] px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-50 transition-colors shadow-sm">
+              <i class="ph-bold ph-files text-base"></i> Subir PDFs
+            </button>
+            <button id="btn-top-anadir-manual" onclick="window.anadirVehiculoManual()" class="btn-top-dinamico hidden bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-900 transition-colors shadow-sm">
+              <i class="ph-bold ph-keyboard text-base"></i> Añadir Manual
+            </button>
 
-            <div id="botonesAgenda" class="hidden flex items-center gap-2">
-                <button id="btnAgendaListado" onclick="window.generarListadoDiario()" class="bg-[#00b0f0] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-600 transition-colors shadow-sm">
-                    <i class="ph-bold ph-clipboard-text text-base"></i> Hoja Preparadores
-                </button>
-                
-                <button id="btnAgendaNuevaCita" onclick="window.crearCitaManual()" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-800 transition-colors shadow-sm">
-                    <i class="ph-bold ph-plus-circle text-base"></i> Nueva Cita
-                </button>
-                <button id="btnAgendaBloqueos" onclick="window.abrirGestorVacaciones()" class="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-indigo-800 transition-colors shadow-sm">
-                    <i class="ph-bold ph-calendar-slash text-base"></i> Bloquear Fechas
-                </button>
-            </div>
+            <!-- Botón Exportar Excel (General para Taller, Recambios, Encuestas, Inventario, Logística) -->
+            <button id="btn-top-exportar" onclick="window.descargarExcelReal()" class="btn-top-dinamico hidden bg-[#107c41] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0c5e31] transition-colors shadow-sm">
+              <i class="ph-bold ph-microsoft-excel-logo text-base"></i> Exportar
+            </button>
 
-            <div id="botonesDevoluciones" class="hidden flex items-center gap-2">
-                <button onclick="window.abrirFormularioDevolucionRenting()" class="bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-900 transition-colors shadow-sm">
-                    <i class="ph-bold ph-plus-circle text-base"></i> Nueva Devolución
-                </button>
-                <button onclick="window.exportarDevolucionesRentingExcel()" class="bg-[#107c41] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0c5e31] transition-colors shadow-sm">
-                    <i class="ph-bold ph-microsoft-excel-logo text-base"></i> Exportar Excel
-                </button>
+            <!-- Botones Agenda -->
+            <button id="btn-top-hoja-prep" onclick="window.generarListadoDiario()" class="btn-top-dinamico hidden bg-[#00b0f0] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-600 transition-colors shadow-sm">
+                <i class="ph-bold ph-clipboard-text text-base"></i> Hoja Preparadores
+            </button>
+            <button id="btn-top-nueva-cita" onclick="window.crearCitaManual()" class="btn-top-dinamico hidden bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-emerald-800 transition-colors shadow-sm">
+                <i class="ph-bold ph-plus-circle text-base"></i> Nueva Cita
+            </button>
+            <button id="btn-top-bloqueos" onclick="window.abrirGestorVacaciones()" class="btn-top-dinamico hidden bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-indigo-800 transition-colors shadow-sm">
+                <i class="ph-bold ph-calendar-slash text-base"></i> Bloquear Fechas
+            </button>
+
+            <!-- Botones Devoluciones Renting -->
+            <button id="btn-top-nueva-dev" onclick="window.abrirFormularioDevolucionRenting()" class="btn-top-dinamico hidden bg-[#001e50] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-blue-900 transition-colors shadow-sm">
+                <i class="ph-bold ph-plus-circle text-base"></i> Nueva Devolución
+            </button>
+            <button id="btn-top-exportar-dev" onclick="window.exportarDevolucionesRentingExcel()" class="btn-top-dinamico hidden bg-[#107c41] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0c5e31] transition-colors shadow-sm">
+                <i class="ph-bold ph-microsoft-excel-logo text-base"></i> Exportar Excel
+            </button>
+
+            <!-- Vistas Inventario (Tarjetas / Excel) -->
+            <div id="btn-top-vistas" class="btn-top-dinamico hidden bg-gray-100 p-1 rounded-lg flex gap-1 border border-gray-300 ml-1 border-l">
+               <button id="btnVistaTarjetas" onclick="window.cambiarModoVisualizacion('tarjetas')" class="bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all"><i class="ph-bold ph-squares-four text-sm"></i> Tarjetas</button>
+               <button id="btnVistaTabla" onclick="window.cambiarModoVisualizacion('tabla')" class="text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all"><i class="ph-bold ph-table text-sm"></i> Excel</button>
             </div>
             
-            <div id="controlesVistaExcel" class="hidden flex items-center gap-2 border-l border-gray-300 pl-3 ml-1">
-                <button onclick="window.descargarExcelReal()" class="bg-[#107c41] text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 hover:bg-[#0c5e31] transition-colors shadow-sm">
-                  <i class="ph-bold ph-microsoft-excel-logo text-base"></i> Exportar
-                </button>
-                <div class="bg-gray-100 p-1 rounded-lg flex gap-1 border border-gray-300">
-                   <button id="btnVistaTarjetas" onclick="window.cambiarModoVisualizacion('tarjetas')" class="bg-white text-[#001e50] border border-[#001e50] shadow-sm px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all"><i class="ph-bold ph-squares-four text-sm"></i> Tarjetas</button>
-                   <button id="btnVistaTabla" onclick="window.cambiarModoVisualizacion('tabla')" class="text-gray-500 hover:text-gray-800 border border-transparent px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all"><i class="ph-bold ph-table text-sm"></i> Excel</button>
-                </div>
-            </div>
          </div>
       </div>
 
+      <!-- FILTROS VISUALES (ESTOS SE MANTIENEN IGUAL) -->
       <div id="filtrosVisuales" class="hidden flex gap-2 overflow-x-auto pb-1 mt-1">
          <button onclick="window.aplicarFiltroVisual('todos', this)" class="filtro-btn bg-[#001e50] text-white border border-[#001e50] px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-all">Todos (<span id="c-todos">0</span>)</button>
          <button onclick="window.aplicarFiltroVisual('pendientes', this)" class="filtro-btn bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 px-5 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all"><i class="ph-fill ph-clock text-gray-400 text-sm"></i> Ptes. Cita (<span id="c-pendientes">0</span>)</button>
