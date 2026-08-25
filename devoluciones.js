@@ -172,12 +172,14 @@ window.setBusquedaDevolucionesRenting = function(valor) {
         clearTimeout(window.devolucionesRentingSearchDebounceTimer);
     }
 
-    // Evita repintar toda la vista por cada tecla y elimina el "bloqueo" al escribir.
+    // 🔥 OPTIMIZACIÓN: Si el valor está vacío, reaccionamos casi al instante (10ms) en lugar de esperar 140ms
+    const delay = valor.trim() === '' ? 10 : 140;
+
     window.devolucionesRentingSearchDebounceTimer = setTimeout(() => {
         if (typeof window.aplicarBusquedaDevolucionesRentingDOM === 'function') {
             window.aplicarBusquedaDevolucionesRentingDOM();
         }
-    }, 140);
+    }, delay);
 };
 
 window.aplicarBusquedaDevolucionesRentingDOM = function() {
@@ -185,19 +187,31 @@ window.aplicarBusquedaDevolucionesRentingDOM = function() {
     if (!contenedor) return;
 
     const ui = window.devolucionesRentingUI || {};
-    const criterio = window.normalizarTextoDevolucionRenting(ui.busqueda || '');
+    const busquedaRaw = String(ui.busqueda || '').trim();
+    const criterio = window.normalizarTextoDevolucionRenting(busquedaRaw);
+    
     const items = Array.from(contenedor.querySelectorAll('[data-dev-item="1"]'));
-
     let visibles = 0;
-    items.forEach((el) => {
-        const texto = window.normalizarTextoDevolucionRenting(el.getAttribute('data-dev-search') || '');
-        const mostrar = !criterio || texto.includes(criterio);
-        el.style.display = mostrar ? '' : 'none';
-        if (mostrar) visibles++;
-    });
+
+    // 🔥 VÍA RÁPIDA: Si la caja está vacía, mostramos todo de golpe sin calcular nada
+    if (criterio === '') {
+        items.forEach(el => {
+            el.style.display = ''; // Limpia el bloqueo
+            visibles++;
+        });
+    } else {
+        // Si hay texto, buscamos normalmente
+        items.forEach(el => {
+            const texto = el.getAttribute('data-dev-search') || ''; 
+            const mostrar = texto.includes(criterio);
+            el.style.display = mostrar ? '' : 'none';
+            if (mostrar) visibles++;
+        });
+    }
 
     const emptyBox = document.getElementById('dev-no-resultados-busqueda');
     const resultadosBox = document.getElementById('dev-resultados-wrapper');
+    
     if (emptyBox && resultadosBox) {
         if (visibles === 0) {
             resultadosBox.style.display = 'none';
@@ -855,6 +869,8 @@ window.renderDevolucionesRenting = function() {
                     type="text"
                     value="${window.escapeJS(ui.busqueda || '')}"
                     oninput="window.setBusquedaDevolucionesRenting(this.value)"
+                    onchange="window.setBusquedaDevolucionesRenting(this.value)"
+                    onkeyup="if(event.key === 'Backspace' || event.key === 'Delete' || event.key === 'Escape') window.setBusquedaDevolucionesRenting(this.value)"
                     placeholder="Buscar por matrícula, renting, modelo, recogido por o ubicación..."
                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-semibold text-[#001e50] focus:outline-none focus:ring-2 focus:ring-sky-400"
                 >
