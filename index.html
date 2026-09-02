@@ -10,13 +10,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <script>
-    // 🔒 Control de periodo de prueba: pasada esta fecha, se corta la carga y se redirige al aviso de bloqueo.
-    if (!/bloqueo\.html$/i.test(location.pathname) && new Date() >= new Date('2026-09-02T00:00:00')) {
-        location.replace('./bloqueo.html');
-        throw new Error('Periodo de prueba finalizado: aplicación bloqueada.');
-    }
-    </script>
     <meta name="author" content="Manuel Arjona Carrera & Miriam Olmo Fernández">
     <meta name="copyright" content="© 2026 Manuel Arjona Carrera & Miriam Olmo Fernández. Todos los derechos reservados.">
     <meta name="application-name" content="GesCar OS / M2 Code Systems">
